@@ -4,11 +4,12 @@
 This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 
 
-## Default analysis steps and tools used:
+## Default analysis steps and tools used
 
 - Alignment (pbmm2)
 - Small variants (DeepVariant)
 - Structural variants (Sawfish)
+- Inhouse allele frequency annotation of structural variants (SVDB)
 - Repeat expansions (TRGT)
 - Repeat contraction (Kivvi)
 - Phasing (hiPhase)
@@ -29,20 +30,20 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 The tools used and output generated depends on how the pipeline is run. See below for instructions.
 The script requires a samplesheet as input:
 
-## Samplesheet format, unrelated samples.
+## Samplesheet format, unrelated samples
 The most basic samplesheet contains 3 tab-separated columns in this specific order:
 
     CASE_GROUP NPN GENDER
 
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
-Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN:
+Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN
 
     123456789012  123456789012   female
     234567890123  234567890123   male
     345678901234  345678901234   male
 
-Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP:
+Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP
 
     WGS_CNV      123456789012    female
     WGS_CNV      234567890123    male
@@ -54,8 +55,7 @@ Example: Unrelated samples, but collect sampleoutput per group based on values i
 
 When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualGroupingKey.
 
-
-## Samplesheet format, trios:
+## Samplesheet format, trios
 
     CASEID  NPN  GENDER  RELATION  AFFECTED_STATUS
 
@@ -83,20 +83,32 @@ Note: GENDER should be male/female, RELATION should be mater/index/pater and AFF
     --jointCall [bool]:     Perform joint genotyping of samples based on value in first column of samplesheet
     --hpo [path]:           Path to file with hpo terms (only relevant for trios / family analyses)
 
+NOTE:
+If any of the parameters --skipVariants, --skipSV or --skipSTR is set, phasing of the data is disabled. 
+In the current version of the script, phasing requires the output of deepVariant, Sawfish and TRGT to phase the data properly. This may be changed in future versions to allow e.g. phasing based solely on deepvariant.
+
 ## Execution plan
 The script can be run on a single compute node (local), or using KG Vejles SLURM cluster
 The script is run locally by default, but can use the SLURM cluster by adding "-profile slurm" to the commandline. Note that the "-profile" is a built in function of Nextflow, i.e. it is set using a single "-" (-profile instead of --profile)
 
-## Usage examples:
+## Usage examples
 
 #### Default: Analyze all samples in samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt
 
-#### Default: Analyze all samples in samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps, use SLURM to execute the script:
+#### Default: Same as above, but use SLURM to execute the script:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm
 
-#### Analyze all samples in samplesheet. Group output for all samples. Run joint genotyping for DeepVariant and Sawfish:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --jointCall --groupedOutput
+#### Analyze all samples in samplesheet. Group output for all samples. Run joint genotyping for DeepVariant and Sawfish, use SLURM to execute the script:
+    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --jointCall --groupedOutput -profile slurm
 
 #### Trio analysis: Run exomiser in addition to all default analysis steps (requires the use of --hpo, and that the samplesheet contains the trio samples with gender, relation and affection status set):
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/TrioSamplesheet.txt --jointCall --groupedOutput --hpo /path/to/TrioHPOfile.txt
+
+
+# Output
+
+Based on the options shown above, and the samplesheet used, output is either stored per sample (individual tools as subfolders for each sample), or grouped by tools and analysis (e.g. all deepVariant data for all samples stored in a single outputfolder).
+See infonet for further details.
+
+
