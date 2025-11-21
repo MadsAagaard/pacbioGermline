@@ -83,10 +83,17 @@ Note: GENDER should be male/female, RELATION should be mater/index/pater and AFF
     --jointCall [bool]:     Perform joint genotyping of samples based on value in first column of samplesheet
     --hpo [path]:           Path to file with hpo terms (only relevant for trios / family analyses)
 
+## Execution plan
+The script can be run on a single compute node (local), or using KG Vejles SLURM cluster
+The script is run locally by default, but can use the SLURM cluster by adding "-profile slurm" to the commandline. Note that the "-profile" is a built in function of Nextflow, i.e. it is set using a single "-" (-profile instead of --profile)
+
 ## Usage examples:
 
 #### Default: Analyze all samples in samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt
+
+#### Default: Analyze all samples in samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps, use SLURM to execute the script:
+    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm
 
 #### Analyze all samples in samplesheet. Group output for all samples. Run joint genotyping for DeepVariant and Sawfish:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --jointCall --groupedOutput
