@@ -64,6 +64,11 @@ Example:
     trio_name	113648565123	female	index	affected
     trio_name	123456789123	male	pater	normal
 
+johnDoe 123456789012    index   affected 
+
+johnDoe 234567890123    mater   normal
+
+johnDoe 345678901234    pater   normal
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
 
 Note: Gender should be male/female, Relation should be mater/index/pater and AFFECTED_STATUS should be normal/affected/unknown
