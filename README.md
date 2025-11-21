@@ -32,33 +32,24 @@ The script requires a samplesheet as input:
 ## Samplesheet format, unrelated samples.
 The most basic samplesheet contains 3 tab-separated columns in this specific order:
 
-CASE_GROUP NPN GENDER
+    CASE_GROUP NPN GENDER
 
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
 Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN:
-ffs abc OMG
 
-123456789012 123456789012 female
-
-234567890123 234567890123 male
-
-345678901234 345678901234 male
+    123456789012  123456789012   female
+    234567890123  234567890123   male
+    345678901234  345678901234   male
 
 Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP:
 
-
-WGS_CNV	123456789012	female
-
-WGS_CNV	234567890123	male
-
-Pseudogene	345678901234	male
-
-Pseudogene	456789012345	female
-
-ManualGroupingKey	567890123456	male
-
-ManualGroupingKey	678901234567	female
+    WGS_CNV      123456789012    female
+    WGS_CNV      234567890123    male
+    Pseudogene   345678901234    male
+    Pseudogene   456789012345    female
+    ManualKey    567890123456    male
+    ManualKey    678901234567    female
 
 
 When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualGroupingKey.
@@ -71,16 +62,8 @@ CASEID  NPN  GENDER  RELATION  AFFECTED_STATUS
 Example:
 
     trio_name	113648565123	female	mater	normal
-    
     trio_name	113648565123	female	index	affected
-    
     trio_name	123456789123	male	pater	normal
-
-johnDoe 123456789012    index   affected 
-
-johnDoe 234567890123    mater   normal
-
-johnDoe 345678901234    pater   normal
 
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
 
