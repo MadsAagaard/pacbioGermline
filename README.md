@@ -37,9 +37,9 @@ CASE_GROUP  NPN  GENDER
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
 Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN:
-123456789012	123456789012	female
-234567890123	234567890123	male
-345678901234	345678901234	male
+    123456789012	123456789012	female
+    234567890123	234567890123	male
+    345678901234	345678901234	male
 
 Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP:
 
@@ -58,9 +58,9 @@ When using the above samplesheet with the --groupedOutput option, the output wil
 CASEID  NPN  GENDER  RELATION  AFFECTED_STATUS
 
 Example:
-trio_name	113648565123	female	mater	normal
-trio_name	113648565123	female	index	affected
-trio_name	123456789123	male	pater	normal
+    trio_name	113648565123	female	mater	normal
+    trio_name	113648565123	female	index	affected
+    trio_name	123456789123	male	pater	normal
 
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
 
