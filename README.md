@@ -37,7 +37,7 @@ The most basic samplesheet contains 3 tab-separated columns in this specific ord
 
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
-Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN
+Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleoutput is stored in an output folder named {NPN}
 
     123456789012  123456789012   female
     234567890123  234567890123   male
@@ -53,7 +53,7 @@ Example: Unrelated samples, but collect sampleoutput per group based on values i
     ManualKey    678901234567    female
 
 
-When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualGroupingKey.
+When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualKey.
 
 ## Samplesheet format, trios
 
