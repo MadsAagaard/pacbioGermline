@@ -19,10 +19,28 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 - QC module (nanostat, mosdepth, cramino, whatsHap, multiQC)
 
 ## Additional user-defined output
-- Exomiser will be run, if the user provides a file with hpo terms (e.g. for rare disease trio analysis). Three exomiser runs based on smallvariants (jointGenotyped DeepVariant vcf), structural variants (jointGenotyped sawfish vcf) 
-
-
+- Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf), structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
+- JointGenotyping is disabled by default, but can be activated with --jointCall (see parameter section)
+- Grouped output (e.g. collect data for all samples for each tool in a single outputfolder) is disabled by default (i.e. output data is collected per sample by default). Grouped output can be activated with --groupedOutput (see parameter section).
+- Tools and modules can be disabled using e.g. --skipQC, --skipVariants, --skipSV, --skipSTR (see parameter section)
 
 # Usage
 
 The tools used and output generated depends on how the pipeline is run. See below for instructions.
+
+## Options:
+  --help:
+  --input
+  --allReads
+  --noMerge
+  --samplesheet
+  --skipQC
+  --skipVariants
+  --skipSV
+  --skipSTR
+  --groupedOutput
+  --jointCall
+  --hpo
+
+## Usage examples:
+
