@@ -44,3 +44,11 @@ The tools used and output generated depends on how the pipeline is run. See belo
 
 ## Usage examples:
 
+#### Default: Analyze all samples in samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps:
+    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt
+
+#### Analyze all samples in samplesheet. Group output for all samples. Run joint genotyping for DeepVariant and Sawfish:
+    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --joiuntCall --groupedOutput
+
+#### Trio analysis: Run exomiser in addition to all default analysis steps (requires the use of --hpo, and that the samplesheet contains the trio samples with gender, relation and affection status set):
+    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/TrioSamplesheet.txt --joiuntCall --groupedOutput --hpo /path/to/TrioHPOfile.txt
