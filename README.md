@@ -37,6 +37,8 @@ CASE_GROUP NPN GENDER
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
 Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN:
+ffs abc OMG
+
 123456789012 123456789012 female
 234567890123 234567890123 male
 345678901234 345678901234 male
