@@ -62,7 +62,7 @@ When using the above samplesheet with the --groupedOutput option, the output wil
 Example:
 
     trio_name	113648565123	female	mater	normal
-    trio_name	113648565123	female	index	affected
+    trio_name	345678965123	female	index	affected
     trio_name	123456789123	male	pater	normal
 
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
