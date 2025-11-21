@@ -29,7 +29,7 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 The tools used and output generated depends on how the pipeline is run. See below for instructions.
 
 ## Options:
-  --help:
+  --help
   --input
   --allReads
   --noMerge
