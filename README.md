@@ -70,18 +70,18 @@ For trios, if --hpo is used, the script will generate a pedigree file (.ped) and
 Note: GENDER should be male/female, RELATION should be mater/index/pater and AFFECTED_STATUS should be normal/affected/unknown
 
 ## Options and parameters:
-    --help (show this help menu with available options)
-    --input [path]: (select data to use as input). If not set, search KG Vejle archive for input unmapped bams)
-    --allReads [bool]: (use allreads, i.e. HiFi reads and failed reads as input). If not set, the script only uses HiFi reads as input.
-    --noMerge [bool]: (do not use all available unmapped bam files as input. Only use files in folder set with --input). Requires that the --input parameter is set
-    --samplesheet [path]: path to samplesheet to use. Required
-    --skipQC [bool]: Do not run QC module
-    --skipVariants [bool]: Do not call small variants (i.e. skip DeepVariant)
-    --skipSV [bool]: Do not call structural variants (i.e. skip Sawfish)
-    --skipSTR [bool]: Do not call repeat expansions (i.e. skip TRGT and Kivvi)
+    --help                  Show this help menu with available options
+    --input [path]:         Path to data to use as input. Default: Search KG Vejle archive for input unmapped bams (search across all previous PacBio runs)
+    --allReads [bool]:      Use allreads, i.e. HiFi reads and failed reads as input. Default: Only uses HiFi reads as input.
+    --noMerge [bool]:       Do not use all available unmapped bam files as input. Only use files in folder set with --input). Requires that the --input parameter is set
+    --samplesheet [path]:   path to samplesheet to use. Required
+    --skipQC [bool]:        Do not run QC module
+    --skipVariants [bool]:  Do not call small variants (i.e. skip DeepVariant)
+    --skipSV [bool]:        Do not call structural variants (i.e. skip Sawfish)
+    --skipSTR [bool]:       Do not call repeat expansions (i.e. skip TRGT and Kivvi)
     --groupedOutput [bool]: Merge output based on value in first column of samplesheet
-    --jointCall [bool]: Perform joint genotyping of samples based on value in first column of samplesheet
-    --hpo [path]: Path to file with hpo terms (only relevant for trios / family analyses)
+    --jointCall [bool]:     Perform joint genotyping of samples based on value in first column of samplesheet
+    --hpo [path]:           Path to file with hpo terms (only relevant for trios / family analyses)
 
 ## Usage examples:
 
