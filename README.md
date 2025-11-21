@@ -19,9 +19,9 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 - QC module (nanostat, mosdepth, cramino, whatsHap, multiQC)
 
 ## Additional user-defined output
-- Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf), structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
+- Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf) and structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
 - JointGenotyping is disabled by default, but can be activated with --jointCall (see parameter section)
-- Grouped output (e.g. collect data for all samples for each tool in a single outputfolder) is disabled by default (i.e. output data is collected per sample by default). Grouped output can be activated with --groupedOutput (see parameter section).
+- Grouped output (e.g. collect data for all samples for each tool in a single outputfolder based on the used samplesheet) is disabled by default (i.e. output data is collected per sample by default). Grouped output can be activated with --groupedOutput (see parameter section).
 - Tools and modules can be disabled using e.g. --skipQC, --skipVariants, --skipSV, --skipSTR (see parameter section)
 
 # Usage
@@ -32,14 +32,14 @@ The script requires a samplesheet as input:
 ## Samplesheet format, unrelated samples.
 The most basic samplesheet contains 3 tab-separated columns in this specific order:
 
-CASE_GROUP  NPN  GENDER
+CASE_GROUP NPN GENDER
 
 Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
 
 Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleouput is stored in an output folder named NPN:
-    123456789012	123456789012	female
-    234567890123	234567890123	male
-    345678901234	345678901234	male
+123456789012 123456789012 female
+234567890123 234567890123 male
+345678901234 345678901234 male
 
 Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP:
 
