@@ -195,7 +195,7 @@ include {pbmm2_align;
         sawFish2_jointCall_all;
         svdb_sawFish2_jointCall_all;
         sawFish2_jointCall_caseID;
-        svdb_sawFish2_jointCall_caseID
+        svdb_sawFish2_jointCall_caseID;
         deepvariant;
         glNexus_jointCall;
         trgt4_diseaseSTRs;

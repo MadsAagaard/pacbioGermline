@@ -23,6 +23,7 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 - Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf) and structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
 - JointGenotyping is disabled by default, but can be activated with --jointCall (see parameter section)
 - Grouped output (e.g. collect data for all samples for each tool in a single outputfolder based on the used samplesheet) is disabled by default (i.e. output data is collected per sample by default). Grouped output can be activated with --groupedOutput (see parameter section).
+- Joint genotyping (GLNexus for small variants, Sawfish for structural variants) can be added with the --jointCall option
 - Tools and modules can be disabled using e.g. --skipQC, --skipVariants, --skipSV, --skipSTR (see parameter section)
 
 # Usage
@@ -52,7 +53,6 @@ Example: Unrelated samples, but collect sampleoutput per group based on values i
     ManualKey    567890123456    male
     ManualKey    678901234567    female
 
-
 When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualKey.
 
 ## Samplesheet format, trios
@@ -67,7 +67,7 @@ Example:
 
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
 
-Note: GENDER should be male/female, RELATION should be mater/index/pater and AFFECTED_STATUS should be normal/affected/unknown
+Note: GENDER should be either male/female, RELATION should be either mater/index/pater and AFFECTED_STATUS should be one of normal/affected/unknown
 
 ## Options and parameters:
     --help                  Show this help menu with available options
@@ -85,7 +85,7 @@ Note: GENDER should be male/female, RELATION should be mater/index/pater and AFF
 
 NOTE:
 If any of the parameters --skipVariants, --skipSV or --skipSTR is set, phasing of the data is disabled. 
-In the current version of the script, phasing requires the output of deepVariant, Sawfish and TRGT to phase the data properly. This may be changed in future versions to allow e.g. phasing based solely on deepvariant.
+In the current version of the script, HiPhase requires the output of DeepVariant, Sawfish and TRGT to phase the data properly. This may be changed in future versions to allow e.g. phasing based solely on DeepVariant.
 
 ## Execution plan
 The script can be run on a single compute node (local), or using KG Vejles SLURM cluster
@@ -108,7 +108,7 @@ The script is run locally by default, but can use the SLURM cluster by adding "-
 
 # Output
 
-Based on the options shown above, and the samplesheet used, output is either stored per sample (individual tools as subfolders for each sample), or grouped by tools and analysis (e.g. all deepVariant data for all samples stored in a single outputfolder).
+Based on the options shown above, and the samplesheet used, output is either stored per sample (individual tools as subfolders for each sample), or grouped by tools and analysis (e.g. all DeepVariant data for all samples stored in a single outputfolder).
 See infonet for further details.
 
 

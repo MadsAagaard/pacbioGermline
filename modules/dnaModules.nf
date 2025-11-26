@@ -19,7 +19,6 @@ Script start : $date2
 Genome FASTA : ${genome_fasta}
 Archive RAW  : ${dataArchive}
 OutputDir   : ${outputDir}
-test:       : ${params.pbmm2}
 """
 
 
