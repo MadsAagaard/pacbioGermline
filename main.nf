@@ -7,25 +7,22 @@ runID="${date}.${user}"
 
 //////////// DEFAULT INPUT ///////////////////////
 
-if (params.samplesheet) {
-    channel.fromPath(params.samplesheet)
-    | splitCsv(sep:'\t')
-    |map { row -> 
-            (caseID, samplename, sex) =tuple(row)
-            //(normalID) =row[1]
-        meta=[caseID:caseID,id:samplename,sex:sex]
-        meta
-        }
-    | set {samplesheet_full}
-    
-    samplesheet_full
-    |map {row -> meta2=[row.id,row]}
-    |set {samplesheet_join}
-
-    channel.fromPath(params.samplesheet)
-    |set {samplesheet_path_ch}
-    // samplesheet_join
+def inputError() {
+    log.info"""
+    USER INPUT ERROR: The user should point to a samplesheet (--samplesheet parameter) or input folder containing all data to be used as input (--input parameter).
+    """.stripIndent()
 }
+
+def hpoInputError() {
+    log.info"""
+    USER INPUT ERROR: A samplesheet (--samplesheet parameter) containing 5 columns (caseID, samplename, gender, relation and affection status) is required when usign --hpo.  
+    """.stripIndent()
+}
+
+if (!params.samplesheet && !params.input), exit 0, inputError() 
+if (!params.samplesheet && params.hpo), exit 0, hpoInputError() 
+
+
 
 if (params.hpo) {
     channel.fromPath(params.hpo)
@@ -73,17 +70,69 @@ if (params.aligned) {
 
 
 if (!params.aligned) {
-    if (params.noMerge) {
 
-        inputBam="${params.input}/*.bam"
+    if (params.input) {
+        if (!params.allReads){
+            inputBam="${params.input}/**/*.hifi_reads.*.bam"
+        }
+        if (params.allReads){
+            inputBam="${params.input}/**/*.bam"
+        }
+        }
+    
+    if (!params.input && params.samplesheet) {
+        if (!params.allReads){
+            inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
+        }
+        if (params.allReads){
+            inputBam="${params.dataArchive}/**/*.bam"
+        }
+        }
 
+    if (params.samplesheet && !params.oldSS) {
+            // newSS: 2 col samplesheet, caseID (eg date) and full samplename: NPN_material_testlist_gender.pacbioID.readset.barcode.bam
+        channel.fromPath(params.samplesheet)
+        | splitCsv(sep:'\t')
+        |map { row -> 
+                (caseID, samplenameFull) =tuple(row)
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+                //(normalID) =row[1]
+    //        meta=[caseID:caseID,id:samplename,sex:sex]
+            meta=[id:samplename,caseID:caseID, sex:gender, testlist:testlist]
+            meta
+            }
+        | set {samplesheet_full}
+
+    }
+
+    if (params.samplesheet && params.oldSS) {
+
+        channel.fromPath(params.samplesheet)
+            | splitCsv(sep:'\t')
+            |map { row -> 
+                (caseID, samplename, sex) =tuple(row)
+
+                meta=[caseID:caseID,id:samplename,sex:sex]
+                meta
+                }
+            | set {samplesheet_full}
+    }
+
+
+
+
+
+    if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
         |map {id,bam -> 
-                (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-                meta=[id:samplename,type:"singleRun"]
-                [meta,bam]        
+                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
+                (instrument,date,time)                      =pacbioID.tokenize("_")     
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+                meta=[id:samplename,gender:gender,rundate:date,testlistFile:testlist]
+                tuple(meta,bam)        
             }
+        |groupTuple(sort:true)
         |branch  {meta,bam -> 
             UNASSIGNED: (meta.id=~/UNASSIGNED/)
                         return [meta,bam]
@@ -93,86 +142,39 @@ if (!params.aligned) {
         | set {ubam_input }
     }
 
-    if (!params.noMerge) {
-        if (!params.allReads) {   
-            if (!params.samplesheet) {
-                inputBam="${params.input}/*.hifi_reads.*.bam"
-            }
-            if (params.samplesheet) {
-                //inputBam="${params.input}/**/hifi_reads/*.bam"
-                if (params.input) {
-                    inputBam="${params.input}/**/*.hifi_reads.*.bam"
-                }
-                if (!params.input) {
-                    inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
-                }
-            }
-        }
+    if (!params.samplesheet) {
+        Channel.fromPath(inputBam, followLinks: true)
+        |map { tuple(it.baseName,it) }
 
-        if (params.allReads) {   
-            if (!params.samplesheet) {
-                inputBam="${params.input}/*.bam"
+        |map {id,bam -> 
+                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
+                (instrument,date2,time)                      =pacbioID.tokenize("_")     
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+                meta=[id:samplename,caseID:date+"_"+testlist, gender:gender,rundate:date,testlist:testlist]
+                tuple(meta,bam)        
             }
-            if (params.samplesheet) {
-                //inputBam="${params.input}/**/hifi_reads/*.bam"
-                if (params.input) {
-                    inputBam="${params.input}/**/*.bam"
-                }
-                if (!params.input) {
-                    inputBam="${params.dataArchive}/**/*.bam"
-                }
-            }
-        }
 
-        if (params.simpleName) {
-    
-            Channel.fromPath(inputBam, followLinks: true)
-            |map { tuple(it.baseName,it) }
-            |map {id,bam -> 
-                    (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-                    (instrument,date,time)                  =pacbioID.tokenize("_")     
-                    //  meta=[sm:samplename,id:samplename+"_"+date, pbRun:pacbioID,barcode:barcode]
-                    //meta=[sm:samplename,id:samplename+"_"+date]
-                    meta=[id:samplename,gender:"NA"]
-                    tuple(meta,bam)        
-                }
-            |groupTuple(sort:true)
-            |branch  {meta,bam -> 
-                UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                            return [meta,bam]
-                samples: true
-                            return [meta,bam]
-            }
-            | set {ubam_input }
+        |groupTuple(sort:true)
+        |branch  {meta,bam -> 
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta,bam]
+            samples: true
+                        return [meta,bam]
         }
-        if (!params.simpleName) {
-    
-            Channel.fromPath(inputBam, followLinks: true)
-            |map { tuple(it.baseName,it) }
-            |map {id,bam -> 
-                    (samplenameNew,pacbioID,hifi,barcode)   =id.tokenize(".")
-                    (instrument,date,time)                  =pacbioID.tokenize("_")     
-                    (samplename,material,lrs,test,gender)   =samplenameNew.tokenize("_")
-                    meta=[id:samplename,gender:gender]
-                    tuple(meta,bam)        
-                }
-            |groupTuple(sort:true)
-            |branch  {meta,bam -> 
-                UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                            return [meta,bam]
-                samples: true
-                            return [meta,bam]
-            }
-            | set {ubam_input }
-        }
+        | set {ubam_input }
     }
-}
 
     ubam_input.samples
         | map { meta, bam -> tuple(meta.id,meta,bam) }
         | set {ubam_input_samples}    
 
+
     if (params.samplesheet) {
+
+        samplesheet_full
+        |map {row -> meta2=[row.id,row]}
+        |set {samplesheet_join}
+
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
         |set {finalUbamInput}
@@ -182,6 +184,7 @@ if (!params.aligned) {
         ubam_input.samples
         |set {finalUbamInput}
     }
+}
 
 
 

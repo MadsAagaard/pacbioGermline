@@ -137,7 +137,7 @@ process deepvariant{
 
     publishDir "${lrsStorage}/deepVariant/gvcf/", mode: 'copy', pattern: "*.deepVariant.g.vcf.*"    
    
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/gvcf/" : "${meta.id}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/gvcf/" : "${outputDir}/${meta.id}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
 
 
     input:
@@ -248,6 +248,8 @@ process hiPhase {
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
+
+    bcftools index -t ${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
