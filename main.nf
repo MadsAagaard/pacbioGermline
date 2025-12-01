@@ -19,8 +19,8 @@ def hpoInputError() {
     """.stripIndent()
 }
 
-if (!params.samplesheet && !params.input), exit 0, inputError() 
-if (!params.samplesheet && params.hpo), exit 0, hpoInputError() 
+if (!params.samplesheet && !params.input) exit 0, inputError() 
+if (!params.samplesheet && params.hpo) exit 0, hpoInputError() 
 
 
 
