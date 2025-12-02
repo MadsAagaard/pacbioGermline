@@ -87,7 +87,7 @@ NOTE:
 If any of the parameters --skipVariants, --skipSV or --skipSTR is set, phasing of the data is disabled. 
 In the current version of the script, HiPhase requires the output of DeepVariant, Sawfish and TRGT to phase the data properly. This may be changed in future versions to allow e.g. phasing based solely on DeepVariant.
 
-## Execution plan
+## Script executor - local or SLURM
 The script can be run on a single compute node (local), or using KG Vejles SLURM cluster
 The script is run locally by default, but can use the SLURM cluster by adding "-profile slurm" to the commandline. Note that the "-profile" is a built in function of Nextflow, i.e. it is set using a single "-" (-profile instead of --profile)
 
