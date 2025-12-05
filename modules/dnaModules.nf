@@ -18,7 +18,8 @@ RunID        : $runID
 Script start : $date2
 Genome FASTA : ${genome_fasta}
 Archive RAW  : ${dataArchive}
-OutputDir   : ${outputDir}
+OutputDir    : ${outputDir}
+sbind        : ${s_bind}
 """
 
 
@@ -712,6 +713,29 @@ process kivvi_d4z4{
     """
 }
 
+process kivvi05_d4z4{
+    tag "$meta.id"
+    label "medium"
+
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/kivviD4Z4_05/" : "${outputDir}/${meta.id}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
+
+
+    input:
+    tuple val(meta), val(data)
+   //  tuple val(meta), path(data)   
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.kivviD4Z4_05")
+    
+    script:
+    """
+    ${params.kivvi_dir2}/kivvi \
+    -r ${genome_fasta} \
+    --bam ${data.bam} \
+    -p ${meta.id}.${genome_version} \
+    -o ${meta.id}.${genome_version}.${readSet}.kivviD4Z4_05 \
+    d4z4
+    """
+}
 
 
 process paraphase {

@@ -19,6 +19,8 @@ def hpoInputError() {
     """.stripIndent()
 }
 
+
+
 if (!params.samplesheet && !params.input) exit 0, inputError() 
 if (!params.samplesheet && params.hpo) exit 0, hpoInputError() 
 
@@ -224,6 +226,7 @@ include {pbmm2_align;
         exo14_2508_exome;
         exo14_2508_genome;
         exo14_2508_SV;
+        kivvi05_d4z4;
         //collect_versions;
         } from "./modules/dnaModules.nf" 
 
@@ -240,7 +243,6 @@ puretargetPlotGenes=["SCA1_ATXN1",
                      "FXS_FMR1",
                      "FRDA_FXN",
                      "HD_HTT"]
-
 
 
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
@@ -486,6 +488,7 @@ workflow {
         if (params.genome=="hg38") {
             paraphase(phasedAll)
             kivvi_d4z4(phasedAll)
+            kivvi05_d4z4(phasedAll)
             starphase(phasedAll)
             svTopo(phasedAll)
             svdb_SawFish(phasedAll)
