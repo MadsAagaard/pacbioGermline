@@ -169,7 +169,7 @@ if (!params.aligned) {
 
     ubam_input.samples
         | map { meta, bam -> tuple(meta.id,meta,bam) }
-        |view
+        //|view
         | set {ubam_input_samples}    
 
 
