@@ -89,6 +89,9 @@ if (!params.aligned) {
         if (params.allReads){
             inputBam="${params.dataArchive}/**/*.bam"
         }
+        if (params.failedReads){
+            inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
+        }
         }
 
     if (params.samplesheet && !params.oldSS) {
