@@ -137,7 +137,6 @@ if (!params.aligned) {
                 meta=[caseID:caseID,id:samplename,sex:sex]
                 meta
                 }
-                |view
             | set {samplesheet_full}
   
 
@@ -190,7 +189,6 @@ if (!params.aligned) {
 
     ubam_input.samples
         | map { meta, bam -> tuple(meta.id,meta,bam) }
-        //|view
         | set {ubam_input_samples}    
 
 
@@ -202,7 +200,6 @@ if (!params.aligned) {
 
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
-        |view
         |set {finalUbamInput}
     }
 
