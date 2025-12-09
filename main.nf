@@ -200,6 +200,7 @@ if (!params.aligned) {
 
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
+
         |set {finalUbamInput}
     }
 
