@@ -105,27 +105,6 @@ if (!params.aligned) {
             }
         | set {samplesheet_full}
 
-    }
-
-    if (params.samplesheet && params.oldSS) {
-
-        channel.fromPath(params.samplesheet)
-            | splitCsv(sep:'\t')
-            |map { row -> 
-                (caseID, samplename, sex) =tuple(row)
-
-                meta=[caseID:caseID,id:samplename,sex:sex]
-                meta
-                }
-                |view
-            | set {samplesheet_full}
-    }
-
-
-
-
-
-    if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
         |map {id,bam -> 
@@ -143,6 +122,45 @@ if (!params.aligned) {
                         return [meta,bam]
         }
         | set {ubam_input }
+    }
+
+    if (params.samplesheet && params.oldSS) {
+
+        channel.fromPath(params.samplesheet)
+            | splitCsv(sep:'\t')
+            |map { row -> 
+                (caseID, samplename, sex) =tuple(row)
+
+                meta=[caseID:caseID,id:samplename,sex:sex]
+                meta
+                }
+                |view
+            | set {samplesheet_full}
+  
+
+            Channel.fromPath(inputBam, followLinks: true)
+            |map { tuple(it.baseName,it) }
+            |map {id,bam -> 
+                    (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
+                    (instrument,date,time)                  =pacbioID.tokenize("_")     
+                    //  meta=[sm:samplename,id:samplename+"_"+date, pbRun:pacbioID,barcode:barcode]
+                    //meta=[sm:samplename,id:samplename+"_"+date]
+                    meta=[id:samplename,gender:"NA"]
+                    tuple(meta,bam)        
+                }
+            |groupTuple(sort:true)
+            |branch  {meta,bam -> 
+                UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                            return [meta,bam]
+                samples: true
+                            return [meta,bam]
+            }
+            | set {ubam_input }
+        }
+
+
+    if (params.samplesheet) {
+
     }
 
     if (!params.samplesheet) {
@@ -181,6 +199,7 @@ if (!params.aligned) {
 
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
+        |view
         |set {finalUbamInput}
     }
 
