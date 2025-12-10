@@ -212,23 +212,23 @@ if (!params.aligned) {
             | set {samplesheet_full}
   
 
-            Channel.fromPath(inputBam, followLinks: true)
-            |map { tuple(it.baseName,it) }
-            |map {id,bam -> 
-                    (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-                    (instrument,date,time)                  =pacbioID.tokenize("_")     
-                    meta=[id:samplename,gender:"NA"]
-                    tuple(meta,bam)        
-                }
-            |groupTuple(sort:true)
-            |branch  {meta,bam -> 
-                UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                            return [meta,bam]
-                samples: true
-                            return [meta,bam]
+        Channel.fromPath(inputBam, followLinks: true)
+        |map { tuple(it.baseName,it) }
+        |map {id,bam -> 
+                (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
+                (instrument,date,time)                  =pacbioID.tokenize("_")     
+                meta=[id:samplename,gender:"NA"]
+                tuple(meta,bam)        
             }
-            | set {ubam_input }
+        |groupTuple(sort:true)
+        |branch  {meta,bam -> 
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta,bam]
+            samples: true
+                        return [meta,bam]
         }
+        | set {ubam_input }
+    }
 
 
     if (params.samplesheet) {
@@ -266,10 +266,12 @@ if (!params.aligned) {
 
         samplesheet_full
         |map {row -> meta2=[row.id,row]}
+        |view
         |set {samplesheet_join}
 
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
+        |view
         |set {finalUbamInput}
     }
 
