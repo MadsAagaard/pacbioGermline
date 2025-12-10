@@ -154,7 +154,7 @@ if (!params.aligned) {
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                meta=[id:samplename,gender:gender,rundate:date,testlistFile:testlist]
+                meta=[id:samplename,gender:gender]
                 tuple(meta,bam)        
             }
         |groupTuple(sort:true)
