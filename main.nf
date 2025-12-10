@@ -139,8 +139,8 @@ if (!params.aligned) {
         // new samplesheet - directly from metadata extracted from LabWare:
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
-        |map { row ->  def value = row[0]   
-             (rekv, npn,material,testlist,gender,proband,intRef) = value.tokenize("_")
+        |map { row ->
+             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
             meta
             }
