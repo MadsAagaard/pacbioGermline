@@ -297,7 +297,7 @@ process sawFish2{
 
     script:
     def exclude=params.genome=="hg38" ? "--cnv-excluded-regions ${cnv_exclude_sawfish}" : ""
-    def sex = (meta.sex=="male"||meta.sex=="M"||meta.gender=="M") ? "--expected-cn ${sawfishMaleExpectedCN}" : "--expected-cn ${sawfishFemaleExpectedCN}"
+    def sex = (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--expected-cn ${sawfishMaleExpectedCN}" : "--expected-cn ${sawfishFemaleExpectedCN}"
    
     """
     sawfish discover \
@@ -597,7 +597,7 @@ process trgt4_diseaseSTRs{
     tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
-    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.gender=="M") ? "--karyotype XY" : "--karyotype XX"
+    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
 
     """
     trgt genotype \
@@ -672,7 +672,7 @@ process trgt4_all {
     tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz.tbi"),emit: str4All_vcf
     
     script:
-    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.gender=="M")  ? "--karyotype XY" : "--karyotype XX"
+    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
     """
     trgt genotype \
     --genome ${genome_fasta} \
