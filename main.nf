@@ -266,7 +266,6 @@ if (!params.aligned) {
 
         samplesheet_full
         |map {row -> meta2=[row.id,row]}
-        |view
         |set {samplesheet_join}
 
         samplesheet_join.join(ubam_input_samples)
