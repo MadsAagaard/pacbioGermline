@@ -169,6 +169,7 @@ if (!params.aligned) {
 
     // intermediate naming scheme:
     if (params.samplesheet && !params.oldSS && params.intSS) {
+        /*
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row -> 
@@ -178,6 +179,16 @@ if (!params.aligned) {
             meta
             }
         | set {samplesheet_full}
+        */
+         channel.fromPath(params.samplesheet)
+            | splitCsv(sep:'\t')
+            |map { row -> 
+                (caseID, samplename, sex) =tuple(row)
+
+                meta=[caseID:caseID,id:samplename,sex:sex]
+                meta
+            }
+            | set {samplesheet_full}
 
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
@@ -185,7 +196,7 @@ if (!params.aligned) {
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                meta=[id:samplename,gender:gender,rundate:date,testlistFile:testlist]
+                meta=[id:samplename,genderFile:gender,testlistFile:testlist]
                 tuple(meta,bam)        
             }
         |groupTuple(sort:true)
