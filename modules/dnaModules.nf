@@ -1131,12 +1131,12 @@ process multiQC_ALL {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${launchDir}/${outputDir}/*/QC/ \
+    -f -q ${launchDir}/${outputDir}/* \
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
 
-
+"${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/QC/nanoStat/"}
 /////////////// TO DO /////////////////////
 /*
 process collect_versions {
