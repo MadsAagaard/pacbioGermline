@@ -158,7 +158,6 @@ if (!params.aligned) {
                 tuple(meta,bam)        
             }
         |groupTuple(sort:true)
-        |view
         |branch  {meta,bam -> 
             UNASSIGNED: (meta.id=~/UNASSIGNED/)
                         return [meta,bam]
