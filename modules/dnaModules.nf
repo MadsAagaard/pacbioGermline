@@ -1136,7 +1136,6 @@ process multiQC_ALL {
     """
 }
 
-"${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/QC/nanoStat/"}
 /////////////// TO DO /////////////////////
 /*
 process collect_versions {
