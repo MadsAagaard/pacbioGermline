@@ -1131,7 +1131,7 @@ process multiQC_ALL {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${launchDir}/${outputDir}/* \
+    -f -q ${launchDir}/${outputDir}/*/*/QC/ \
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
