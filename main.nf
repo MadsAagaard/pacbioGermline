@@ -147,7 +147,6 @@ if (!params.aligned) {
         | set {samplesheet_full}
 
 
-
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
         |map {id,bam -> 
@@ -242,11 +241,6 @@ if (!params.aligned) {
         | set {ubam_input }
     }
 
-
-    if (params.samplesheet) {
-
-    }
-
     if (!params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
@@ -275,7 +269,9 @@ if (!params.aligned) {
 
 
     if (params.samplesheet) {
-
+         channel.fromPath(params.samplesheet)
+         |set {samplesheet_path_ch}
+        
         samplesheet_full
         |map {row -> meta2=[row.id,row]}
         |set {samplesheet_join}
