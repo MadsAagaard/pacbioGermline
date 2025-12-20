@@ -1121,6 +1121,8 @@ process multiQC_ALL {
 
     publishDir "${outputDir}/", mode: 'copy'
 
+
+
     input:
     tuple val(meta),path(data)  
 
@@ -1128,14 +1130,16 @@ process multiQC_ALL {
     path ("${params.rundir}.MultiQC.ALL.html")
 
     script:
+    def qcdir = {params.groupedOutput ? "${launchDir}/${outputDir}/*/QC/" : "${launchDir}/${outputDir}/*/*/QC/"}
+    
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${launchDir}/${outputDir}/*/*/QC/ \
+    -f -q ${qcdir}/ \
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
-
+//    -f -q ${launchDir}/${outputDir}/*/*/QC/ \
 /////////////// TO DO /////////////////////
 /*
 process collect_versions {
