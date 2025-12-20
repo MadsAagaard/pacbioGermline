@@ -1131,11 +1131,11 @@ process multiQC_ALL {
 
     script:
     def qcdir = {params.groupedOutput ? "${launchDir}/${outputDir}/*/QC/" : "${launchDir}/${outputDir}/*/*/QC/"}
-
+    
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${qcdir} \
+    -f -q $qcdir \
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
