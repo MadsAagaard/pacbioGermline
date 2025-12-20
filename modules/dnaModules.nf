@@ -1129,8 +1129,12 @@ process multiQC_ALL {
     output:
     path ("${params.rundir}.MultiQC.ALL.html")
 
+ //   def exclude=params.genome=="hg38" ? "--cnv-excluded-regions ${cnv_exclude_sawfish}" : ""
+   // def sex = (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--expected-cn ${sawfishMaleExpectedCN}" : "--expected-cn ${sawfishFemaleExpectedCN}"
+
+
     script:
-    def qcdir = {params.groupedOutput ? "${launchDir}/${outputDir}/*/QC/" : "${launchDir}/${outputDir}/*/*/QC/"}
+    def qcdir = params.groupedOutput ? "${launchDir}/${outputDir}/*/QC/" : "${launchDir}/${outputDir}/*/*/QC/"}
     
     """
     multiqc \
