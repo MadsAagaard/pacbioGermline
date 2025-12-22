@@ -74,16 +74,19 @@ if (params.aligned) {
 if (!params.aligned) {
 
     if (params.input) {
-        if (!params.allReads){
+        if (!params.allReads && !params.failedReads){
             inputBam="${params.input}/**/*.hifi_reads.*.bam"
         }
         if (params.allReads){
             inputBam="${params.input}/**/*.bam"
         }
+        if (params.failedReads){
+            inputBam="${params.input}/**/*.fail_reads.*.bam"
         }
+    }
     
-    if (!params.input && params.samplesheet) {
-        if (!params.allReads){
+    if (!params.input) {
+        if (!params.allReads && !params.failedReads){
             inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
         }
         if (params.allReads){
@@ -92,21 +95,57 @@ if (!params.aligned) {
         if (params.failedReads){
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
-        }
+    }
 
-    if (params.samplesheet && !params.oldSS) {
-            // newSS: 2 col samplesheet, caseID (eg date) and full samplename: NPN_material_testlist_gender.pacbioID.readset.barcode.bam
+    /*
+        Different naming schemes during imnplementation
+
+        params.oldSS (initial setup during testing): 
+        - samplesheet contains 3 cols per default: caseid, npn, gender
+        - input files are named npn.runinfo.readset.barcode.bam
+
+        From 251107 to dec 2025:
+        params.intSS (intermediate samplesetup):
+        - samplesheet contains same 3 cols, or 5 cols for trio/family
+        - input files are named with more comprehensive sampleInfo:
+        Input file structure:
+        sampleInfo.runinfo.readset.barcode.bam, where sampleInfo contains:
+        npn_material_testlist_gender
+
+
+        From december 2025 (run 251205 and onwards):
+        default going forward, if params.oldSS or intSS not set:
+
+        - samplesheet extracted directly from run samplesheets:
+        Strucutre:
+        rekv_npn_material_testlist_gender_proband(T or F)_internalRef (number or noInfo)
+
+        Examples:
+        0000093123_113720841930_78_SL-NGC-SJAELDNE_K_F_noInfo
+        0000093645_113697182321_78_SL-NGC-NYRESVIGT_M_F_113632562421
+        0000093646_113697182186_78_SL-NGC-NYRESVIGT_K_F_113632562421
+        Input bam:
+        same as for intSS:
+        sampleInfo.runinfo.readset.barcode.bam, where sampleInfo contains:
+        npn_material_testlist_gender
+        Example:
+        113618066447_78_NGC-NEUROGENETIK_K.m84313_251205_131758_s1.hifi_reads.bc2049.bam
+    */
+   
+    // default from dec. 5th, 2025:
+
+    if (params.samplesheet && !params.oldSS && !params.intSS) {
+
+        // new samplesheet - directly from metadata extracted from LabWare:
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
-        |map { row -> 
-                (caseID, samplenameFull) =tuple(row)
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                //(normalID) =row[1]
-    //        meta=[caseID:caseID,id:samplename,sex:sex]
-            meta=[id:samplename,caseID:caseID, sex:gender, testlist:testlist]
+        |map { row ->
+             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
+            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
             meta
             }
         | set {samplesheet_full}
+
 
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
@@ -114,7 +153,8 @@ if (!params.aligned) {
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                meta=[id:samplename,gender:gender,rundate:date,testlistFile:testlist]
+               // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
+               meta=[id:samplename]
                 tuple(meta,bam)        
             }
         |groupTuple(sort:true)
@@ -127,7 +167,50 @@ if (!params.aligned) {
         | set {ubam_input }
     }
 
-    if (params.samplesheet && params.oldSS) {
+    // intermediate naming scheme:
+    if (params.samplesheet && !params.oldSS && params.intSS) {
+        /*
+        channel.fromPath(params.samplesheet)
+        | splitCsv(sep:'\t')
+        |map { row -> 
+                (caseID, samplenameFull) =tuple(row)
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+            meta=[id:samplename,caseID:caseID, sex:gender, testlist:testlist]
+            meta
+            }
+        | set {samplesheet_full}
+        */
+         channel.fromPath(params.samplesheet)
+            | splitCsv(sep:'\t')
+            |map { row -> 
+                (caseID, samplename, sex) =tuple(row)
+
+                meta=[caseID:caseID,id:samplename,sex:sex]
+                meta
+            }
+            | set {samplesheet_full}
+
+        Channel.fromPath(inputBam, followLinks: true)
+        |map { tuple(it.baseName,it) }
+        |map {id,bam -> 
+                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
+                (instrument,date,time)                      =pacbioID.tokenize("_")     
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+                meta=[id:samplename,genderFile:gender,testlistFile:testlist]
+                tuple(meta,bam)        
+            }
+        |groupTuple(sort:true)
+        |branch  {meta,bam -> 
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta,bam]
+            samples: true
+                        return [meta,bam]
+        }
+        | set {ubam_input }
+    }
+
+    // Old (initial) naming scheme:
+    if (params.samplesheet && params.oldSS && !params.intSS) {
 
         channel.fromPath(params.samplesheet)
             | splitCsv(sep:'\t')
@@ -140,29 +223,22 @@ if (!params.aligned) {
             | set {samplesheet_full}
   
 
-            Channel.fromPath(inputBam, followLinks: true)
-            |map { tuple(it.baseName,it) }
-            |map {id,bam -> 
-                    (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-                    (instrument,date,time)                  =pacbioID.tokenize("_")     
-                    //  meta=[sm:samplename,id:samplename+"_"+date, pbRun:pacbioID,barcode:barcode]
-                    //meta=[sm:samplename,id:samplename+"_"+date]
-                    meta=[id:samplename,gender:"NA"]
-                    tuple(meta,bam)        
-                }
-            |groupTuple(sort:true)
-            |branch  {meta,bam -> 
-                UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                            return [meta,bam]
-                samples: true
-                            return [meta,bam]
+        Channel.fromPath(inputBam, followLinks: true)
+        |map { tuple(it.baseName,it) }
+        |map {id,bam -> 
+                (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
+                (instrument,date,time)                  =pacbioID.tokenize("_")     
+                meta=[id:samplename,gender:"NA"]
+                tuple(meta,bam)        
             }
-            | set {ubam_input }
+        |groupTuple(sort:true)
+        |branch  {meta,bam -> 
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta,bam]
+            samples: true
+                        return [meta,bam]
         }
-
-
-    if (params.samplesheet) {
-
+        | set {ubam_input }
     }
 
     if (!params.samplesheet) {
@@ -193,14 +269,15 @@ if (!params.aligned) {
 
 
     if (params.samplesheet) {
-
+         channel.fromPath(params.samplesheet)
+         |set {samplesheet_path_ch}
+        
         samplesheet_full
         |map {row -> meta2=[row.id,row]}
         |set {samplesheet_join}
 
         samplesheet_join.join(ubam_input_samples)
         |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
-
         |set {finalUbamInput}
     }
 
@@ -391,175 +468,181 @@ workflow PHASED {
 
 //Channel.topic('versions') as versions_ch
 workflow {
-
-    if (!params.aligned) {
-
-        PREPROCESS(finalUbamInput)
-
-        PREPROCESS.out.aligned
-        | map {meta,bam,bai -> tuple(meta,[bam,bai])}
-        |set {alignedFinal}
+    if (params.test) {
+        finalUbamInput.view()
+        samplesheet_full.view()
     }
 
-    if (!params.skipQC) {
-        QC(alignedFinal)
-    }
-    
-    if (!params.skipVariants) {
-        VARIANTS(alignedFinal)
-        VARIANTS.out.dv_vcf     //meta, vcf, idx
-        | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-        |set {dv_vcf}
-        VARIANTS.out.dv_gvcf
-        | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-        |set {dv_gvcf}
-    }
+    if (!params.test) {
+        if (!params.aligned) {
 
-    if (!params.skipSV) {
-        STRUCTURALVARIANTS(alignedFinal)
-        STRUCTURALVARIANTS.out.sawfish_vcf //meta, vcf, idx
-        | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-        |set {sawfish_ch}
-    }
+            PREPROCESS(finalUbamInput)
 
-    if (!params.skipSTR) {
-        STR(alignedFinal)
-    }
+            PREPROCESS.out.aligned
+            | map {meta,bam,bai -> tuple(meta,[bam,bai])}
+            |set {alignedFinal}
+        }
 
-    if (!params.skipVariants && !params.skipSV && !params.skipSTR) {
-
-        STR.out.str4_vcf
-        | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-        | set {strchannel}
-
-        alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel) 
-        |set {hiphaseInput}
-
-        hiPhase(hiphaseInput)
+        if (!params.skipQC) {
+            QC(alignedFinal)
+        }
         
-        hiPhase.out.hiphase_bam
-        .join(hiPhase.out.hiphase_dv_vcf)
-        .join(hiPhase.out.hiphase_sawfish_vcf)
-        .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
-        | map {meta,bam,bai,dv_vcf,dv_idx,sv_vcf,sv_idx,sv_jsonReads -> 
-        tuple(meta,[bam:bam,bai:bai,dv_vcf:dv_vcf,dv_idx:dv_idx,sawfish_vcf:sv_vcf,sawfish_idx:sv_idx,sawfish_reads:sv_jsonReads])}
-        |set {phasedAll}    // use for val(data) instead of path(data) setup in modules 
+        if (!params.skipVariants) {
+            VARIANTS(alignedFinal)
+            VARIANTS.out.dv_vcf     //meta, vcf, idx
+            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
+            |set {dv_vcf}
+            VARIANTS.out.dv_gvcf
+            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
+            |set {dv_gvcf}
+        }
 
+        if (!params.skipSV) {
+            STRUCTURALVARIANTS(alignedFinal)
+            STRUCTURALVARIANTS.out.sawfish_vcf //meta, vcf, idx
+            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
+            |set {sawfish_ch}
+        }
 
+        if (!params.skipSTR) {
+            STR(alignedFinal)
+        }
 
+        if (!params.skipVariants && !params.skipSV && !params.skipSTR) {
 
-        if (params.jointCall) {
-            STRUCTURALVARIANTS.out.sawfish_discover_dir
-            | map {" --sample "+it}
-            |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
-            |map {it.text.trim()}
-            |set {sawfish_discover_bam_list_ch}
- 
-            STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
-            | map {meta, dir, bam ->
-                def dirPath = dir.toString()
-                def bamPath = bam.toString()
-                return [ meta.caseID, dirPath+", "+ bamPath ]
-             }
-            | collectFile(newLine: true) { item  ->
-                def caseID = item[0]
-                def line = item[1]
-                return [ "${caseID}.sawFishJoinCall.manifest.csv", line ]
-             }
-            | map { manifestFile -> 
-                def caseID = manifestFile.getName().tokenize(".")[0]
-                return tuple(caseID, [manifestFile])
-                }
-            | set { sawfish_jointCall_manifest_ch }
+            STR.out.str4_vcf
+            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
+            | set {strchannel}
 
+            alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel) 
+            |set {hiphaseInput}
 
-            manifestChannel =dv_gvcf
-             | map { meta, files ->
-                def vcfPath = files[0].toString()
-                return [ meta.caseID, "${vcfPath}" ]
-             }
-             | collectFile(newLine: true) { item ->
-                def caseID = item[0]
-                def line   = item[1]
-                return [ "${caseID}.manifest", line ]
-             }
+            hiPhase(hiphaseInput)
             
-             manifestChannel
-             | map { manifestFile -> manifestFile
-                def caseID = manifestFile.getName().tokenize(".")[0]
-                return tuple(caseID, [manifestFile])
-             }
-            | set { glnexus_manifest_ch }
+            hiPhase.out.hiphase_bam
+            .join(hiPhase.out.hiphase_dv_vcf)
+            .join(hiPhase.out.hiphase_sawfish_vcf)
+            .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
+            | map {meta,bam,bai,dv_vcf,dv_idx,sv_vcf,sv_idx,sv_jsonReads -> 
+            tuple(meta,[bam:bam,bai:bai,dv_vcf:dv_vcf,dv_idx:dv_idx,sawfish_vcf:sv_vcf,sawfish_idx:sv_idx,sawfish_reads:sv_jsonReads])}
+            |set {phasedAll}    // use for val(data) instead of path(data) setup in modules 
 
-            if (!params.groupedOutput) {           
-                sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
-                svdb_sawFish2_jointCall_all(sawFish2_jointCall_all.out.sv_jointCall_vcf)
+
+
+
+            if (params.jointCall) {
+                STRUCTURALVARIANTS.out.sawfish_discover_dir
+                | map {" --sample "+it}
+                |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
+                |map {it.text.trim()}
+                |set {sawfish_discover_bam_list_ch}
+    
+                STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
+                | map {meta, dir, bam ->
+                    def dirPath = dir.toString()
+                    def bamPath = bam.toString()
+                    return [ meta.caseID, dirPath+", "+ bamPath ]
+                }
+                | collectFile(newLine: true) { item  ->
+                    def caseID = item[0]
+                    def line = item[1]
+                    return [ "${caseID}.sawFishJoinCall.manifest.csv", line ]
+                }
+                | map { manifestFile -> 
+                    def caseID = manifestFile.getName().tokenize(".")[0]
+                    return tuple(caseID, [manifestFile])
+                    }
+                | set { sawfish_jointCall_manifest_ch }
+
+
+                manifestChannel =dv_gvcf
+                | map { meta, files ->
+                    def vcfPath = files[0].toString()
+                    return [ meta.caseID, "${vcfPath}" ]
+                }
+                | collectFile(newLine: true) { item ->
+                    def caseID = item[0]
+                    def line   = item[1]
+                    return [ "${caseID}.manifest", line ]
+                }
+                
+                manifestChannel
+                | map { manifestFile -> manifestFile
+                    def caseID = manifestFile.getName().tokenize(".")[0]
+                    return tuple(caseID, [manifestFile])
+                }
+                | set { glnexus_manifest_ch }
+
+                if (!params.groupedOutput) {           
+                    sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
+                    svdb_sawFish2_jointCall_all(sawFish2_jointCall_all.out.sv_jointCall_vcf)
+                }
+
+                glNexus_jointCall(glnexus_manifest_ch)
+                sawFish2_jointCall_caseID(sawfish_jointCall_manifest_ch)
+                svdb_sawFish2_jointCall_caseID(sawFish2_jointCall_caseID.out.sv_jointCall_caseID_vcf)
             }
 
-            glNexus_jointCall(glnexus_manifest_ch)
-            sawFish2_jointCall_caseID(sawfish_jointCall_manifest_ch)
-            svdb_sawFish2_jointCall_caseID(sawFish2_jointCall_caseID.out.sv_jointCall_caseID_vcf)
-        }
+            methylationBW(phasedAll)
+            methylationSegm(methylationBW.out)
+            cramino(phasedAll)
+            mitorsaw(phasedAll)
+            whatsHap_stats(phasedAll)
+            
+            if (params.genome=="hg38") {
+                paraphase(phasedAll)
+                kivvi_d4z4(phasedAll)
+                kivvi05_d4z4(phasedAll)
+                starphase(phasedAll)
+                svTopo(phasedAll)
+                svdb_SawFish(phasedAll)
+            }
 
-        methylationBW(phasedAll)
-        methylationSegm(methylationBW.out)
-        cramino(phasedAll)
-        mitorsaw(phasedAll)
-        whatsHap_stats(phasedAll)
-        
-        if (params.genome=="hg38") {
-            paraphase(phasedAll)
-            kivvi_d4z4(phasedAll)
-            kivvi05_d4z4(phasedAll)
-            starphase(phasedAll)
-            svTopo(phasedAll)
-            svdb_SawFish(phasedAll)
-        }
+            hiPhase.out.hiphase_bam
+            .join(svdb_SawFish.out.sawfishAF10)
+            .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
+            | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
+            tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
+            |set {phasedSawfishAF10}   
 
-        hiPhase.out.hiphase_bam
-        .join(svdb_SawFish.out.sawfishAF10)
-        .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
-        | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
-        tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
-        |set {phasedSawfishAF10}   
+            svTopo_filtered(phasedSawfishAF10)
 
-        svTopo_filtered(phasedSawfishAF10)
+            // trio specific analysis. 
+            //NB: Currently only works for single-family or single-trio analysis!
 
-        // trio specific analysis. 
-        //NB: Currently only works for single-family or single-trio analysis!
-
-        if (params.hpo && params.samplesheet && params.jointCall && params.groupedOutput) {
-           glNexus_jointCall.out.glnexus_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
-           |set {genomiser_ch}
-           glNexus_jointCall.out.glnexus_wes_roi_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
-           |set {exomiser_ch}
-           svdb_sawFish2_jointCall_caseID.out.sawfish_caseID_AF10.combine(hpo_ch).combine(samplesheet_path_ch)
-           |set {exomiserSV_ch}
-            //above structure: caseID, vcf, idx, hpoFile,samplesheet
-            exo14_2508_exome(exomiser_ch)
-            exo14_2508_genome(genomiser_ch)
-            exo14_2508_SV(exomiserSV_ch)
-        }
+            if (params.hpo && params.samplesheet && params.jointCall && params.groupedOutput) {
+            glNexus_jointCall.out.glnexus_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
+            |set {genomiser_ch}
+            glNexus_jointCall.out.glnexus_wes_roi_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
+            |set {exomiser_ch}
+            svdb_sawFish2_jointCall_caseID.out.sawfish_caseID_AF10.combine(hpo_ch).combine(samplesheet_path_ch)
+            |set {exomiserSV_ch}
+                //above structure: caseID, vcf, idx, hpoFile,samplesheet
+                exo14_2508_exome(exomiser_ch)
+                exo14_2508_genome(genomiser_ch)
+                exo14_2508_SV(exomiserSV_ch)
+            }
 
 
 
 
-        // input channel for multiQC
-        if (!params.skipQC) {
-            QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
-            | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
-            |set {multiqcSingleInput}   
-            multiQC(multiqcSingleInput)
+            // input channel for multiQC
+            if (!params.skipQC) {
+                QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
+                | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
+                |set {multiqcSingleInput}   
+                multiQC(multiqcSingleInput)
 
-            def allOutputs = Channel.empty()
-            allOutputs = allOutputs.mix(QC.out.mosdepth)    
-            allOutputs = allOutputs.mix(QC.out.nanoStat)          
-            allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
+                def allOutputs = Channel.empty()
+                allOutputs = allOutputs.mix(QC.out.mosdepth)    
+                allOutputs = allOutputs.mix(QC.out.nanoStat)          
+                allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
 
-            allOutputs
-            |groupTuple
-            |set {multiqcAllInput}
-            multiQC_ALL(multiqcAllInput)
+                allOutputs
+                |groupTuple
+                |set {multiqcAllInput}
+                multiQC_ALL(multiqcAllInput)
+            }
         }
     }
 }
