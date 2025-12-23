@@ -217,7 +217,7 @@ if (!params.aligned) {
                 return [meta, bams]
             }
         |set { ubam_ss_merged_size_split }
-    
+        ubam_ss_merged_size_split.drop.view()
     //write out dropped samples info
         ubam_ss_merged_size_split.drop
         |map { meta, bams ->
