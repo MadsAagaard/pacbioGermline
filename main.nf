@@ -133,8 +133,6 @@ if (!params.aligned) {
     */
    
     // default from dec. 5th, 2025:
-    def MIN_GB = params.min_gb ?: 30
-
 
     if (params.samplesheet && !params.oldSS && !params.intSS) {
         channel.fromPath(params.samplesheet)
