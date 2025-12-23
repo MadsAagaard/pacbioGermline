@@ -96,7 +96,7 @@ if (!params.aligned) {
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
     }
-
+}
     /*
         Different naming schemes during imnplementation
 
