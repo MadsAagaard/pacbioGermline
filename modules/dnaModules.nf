@@ -103,7 +103,7 @@ process inputFiles_symlinks_ubam{
     publishDir {params.groupedOutput ? \
     "${outputDir}/${meta.caseID}/documents/inputSymlinks/" : \
     "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/documents/inputSymlinks/"}, \
-     mode: 'symlink', pattern: '*.{bam,pbi}'
+     mode: 'link', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
@@ -119,7 +119,7 @@ process inputFiles_symlinks_ubam{
 process symlinks_ubam_dropped {
     label "low"
     
-    publishDir "${outputDir}/runInfo/ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir "${outputDir}/runInfo/ubam_symlinks/", mode: 'link', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
