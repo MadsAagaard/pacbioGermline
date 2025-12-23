@@ -20,6 +20,7 @@ Genome FASTA : ${genome_fasta}
 Archive RAW  : ${dataArchive}
 OutputDir    : ${outputDir}
 sbind        : ${s_bind}
+min input GB : $params.minGB
 """
 
 
@@ -39,6 +40,8 @@ process check_tmpdir {
 
 process write_input_summary {
     publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
@@ -50,10 +53,28 @@ process write_input_summary {
     (!params.intSS && ! params.oldSS)
     script:
     """
-    cat > ubam_size_summary.txt << 'EOF'
+    cat > ${params.rundir}.${readSet}.input.allSamples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
+
+process write_dropped_samples_summary {
+    publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    input:
+    val(summary_ch)
+
+    output:
+    path("*.txt")
+
+    when:
+    (!params.intSS && !params.oldSS)
+    script:
+    """
+    cat > ${params.rundir}.${readSet}.dropped.samples.summary.txt << 'EOF'
+    ${summary_ch}
+    """
+}
+
 
 
 process create_fofn {
