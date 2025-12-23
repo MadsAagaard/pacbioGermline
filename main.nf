@@ -135,60 +135,129 @@ if (!params.aligned) {
     // default from dec. 5th, 2025:
 
     if (params.samplesheet && !params.oldSS && !params.intSS) {
-
-        // new samplesheet - directly from metadata extracted from LabWare:
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row ->
-             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
+            (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
             meta
             }
         | set {samplesheet_full}
 
-
         Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
-        |map {id,bam -> 
-                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
-                (instrument,date,time)                      =pacbioID.tokenize("_")     
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-               // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
-               meta=[id:samplename]
-                tuple(meta,bam)        
+        | map { tuple(it.baseName, it) }
+            |map {id,bam -> 
+            (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
+            (instrument,date,time)                      =pacbioID.tokenize("_")     
+            (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+            // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
+            meta=[id:samplename]
+            tuple(meta,bam)        
             }
-        |groupTuple(sort:true)
-        |branch  {meta,bam -> 
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta,bam]
-            samples: true
-                        return [meta,bam]
+        | groupTuple(sort:true)   // now emits: (meta, [bam1,bam2,...])
+        | map { meta, bams ->
+            long totalBytes = (bams.sum { it.size() } as long)
+            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
+            def meta2 = meta + [
+                nBams       : bams.size(),
+                totalsizeGB : totalGB
+            ]
+            tuple(meta2, bams)
         }
-        | set {ubam_input }
+        | branch { meta, bams ->
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta, bams]
+            samples: true
+                        return [meta, bams]
+        }
+        |set { ubam_input_all }
+
+        ubam_input_all.samples
+            | map { meta, bam -> tuple(meta.id,meta,bam) }
+        |set {ubam_input_all_samples}    
+
+        samplesheet_full
+            |map {row -> meta2=[row.id,row]}
+        |set {samplesheet_join}
+
+        samplesheet_join.join(ubam_input_all_samples)
+            |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
+        |set {ubam_ss_merged} // full unfiltered set
+
+        //write info of full set to summary file:
+        ubam_ss_merged
+        .map { meta, bams ->
+            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+            "${meta.id}\tFiles: ${meta.nBams}\t${meta.readSet}\tTotalSize: ${gb} GB\tTestlist: ${meta.caseID}\n"
+        }
+        .collectFile(
+            name: "{params.rundir}.${readSet}.ubam_size_summary.tsv",
+            storeDir: "${outputDir}/runInfo/",
+            sort: true
+        )
+
+       ubam_ss_merged
+        .map { meta, bams ->
+            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+            "${meta.id}\t${meta.nBams}\t${meta.readsetScript}\t${gb}\t${meta.caseID}"
+        }
+        .collect()
+        | map { lines ->
+            def header  = "sample\tbamcount\treadSet\ttotal_gb\ttestlist"
+            ([header] + lines).join("\n")
+        }
+        |set {ubam_size_summary_ch}
+
+        //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
+        ubam_ss_merged
+            |branch { meta, bams ->
+            keep:   (meta.totalsizeGB as double) >= 40.0
+                return [meta, bams]
+            drop:   true
+                return [meta, bams]
+            }
+        |set { ubam_ss_merged_size_split }
+    
+    //write out dropped samples info
+        ubam_ss_merged_size_split.drop
+        |map { meta, bams ->
+            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+            "dropping\t${meta.id}\t(Totalsize: ${gb} GB)\t${meta.caseID}\n"
+            }
+        .collectFile(
+            name: "{params.rundir}.${readSet}.dropped_samples.txt",
+            storeDir: "${outputDir}/runInfo/",
+            sort: true
+        )
+
+
+        ubam_ss_merged_size_split.keep
+        |map { meta, bams ->
+            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+            "Analyzing\t${meta.id}\t(Totalsize: ${gb} GB)\t${meta.caseID}\n"
+            }
+        .collectFile(
+            name: "{params.rundir}.${readSet}.analyzed_samples.txt",
+            storeDir: "${outputDir}/runInfo/",
+            sort: true
+        )
+
+        ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
+            |set {finalUbamInput}
     }
+
 
     // intermediate naming scheme:
     if (params.samplesheet && !params.oldSS && params.intSS) {
-        /*
+
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row -> 
-                (caseID, samplenameFull) =tuple(row)
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-            meta=[id:samplename,caseID:caseID, sex:gender, testlist:testlist]
+            (caseID, samplename, sex) =tuple(row)
+            meta=[caseID:caseID,id:samplename,sex:sex]
             meta
-            }
+        }
         | set {samplesheet_full}
-        */
-         channel.fromPath(params.samplesheet)
-            | splitCsv(sep:'\t')
-            |map { row -> 
-                (caseID, samplename, sex) =tuple(row)
-
-                meta=[caseID:caseID,id:samplename,sex:sex]
-                meta
-            }
-            | set {samplesheet_full}
 
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
@@ -200,11 +269,20 @@ if (!params.aligned) {
                 tuple(meta,bam)        
             }
         |groupTuple(sort:true)
+        | map { meta, bams ->
+            long totalBytes = (bams.sum { it.size() } as long)
+            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
+            def meta2 = meta + [
+                nBams       : bams.size(),
+                totalsizeGB : totalGB
+            ]
+            tuple(meta2, bams)
+        }
         |branch  {meta,bam -> 
             UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta,bam]
+                return [meta,bam]
             samples: true
-                        return [meta,bam]
+                return [meta,bam]
         }
         | set {ubam_input }
     }
@@ -213,30 +291,37 @@ if (!params.aligned) {
     if (params.samplesheet && params.oldSS && !params.intSS) {
 
         channel.fromPath(params.samplesheet)
-            | splitCsv(sep:'\t')
-            |map { row -> 
-                (caseID, samplename, sex) =tuple(row)
-
-                meta=[caseID:caseID,id:samplename,sex:sex]
-                meta
-                }
-            | set {samplesheet_full}
+        | splitCsv(sep:'\t')
+        |map { row -> 
+            (caseID, samplename, sex) =tuple(row)
+            meta=[caseID:caseID,id:samplename,sex:sex]
+            meta
+            }
+        | set {samplesheet_full}
   
-
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
         |map {id,bam -> 
-                (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-                (instrument,date,time)                  =pacbioID.tokenize("_")     
-                meta=[id:samplename,gender:"NA"]
-                tuple(meta,bam)        
+            (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
+            (instrument,date,time)                  =pacbioID.tokenize("_")     
+            meta=[id:samplename,gender:"NA"]
+            tuple(meta,bam)        
             }
         |groupTuple(sort:true)
+        | map { meta, bams ->
+            long totalBytes = (bams.sum { it.size() } as long)
+            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
+            def meta2 = meta + [
+                nBams       : bams.size(),
+                totalsizeGB : totalGB
+            ]
+            tuple(meta2, bams)
+        }
         |branch  {meta,bam -> 
             UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta,bam]
+                return [meta,bam]
             samples: true
-                        return [meta,bam]
+                return [meta,bam]
         }
         | set {ubam_input }
     }
@@ -254,6 +339,15 @@ if (!params.aligned) {
             }
 
         |groupTuple(sort:true)
+        | map { meta, bams ->
+            long totalBytes = (bams.sum { it.size() } as long)
+            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
+            def meta2 = meta + [
+                nBams       : bams.size(),
+                totalsizeGB : totalGB
+            ]
+            tuple(meta2, bams)
+        }
         |branch  {meta,bam -> 
             UNASSIGNED: (meta.id=~/UNASSIGNED/)
                         return [meta,bam]
@@ -263,14 +357,13 @@ if (!params.aligned) {
         | set {ubam_input }
     }
 
-    ubam_input.samples
-        | map { meta, bam -> tuple(meta.id,meta,bam) }
+
+
+    if (params.samplesheet && (params.intSS || params.oldSS)) {
+
+        ubam_input.samples
+            | map { meta, bam -> tuple(meta.id,meta,bam) }
         | set {ubam_input_samples}    
-
-
-    if (params.samplesheet) {
-         channel.fromPath(params.samplesheet)
-         |set {samplesheet_path_ch}
         
         samplesheet_full
         |map {row -> meta2=[row.id,row]}
@@ -285,9 +378,12 @@ if (!params.aligned) {
         ubam_input.samples
         |set {finalUbamInput}
     }
+
+     if (params.samplesheet) {
+        channel.fromPath(params.samplesheet)
+        |set {samplesheet_path_ch}
+    }
 }
-
-
 
 /////////////////// MODULES ///////////////////////
 include {pbmm2_align;
@@ -326,6 +422,7 @@ include {pbmm2_align;
         exo14_2508_genome;
         exo14_2508_SV;
         kivvi05_d4z4;
+        write_input_summary;
         //collect_versions;
         } from "./modules/dnaModules.nf" 
 
@@ -475,7 +572,7 @@ workflow {
 
     if (!params.test) {
         if (!params.aligned) {
-
+            write_input_summary(ubam_size_summary_ch)
             PREPROCESS(finalUbamInput)
 
             PREPROCESS.out.aligned
@@ -648,3 +745,48 @@ workflow {
 }
 
 
+
+
+/*
+
+251223 working - backup:
+
+
+
+
+
+
+    if (params.samplesheet && !params.oldSS && !params.intSS) {
+
+        // new samplesheet - directly from metadata extracted from LabWare:
+        channel.fromPath(params.samplesheet)
+        | splitCsv(sep:'\t')
+        |map { row ->
+             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
+            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
+            meta
+            }
+        | set {samplesheet_full}
+
+
+        Channel.fromPath(inputBam, followLinks: true)
+        |map { tuple(it.baseName,it) }
+        |map {id,bam -> 
+                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
+                (instrument,date,time)                      =pacbioID.tokenize("_")     
+                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
+               // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
+               meta=[id:samplename]
+                tuple(meta,bam)        
+            }
+        |groupTuple(sort:true)
+        |branch  {meta,bam -> 
+            UNASSIGNED: (meta.id=~/UNASSIGNED/)
+                        return [meta,bam]
+            samples: true
+                        return [meta,bam]
+        }
+        | set {ubam_input }
+    }
+
+*/

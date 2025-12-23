@@ -37,6 +37,25 @@ process check_tmpdir {
     """
 }
 
+process write_input_summary {
+    publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    input:
+    val(summary_ch)
+
+    output:
+    path("*.txt")
+
+
+    when:
+    (!params.intSS && ! params.oldSS)
+    script:
+    """
+    cat > ubam_size_summary.txt << 'EOF'
+    ${summary_ch}
+    """
+}
+
+
 process create_fofn {
     label "low"
     
