@@ -119,7 +119,7 @@ process inputFiles_symlinks_ubam{
 process symlinks_ubam_dropped {
     label "low"
     
-    publishDir "${outputDir}/runInfo/ubam_symlinks/", mode: 'link', pattern: '*.{bam,pbi}'
+    publishDir "${outputDir}/runInfo/dropped_samples_ubam_symlinks/", mode: 'link', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
