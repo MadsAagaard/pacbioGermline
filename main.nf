@@ -221,6 +221,7 @@ if (!params.aligned) {
 
     //write out dropped samples info
         ubam_ss_merged_size_split.drop
+        |view
         |map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
             "${meta.id}\t${meta.nBams}\t${meta.readSet}\t${gb}\t${meta.caseID}"
@@ -576,7 +577,7 @@ workflow {
     if (!params.test) {
         if (!params.aligned) {
             write_input_summary(ubam_size_summary_ch)
-            write_dropped_samples_summary(ubam_size_dropped_ch)
+            //write_dropped_samples_summary(ubam_size_dropped_ch)
             PREPROCESS(finalUbamInput)
 
             PREPROCESS.out.aligned
