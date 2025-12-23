@@ -220,16 +220,14 @@ if (!params.aligned) {
         |set { ubam_ss_merged_size_split }
 
     //write out dropped samples info
-        
-
         ubam_ss_merged_size_split.drop
         |map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${gb}\t${meta.caseID}"
-            }
+            "${meta.id}\t${meta.nBams}\t${meta.readSet}\t${gb}\t${meta.caseID}"
+        }
         .collect()
         | map { lines ->
-            def header  ="sample\tbamcount\treadSet\t${meta.readSet}\ttotal_gb\ttestlist"
+            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
             ([header] + lines).join("\n")
         |set {ubam_size_dropped_ch}
 
