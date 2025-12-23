@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
-
+import java.util.Locale
 date=new Date().format( 'yyMMdd' )
 user="$USER"
 runID="${date}.${user}"
