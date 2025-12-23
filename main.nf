@@ -212,7 +212,7 @@ if (!params.aligned) {
         //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
         ubam_ss_merged
             |branch { meta, bams ->
-            keep:   (meta.totalsizeGB as double) >= $params.minGB
+            keep:   (meta.totalsizeGB as double) >= 30
                 return [meta, bams]
             drop:   true
                 return [meta, bams]
