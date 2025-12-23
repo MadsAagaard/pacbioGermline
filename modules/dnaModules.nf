@@ -41,7 +41,7 @@ process check_tmpdir {
 process write_input_summary {
     publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
     
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/documents/"}, mode: 'copy', pattern: "*.txt"
+    //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
