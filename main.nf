@@ -229,6 +229,7 @@ if (!params.aligned) {
         | map { lines ->
             def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
             ([header] + lines).join("\n")
+            |view
         |set {ubam_size_dropped_ch}
 
 /*
