@@ -231,7 +231,7 @@ if (!params.aligned) {
             storeDir: "${outputDir}/runInfo/",
             sort: true
         )
-*/
+
 
         ubam_ss_merged_size_split.keep
         |map { meta, bams ->
@@ -243,7 +243,7 @@ if (!params.aligned) {
             storeDir: "${outputDir}/runInfo/",
             sort: true
         )
-
+*/
         ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
             |set {finalUbamInput}
     }
