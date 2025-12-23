@@ -96,7 +96,7 @@ if (!params.aligned) {
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
     }
-}
+
     /*
         Different naming schemes during imnplementation
 
@@ -185,18 +185,7 @@ if (!params.aligned) {
         |set {ubam_ss_merged} // full unfiltered set
 
         //write info of full set to summary file:
-        /*
-        ubam_ss_merged
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\tFiles: ${meta.nBams}\t${meta.readSet}\tTotalSize: ${gb} GB\tTestlist: ${meta.caseID}\n"
-        }
-        .collectFile(
-            name: "${params.rundir}.${readSet}.ubam_size_summary.tsv",
-            storeDir: "${outputDir}/runInfo/",
-            sort: true
-        )
-        */
+ 
        ubam_ss_merged
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
@@ -212,14 +201,14 @@ if (!params.aligned) {
         //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
         ubam_ss_merged
             |branch { meta, bams ->
-            keep:   (meta.totalsizeGB as double) >= 30
-                return [meta, bams]
-            drop:   true
-                return [meta, bams]
+                keep:   (meta.totalsizeGB as double) >= 30
+                    return [meta, bams]
+                drop:   true
+                    return [meta, bams]
             }
         |set { ubam_ss_merged_size_split }
 
-    //write out dropped samples info
+        //write out dropped samples info
         ubam_ss_merged_size_split.drop
         |view
         |map { meta, bams ->
@@ -230,25 +219,13 @@ if (!params.aligned) {
         | map { lines ->
             def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
             ([header] + lines).join("\n")
-            |view
+        }
         |set {ubam_size_dropped_ch}
 
-/*
-        ubam_ss_merged_size_split.keep
-        |map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "Analyzing\t${meta.id}\t(Totalsize: ${gb} GB)\t${meta.caseID}\n"
-            }
-        .collectFile(
-            name: "{params.rundir}.${readSet}.analyzed_samples.txt",
-            storeDir: "${outputDir}/runInfo/",
-            sort: true
-        )
-*/
         ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
             |set {finalUbamInput}
+           
     }
-
 
     // intermediate naming scheme:
     if (params.samplesheet && !params.oldSS && params.intSS) {
@@ -577,7 +554,7 @@ workflow {
     if (!params.test) {
         if (!params.aligned) {
             write_input_summary(ubam_size_summary_ch)
-            //write_dropped_samples_summary(ubam_size_dropped_ch)
+            write_dropped_samples_summary(ubam_size_dropped_ch)
             PREPROCESS(finalUbamInput)
 
             PREPROCESS.out.aligned
