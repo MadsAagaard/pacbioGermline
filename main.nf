@@ -219,6 +219,8 @@ if (!params.aligned) {
         |set { ubam_ss_merged_size_split }
         ubam_ss_merged_size_split.drop.view()
     //write out dropped samples info
+        
+        /*
         ubam_ss_merged_size_split.drop
         |map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
@@ -229,7 +231,7 @@ if (!params.aligned) {
             storeDir: "${outputDir}/runInfo/",
             sort: true
         )
-
+*/
 
         ubam_ss_merged_size_split.keep
         |map { meta, bams ->
