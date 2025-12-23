@@ -98,6 +98,8 @@ if (!params.aligned) {
     }
 
     /*
+        Update 251223: "oldSS" option discontinued - use older version of script instead. 
+
         Different naming schemes during imnplementation
 
         params.oldSS (initial setup during testing): 
@@ -134,7 +136,7 @@ if (!params.aligned) {
    
     // default from dec. 5th, 2025:
 
-    if (params.samplesheet && !params.oldSS && !params.intSS) {
+    if (params.samplesheet && !params.intSS) {
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row ->
@@ -227,7 +229,7 @@ if (!params.aligned) {
     }
 
     // intermediate naming scheme:
-    if (params.samplesheet && !params.oldSS && params.intSS) {
+    if (params.samplesheet && params.intSS) {
 
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
@@ -266,44 +268,8 @@ if (!params.aligned) {
         | set {ubam_input }
     }
 
-    // Old (initial) naming scheme:
-    if (params.samplesheet && params.oldSS && !params.intSS) {
 
-        channel.fromPath(params.samplesheet)
-        | splitCsv(sep:'\t')
-        |map { row -> 
-            (caseID, samplename, sex) =tuple(row)
-            meta=[caseID:caseID,id:samplename,sex:sex]
-            meta
-            }
-        | set {samplesheet_full}
-  
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
-        |map {id,bam -> 
-            (samplename,pacbioID,hifi,barcode)      =id.tokenize(".")
-            (instrument,date,time)                  =pacbioID.tokenize("_")     
-            meta=[id:samplename,gender:"NA"]
-            tuple(meta,bam)        
-            }
-        |groupTuple(sort:true)
-        | map { meta, bams ->
-            long totalBytes = (bams.sum { it.size() } as long)
-            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
-            def meta2 = meta + [
-                nBams       : bams.size(),
-                totalsizeGB : totalGB
-            ]
-            tuple(meta2, bams)
-        }
-        |branch  {meta,bam -> 
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                return [meta,bam]
-            samples: true
-                return [meta,bam]
-        }
-        | set {ubam_input }
-    }
+
 
     if (!params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
@@ -338,7 +304,7 @@ if (!params.aligned) {
 
 
 
-    if (params.samplesheet && (params.intSS || params.oldSS)) {
+    if (params.samplesheet && params.intSS) {
 
         ubam_input.samples
             | map { meta, bam -> tuple(meta.id,meta,bam) }
@@ -403,6 +369,7 @@ include {pbmm2_align;
         kivvi05_d4z4;
         write_input_summary;
         write_dropped_samples_summary;
+        symlinks_ubam_dropped;
         //collect_versions;
         } from "./modules/dnaModules.nf" 
 
@@ -554,6 +521,7 @@ workflow {
         if (!params.aligned) {
             write_input_summary(ubam_size_summary_ch)
             write_dropped_samples_summary(ubam_size_dropped_ch)
+            symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
             PREPROCESS(finalUbamInput)
 
             PREPROCESS.out.aligned

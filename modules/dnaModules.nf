@@ -50,7 +50,7 @@ process write_input_summary {
 
 
     when:
-    (!params.intSS && ! params.oldSS)
+    !params.intSS
     script:
     """
     cat > ${params.rundir}.${readSet}.input.allSamples.summary.txt << 'EOF'
@@ -67,7 +67,7 @@ process write_dropped_samples_summary {
     path("*.txt")
 
     when:
-    (!params.intSS && !params.oldSS)
+    !params.intSS
     script:
     """
     cat > ${params.rundir}.${readSet}.dropped.samples.summary.txt << 'EOF'
@@ -104,6 +104,22 @@ process inputFiles_symlinks_ubam{
     "${outputDir}/${meta.caseID}/documents/inputSymlinks/" : \
     "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}/documents/inputSymlinks/"}, \
      mode: 'symlink', pattern: '*.{bam,pbi}'
+
+    input:
+    tuple val(meta), path(data)   
+
+    output:
+    tuple val(meta), path(data)
+ 
+    script:
+    """
+    """
+
+}
+process symlinks_ubam_dropped {
+    label "low"
+    
+    publishDir "${outputDir}/runInfo/ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
