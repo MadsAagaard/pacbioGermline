@@ -141,7 +141,8 @@ if (!params.aligned) {
         | splitCsv(sep:'\t')
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
+            def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
+            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey]
             meta
             }
         | set {samplesheet_full}
