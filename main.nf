@@ -137,6 +137,8 @@ if (!params.aligned) {
     // default from dec. 5th, 2025:
 
     if (params.samplesheet && !params.intSS) {
+        
+        
         def ssBase = params.samplesheet
                     .toString()
                     .tokenize('/')

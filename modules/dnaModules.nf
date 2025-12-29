@@ -52,7 +52,7 @@ process write_input_summary {
     !params.intSS
     script:
     """
-    cat > ${date}.${ssBase}.${readSet}.input.allSamples.summary.txt << 'EOF'
+    cat > ${ssBase}.${readSet}.input.allSamples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -70,7 +70,7 @@ process write_dropped_samples_summary {
     !params.intSS
     script:
     """
-    cat > ${date}.${ssBase}.${readSet}.dropped.samples.summary.txt << 'EOF'
+    cat > ${ssBase}.${readSet}.dropped.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
