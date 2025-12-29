@@ -60,6 +60,7 @@ process write_input_summary {
 
 process write_dropped_samples_summary {
     publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    publishDir "/lnx01_data2/shared/patients/pacbioLRS/documents/dropped_samples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
