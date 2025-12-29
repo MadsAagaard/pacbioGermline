@@ -40,7 +40,8 @@ process check_tmpdir {
 
 process write_input_summary {
     publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
-    
+    publishDir "${lrsDocuments}/run_summaries/", mode: 'copy', pattern: "*.txt"
+
     //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
@@ -53,14 +54,14 @@ process write_input_summary {
     !params.intSS
     script:
     """
-    cat > ${params.rundir}.${readSet}.input.allSamples.summary.txt << 'EOF'
+    cat > ${date}.${ssBase}.${readSet}.input.allSamples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
 
 process write_dropped_samples_summary {
     publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
-    publishDir "/lnx01_data2/shared/patients/pacbioLRS/documents/dropped_samples/", mode: 'copy', pattern: "*.txt"
+    publishDir "${lrsDocuments}/dropped_samples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
@@ -71,7 +72,7 @@ process write_dropped_samples_summary {
     !params.intSS
     script:
     """
-    cat > ${params.rundir}.${readSet}.dropped.samples.summary.txt << 'EOF'
+    cat > ${date}.${ssBase}.${readSet}.dropped.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
