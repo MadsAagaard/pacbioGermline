@@ -137,12 +137,19 @@ if (!params.aligned) {
     // default from dec. 5th, 2025:
 
     if (params.samplesheet && !params.intSS) {
+        def ssBase = params.samplesheet
+                    .toString()
+                    .tokenize('/')
+                    .last()
+                    .replaceFirst(/_metadata$/, '')
+
+
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey]
+            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,ssBase:ssBase]
             meta
             }
         | set {samplesheet_full}
