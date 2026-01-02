@@ -102,7 +102,7 @@ process inputFiles_symlinks_ubam{
     publishDir {params.groupedOutput ? \
     "${outputDir}/${meta.caseID}/documents/inputSymlinks/" : \
     "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/inputSymlinks/"}, \
-     mode: 'link', pattern: '*.{bam,pbi}'
+     mode: 'symlink', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
