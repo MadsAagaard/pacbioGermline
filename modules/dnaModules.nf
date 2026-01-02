@@ -58,7 +58,7 @@ process write_input_summary {
 }
 
 process write_dropped_samples_summary {
-    publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDir}/runInfo/${date}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/dropped_samples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
