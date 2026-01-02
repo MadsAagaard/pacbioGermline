@@ -335,7 +335,7 @@ process sawFish2{
     label "high"
     conda "${params.sawfish2}"
 
-    publishDir "${lrsStorage}/structuralVariants/2025/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
+    publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
 
 
@@ -389,7 +389,7 @@ process svdb_SawFish {
     label "low"
     conda "${params.svdb}"
 
-    publishDir "${lrsStorage}/structuralVariants/2025/sawfish/svdb/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
+    publishDir "${lrsStorage}/structuralVariants/sawfish/svdb/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/vcfs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
