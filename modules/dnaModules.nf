@@ -37,7 +37,7 @@ process check_tmpdir {
 }
 
 process write_input_summary {
-    publishDir "${outputDir}/runInfo/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDir}/runInfo/${date}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/run_summaries/", mode: 'copy', pattern: "*.txt"
 
     //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/"}, mode: 'copy', pattern: "*.txt"
