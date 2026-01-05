@@ -522,12 +522,15 @@ workflow PHASED {
 
 //Channel.topic('versions') as versions_ch
 workflow {
-    if (params.test) {
-        finalUbamInput.view()
-        samplesheet_full.view()
+    if (params.test ||params.summary) {
+        //finalUbamInput.view()
+        //samplesheet_full.view()
+        write_input_summary(ubam_size_summary_ch)
+        write_dropped_samples_summary(ubam_size_dropped_ch)
+        symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
     }
 
-    if (!params.test) {
+    if (!params.test&&!params.summary) {
         if (!params.aligned) {
             write_input_summary(ubam_size_summary_ch)
             write_dropped_samples_summary(ubam_size_dropped_ch)
