@@ -47,9 +47,6 @@ process write_input_summary {
     output:
     path("*.txt")
 
-
-    when:
-    !params.intSS
     script:
     """
     cat > ${ssBase}.${readSet}.input.allSamples.summary.txt << 'EOF'
@@ -66,8 +63,6 @@ process write_dropped_samples_summary {
     output:
     path("*.txt")
 
-    when:
-    !params.intSS
     script:
     """
     cat > ${ssBase}.${readSet}.dropped.samples.summary.txt << 'EOF'
