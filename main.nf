@@ -700,7 +700,9 @@ workflow {
                 allOutputs
                 |groupTuple
                 |set {multiqcAllInput}
-                multiQC_ALL(multiqcAllInput)
+                if (params.groupedOutput) {
+                    multiQC_ALL(multiqcAllInput)
+                }
             }
         }
     }

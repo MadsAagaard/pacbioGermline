@@ -1164,10 +1164,11 @@ process multiQC {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/ \
+    -f -q ${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/ \
     -n ${meta.id}.MultiQC.DNA.html
     """
 }
+//    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/ \
 
 
 process multiQC_ALL {
@@ -1176,7 +1177,8 @@ process multiQC_ALL {
 
     publishDir "${outputDir}/", mode: 'copy'
 
-
+    when:
+    params.groupedOutput
 
     input:
     tuple val(meta),path(data)  
