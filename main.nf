@@ -252,7 +252,6 @@ if (!params.aligned) {
         |set {samplesheet_path_ch}
     }
 
-
     if (!params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
@@ -290,15 +289,6 @@ if (!params.aligned) {
 }
 
 
-
-
-
-
-
-     if (params.samplesheet) {
-
-    }
-}
 
 /////////////////// MODULES ///////////////////////
 include {pbmm2_align;
