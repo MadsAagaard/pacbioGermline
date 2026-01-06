@@ -245,6 +245,18 @@ if (!params.aligned) {
         }
         |set {ubam_size_dropped_ch}
 
+        ubam_ss_merged_size_split.keep 
+        .map { meta, bams ->
+            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+            "${meta.id}\t${meta.nBams}\t${readSet}\t${gb}\t${meta.caseID}"
+        }
+        .collect()
+        | map { lines ->
+            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
+            ([header] + lines).join("\n")
+        }
+        |set {ubam_size_keep_ch}
+
         ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
         |set {finalUbamInput}
         
@@ -330,6 +342,7 @@ include {pbmm2_align;
         write_input_summary;
         write_dropped_samples_summary;
         symlinks_ubam_dropped;
+        write_analyzed_samples_summary;
         //collect_versions;
         } from "./modules/dnaModules.nf" 
 
@@ -476,6 +489,7 @@ workflow {
         finalUbamInput.view()
         samplesheet_full.view()
         write_input_summary(ubam_size_summary_ch)
+        write_analyzed_samples_summary(ubam_size_keep_ch)
         write_dropped_samples_summary(ubam_size_dropped_ch)
         symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
     }
