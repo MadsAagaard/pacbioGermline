@@ -256,7 +256,7 @@ if (!params.aligned) {
             ([header] + lines).join("\n")
         }
         |set {ubam_size_keep_ch}
-ubam_size_keep_ch.view()
+
         ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
         |set {finalUbamInput}
         
@@ -497,6 +497,7 @@ workflow {
     if (!params.test && !params.summary) {
         if (!params.aligned) {
             write_input_summary(ubam_size_summary_ch)
+            write_analyzed_samples_summary(ubam_size_keep_ch)
             write_dropped_samples_summary(ubam_size_dropped_ch)
             symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
             PREPROCESS(finalUbamInput)
