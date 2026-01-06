@@ -256,7 +256,7 @@ if (!params.aligned) {
             ([header] + lines).join("\n")
         }
         |set {ubam_size_keep_ch}
-
+ubam_size_keep_ch.view()
         ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
         |set {finalUbamInput}
         
