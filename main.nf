@@ -372,20 +372,18 @@ workflow PREPROCESS {
     inputFiles_symlinks_ubam(finalUbamInput)
     create_fofn(finalUbamInput)
     pbmm2_align_mergedData(create_fofn.out)
-    
+/*    
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
         extractHifi(pbmm2_align_mergedData.out.bamAll)
     }
-
+*/
     emit:
     alignedAll=pbmm2_align_mergedData.out.bamAll
     //alignedHifi=extractHifi.out.bamHifi
-  
-    if (!params.failedReads && !params.allReads && !params.hifiReads) { 
-    alignedHifi=extractHifi.out.bamHifi
-    }
+
     
 }
+alignedHifi=extractHifi.out.bamHifi
 
 workflow VARIANTS {
 
@@ -501,7 +499,8 @@ workflow {
             PREPROCESS(finalUbamInput)
             
             if (!params.failedReads && !params.allReads && !params.hifiReads) {
-                PREPROCESS.out.alignedHifi.join(PREPROCESS.out.alignedAll)
+                extractHifi(PREPROCESS.out.alignedAll)
+                extractHifi.out.alignedHifi.join(PREPROCESS.out.alignedAll)
                 | map {meta,bamHifi,baiHifi,bamAll,baiAll ->
                 tuple(meta, [mainBamFile:bamHifi, mainBaiFile:baiHifi, bamAll:bamAll, baiAll:baiAll])}
                 |set {alignedFinal}
