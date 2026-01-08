@@ -552,9 +552,6 @@ workflow {
             tuple(meta,[bam:bam,bai:bai,dv_vcf:dv_vcf,dv_idx:dv_idx,sawfish_vcf:sv_vcf,sawfish_idx:sv_idx,sawfish_reads:sv_jsonReads])}
             |set {phasedAll}    // use for val(data) instead of path(data) setup in modules 
 
-
-
-
             if (params.jointCall) {
                 STRUCTURALVARIANTS.out.sawfish_discover_dir
                 | map {" --sample "+it}
