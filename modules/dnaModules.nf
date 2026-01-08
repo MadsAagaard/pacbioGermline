@@ -200,7 +200,7 @@ process extractHifi {
     conda "${params.pbtk}"
 
     input:
-    tuple val(meta), path(data)
+    tuple val(meta), path(bam),path(bai)
 
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged*bai"),  emit: alignedHifi
@@ -209,7 +209,7 @@ process extractHifi {
     """
     extracthifi \
     -j ${task.cpus} \
-    ${data[0]} \
+    ${bam} \
     ${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam
     """
 

@@ -500,7 +500,7 @@ workflow {
             write_dropped_samples_summary(ubam_size_dropped_ch)
             symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
             PREPROCESS(finalUbamInput)
-            
+
             if (!params.failedReads && !params.allReads && !params.hifiReads) {
                 extractHifi(PREPROCESS.out.alignedAll)
                 extractHifi.out.alignedHifi.join(PREPROCESS.out.alignedAll)
