@@ -74,25 +74,19 @@ if (params.aligned) {
 if (!params.aligned) {
 
     if (params.input) {
-        if (!params.allReads && !params.failedReads){
+        if (params.hifiReads && !params.failedReads){
             inputBam="${params.input}/**/*.hifi_reads.*.bam"
         }
-        if (params.allReads){
-            inputBam="${params.input}/**/*.bam"
-        }
-        if (params.failedReads){
+        if (params.failedReads && !params.hifiReads){
             inputBam="${params.input}/**/*.fail_reads.*.bam"
         }
     }
     
     if (!params.input) {
-        if (!params.allReads && !params.failedReads){
+        if (params.hifiReads && !params.failedReads){
             inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
         }
-        if (params.allReads){
-            inputBam="${params.dataArchive}/**/*.bam"
-        }
-        if (params.failedReads){
+        if (params.failedReads && !params.hifiReads){
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
     }
@@ -306,6 +300,7 @@ if (!params.aligned) {
 include {pbmm2_align;
         create_fofn;
         pbmm2_align_mergedData;
+        extractHifi;
         inputFiles_symlinks_ubam;
         sawFish2;
         svdb_SawFish;
@@ -371,28 +366,24 @@ workflow PREPROCESS {
     main:
 
     inputFiles_symlinks_ubam(finalUbamInput)
-    if (params.noMerge) {
-        pbmm2_align(finalUbamInput)
-        
-        pbmm2_align.out.bam
-        |set {alignedTMP}
-    }
-    if (!params.noMerge) {
-        create_fofn(finalUbamInput)
-        pbmm2_align_mergedData(create_fofn.out)
-        pbmm2_align_mergedData.out.bam
-        |set {alignedTMP}
+    create_fofn(finalUbamInput)
+    pbmm2_align_mergedData(create_fofn.out)
+    
+    if (!params.failedReads && !params.allReads && !params.hifiReads) {
+        extractHifi(pbmm2_align_mergedData.out.bamAll)
     }
 
     emit:
-    aligned=alignedTMP
-    
+    alignedAll=pbmm2_align_mergedData.out.bamAll
+    if (!params.failedReads && !params.allReads && !params.hifiReads) { 
+    alignedHifi=extractHifi.out.bamHifi
+    }
 }
 
 workflow VARIANTS {
 
     take:
-    aligned     //tuple(meta,[bam,bai])
+    aligned    
     main:
     deepvariant(aligned)
 
@@ -501,10 +492,19 @@ workflow {
             write_dropped_samples_summary(ubam_size_dropped_ch)
             symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
             PREPROCESS(finalUbamInput)
-
-            PREPROCESS.out.aligned
-            | map {meta,bam,bai -> tuple(meta,[bam,bai])}
-            |set {alignedFinal}
+            
+            if (!params.failedReads && !params.allReads && !params.hifiReads) {
+                PREPROCESS.out.alignedHifi.join(PREPROCESS.out.alignedAll)
+                | map {meta,bamHifi,baiHifi,bamAll,baiAll ->
+                tuple(meta,[mainBamFile:bamHifi,mainBaiFile:baiHifi,bamAll:bamAll,baiAll:baiAll])}
+                |set {alignedFinal}
+            }
+            if (params.allReads || params.hifiReads || params.failedReads) {
+                PREPROCESS.out.alignedAll
+                | map {meta,bamAll,baiAll ->
+                tuple(meta,[mainBamFile:bamAll,mainBaiFile:baiAll])}
+                |set {alignedFinal}
+            }
         }
 
         if (!params.skipQC) {
@@ -538,7 +538,8 @@ workflow {
             | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
             | set {strchannel}
 
-            alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel) 
+            alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel)
+            | map {meta,bamdata,dvvcf,dv} 
             |set {hiphaseInput}
 
             hiPhase(hiphaseInput)

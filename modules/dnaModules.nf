@@ -12,15 +12,16 @@ log.info """\
 ======================================================
 Clinical Genetics Vejle: PacBio LRS v2
 ======================================================
-Genome       : $params.genome
-Read set     : $readSet
-RunID        : $runID
-Script start : $date2
-Genome FASTA : ${genome_fasta}
-Archive RAW  : ${dataArchive}
-OutputDir    : ${outputDir}
-sbind        : ${s_bind}
-min input GB : $params.minGB
+Genome        : $params.genome
+Input Readset : $inputReadSet
+read Subset   : $readSubset
+RunID         : $runID
+Script start  : $date2
+Genome FASTA  : ${genome_fasta}
+Archive RAW   : ${dataArchive}
+OutputDir     : ${outputDir}
+sbind         : ${s_bind}
+min input GB  : $params.minGB
 """
 
 
@@ -40,7 +41,7 @@ process write_input_summary {
     publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/allSamples/", mode: 'copy', pattern: "*.txt"
 
-    //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, mode: 'copy', pattern: "*.txt"
+    //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
@@ -49,7 +50,7 @@ process write_input_summary {
 
     script:
     """
-    cat > ${ssBase}.${readSet}.input.allSamples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet}.input.allSamples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -65,7 +66,7 @@ process write_dropped_samples_summary {
 
     script:
     """
-    cat > ${ssBase}.${readSet}.dropped.samples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet}.dropped.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -81,7 +82,7 @@ process write_analyzed_samples_summary {
 
     script:
     """
-    cat > ${ssBase}.${readSet}.analyzed.samples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet}.analyzed.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -92,7 +93,7 @@ process create_fofn {
     
     publishDir {params.groupedOutput ? \
     "${outputDir}/${meta.caseID}/documents/" : \
-    "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, \
+    "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/"}, \
     mode: 'copy',pattern: '*.fofn'
 
     cpus 4
@@ -112,7 +113,7 @@ process inputFiles_symlinks_ubam{
     
     publishDir {params.groupedOutput ? \
     "${outputDir}/${meta.caseID}/documents/inputSymlinks/" : \
-    "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/inputSymlinks/"}, \
+    "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/documents/inputSymlinks/"}, \
      mode: 'symlink', pattern: '*.{bam,pbi}'
 
     input:
@@ -151,7 +152,7 @@ process pbmm2_align {
     tuple val(meta), path(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.pbmm2.bam"), path("${meta.id}.${genome_version}.${readSet}.pbmm2*bai"),  emit: bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2*bai"),  emit: bam
  
     script:
     """
@@ -163,7 +164,7 @@ process pbmm2_align {
     --sample ${meta.id} \
     ${genome_mmi} \
     ${data[0]} \
-    ${meta.id}.${genome_version}.${readSet}.pbmm2.bam
+    ${meta.id}.${genome_version}.${inputReadSet}.pbmm2.bam
     """
 }
 
@@ -176,7 +177,7 @@ process pbmm2_align_mergedData {
     tuple val(meta), path(fofn)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSet}.pbmm2.merged*bai"),  emit: bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged*bai"),  emit: bamAll
 
 
     script:
@@ -189,10 +190,30 @@ process pbmm2_align_mergedData {
     --sample ${meta.id} \
     ${genome_mmi} \
     ${fofn} \
-    ${meta.id}.${genome_version}.${readSet}.pbmm2.merged.bam
+    ${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged.bam
     """
 }
 
+process extractHifi {
+    label "high"
+    tag "$meta.id"
+    conda "${params.pbtk}"
+
+    input:
+    tuple val(meta), path(data)
+
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset}.pbmm2.merged*bai"),  emit: bamHifi
+
+    script:
+    """
+    extracthifi \
+    -j ${task.cpus} \
+    ${data[0]} \
+    ${meta.id}.${genome_version}.${readSubset}.pbmm2.merged.bam
+    """
+
+}
 
 ////////////////////////////////////////////
 /////// ------- SMALL VARIANTS ------- /////
@@ -204,24 +225,24 @@ process deepvariant{
 
     publishDir "${lrsStorage}/deepVariant/gvcf/", mode: 'copy', pattern: "*.deepVariant.g.vcf.*"    
    
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/gvcf/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/gvcf/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
 
 
     input:
-    tuple val(meta), path(data)
+    tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
     //path("${meta.id}.deepvariant.vcf_stats_report.txt")
     """
     singularity run -B ${s_bind} ${simgpath}/deepvariant190.sif /opt/deepvariant/bin/run_deepvariant \
     --model_type=PACBIO \
     --ref=${genome_fasta} \
-    --reads=${data[0]} \
-    --output_vcf=${meta.id}.${genome_version}.${readSet}.deepVariant.vcf.gz \
-    --output_gvcf=${meta.id}.${genome_version}.${readSet}.deepVariant.g.vcf.gz \
+    --reads=${data.mainBamFile} \
+    --output_vcf=${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz \
+    --output_gvcf=${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz \
     --num_shards=${task.cpus}
     """    
 }
@@ -239,9 +260,9 @@ process glNexus_jointCall {
     tuple val(caseID), path(manifest)
 
     output:
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.vcf.gz"), path("${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz"), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
     tuple val(caseID), path("${manifest}")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
     
     script:
     """
@@ -250,11 +271,11 @@ process glNexus_jointCall {
     --threads ${task.cpus} \
     --list ${manifest} > ${caseID}.glnexus.bcf
 
-    bcftools view -Oz -o ${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.vcf.gz ${caseID}.glnexus.bcf
-    bcftools index -t ${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.vcf.gz
+    bcftools view -Oz -o ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz ${caseID}.glnexus.bcf
+    bcftools index -t ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz
 
-    bcftools view -R ${ROI} ${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.WES_ROI.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSet}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools view -R ${ROI} ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools index -t ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz
 
     """
 }
@@ -271,11 +292,11 @@ process hiPhase {
     label "intermediate"
     conda "${params.hiphase}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/"}, mode: 'copy', pattern: "*.hiphase.ba*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/alignments/"}, mode: 'copy', pattern: "*.hiphase.ba*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
     
     publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.hiphase.ba*"
     publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.hiphase.cra*"
@@ -283,53 +304,70 @@ process hiPhase {
 
 
     input:
-    tuple val(meta), path(aln), path(vcf), path(sv), path(str)
+    tuple val(meta), val(data), path(vcf), path(sv), path(str)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSet}.hiphase.bam.bai"), emit: hiphase_bam                                                
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.bam.bai"),  emit: hiphase_bam                 
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSet}.hiphase.cram.crai"), emit: hiphase_cram       
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.cram.crai"), emit: hiphase_cram       
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
 
-    //topic channel:
-   // tuple(val(task.process), eval('hiphase --version |head -n1 ||true')),emit:versions_ch,topic:'versions'
+    if (!params.failedReads && !params.allReads && !params.hifiReads) {
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
+    }
 
     script:
+    def bamArgs 
+    if (params.allReads || params.hifiReads|| params.failedReads) {
+        bamArgs="""
+        --bam ${data.mainBamFile}
+        --output-bam ${meta.id}.${genome_version}.${readSubset}.hiphase.bam
+        """.stripIndent()
+    }
+    else  {
+        bamArgs="""
+        --bam ${data.mainBamFile}
+        --output-bam ${meta.id}.${genome_version}.${readSubset}.hiphase.bam
+        --bam ${data.bamAll}
+        --output-bam ${meta.id}.${genome_version}.${InputReadSet}.hiphase.bam 
+        """.stripIndent()
+    }
+
+
     """
     hiphase \
-    --bam ${aln[0]} \
-    --output-bam ${meta.id}.${genome_version}.${readSet}.hiphase.bam \
+    $bamArgs \
     --vcf ${vcf[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz \
     --vcf ${sv[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSet}.hiphase.sawfish.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz \
     --vcf ${str[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSet}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
-    -V  ${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.vcf.gz \
+    -V  ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz \
     -L ${ROI} \
-    -O  ${meta.id}.${genome_version}.${readSet}.hiphase.deepvariant.WES_ROI.vcf.gz
+    -O  ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz
 
     samtools view \
     -T ${genome_fasta} \
     -C \
-    -o ${meta.id}.${genome_version}.${readSet}.hiphase.cram  ${meta.id}.${genome_version}.${readSet}.hiphase.bam 
+    -o ${meta.id}.${genome_version}.${readSubset}.hiphase.cram  ${meta.id}.${genome_version}.${readSubset}.hiphase.bam 
 
-    samtools index ${meta.id}.${genome_version}.${readSet}.hiphase.cram
+    samtools index ${meta.id}.${genome_version}.${readSubset}.hiphase.cram
 
 
     """
@@ -347,14 +385,14 @@ process sawFish2{
     conda "${params.sawfish2}"
 
     publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
 
 
     input:
-    tuple val(meta), path(data)
+    tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path(data), path("*.sawfishSV.*")
+    tuple val(meta),  path("*.sawfishSV.*") //path(data),
     tuple val(meta), path("*.sawfishSV.vcf.gz"),path("*.sawfishSV.vcf.gz.tbi"),emit: sv_vcf
     path("${meta.id}.sawfishDiscover"), emit: sv_discover_dir
     tuple val(meta), path("${meta.id}.sawfishDiscover"), path("${data[0]}"), emit: sv_discover_dir2
@@ -369,7 +407,7 @@ process sawFish2{
     sawfish discover \
     --threads ${task.cpus} \
     --ref ${genome_fasta} \
-    --bam ${data[0]} \
+    --bam ${data.bamHifi} \
     $exclude \
     $sex \
     --output-dir ${meta.id}.sawfishDiscover 
@@ -380,17 +418,17 @@ process sawFish2{
     --sample ${meta.id}.sawfishDiscover \
     --output-dir ${meta.id}.sawfishSV 
     
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.${readSet}.sawfishSV.vcf.gz
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.${readSubset}.sawfishSV.vcf.gz
 
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.${readSet}.sawfishSV.vcf.gz.tbi
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.${readSubset}.sawfishSV.vcf.gz.tbi
 
-    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.${readSet}.sawfishSV.supporting_reads.json.gz
+    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.${readSubset}.sawfishSV.supporting_reads.json.gz
 
-    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.${readSet}.sawfishSV.gc_bias_corrected_depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.${readSubset}.sawfishSV.gc_bias_corrected_depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSet}.sawfishSV.depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSubset}.sawfishSV.depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSet}.sawfishSV.copynum.bedgraph
+    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSubset}.sawfishSV.copynum.bedgraph
     """
 }
 
@@ -402,7 +440,7 @@ process svdb_SawFish {
 
     publishDir "${lrsStorage}/structuralVariants/sawfish/svdb/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/vcfs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/vcfs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
 
 
@@ -411,20 +449,20 @@ process svdb_SawFish {
     
     output:
     tuple val(meta), path("*.sawfishSV.hiphase.svdb.*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
     script:
     """
     svdb --query \
     --query_vcf ${data.sawfish_vcf} \
-    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.vcf
+    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf
     
-    bgzip ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.vcf
+    bgzip ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf
     
-    bcftools index -t ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSet}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
     """
 }
@@ -448,9 +486,9 @@ process sawFish2_jointCall_all{
     ${x} \
     --output-dir ${params.rundir}.sawfishSV_jointCall 
     
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.vcf.gz
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz
 
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -474,12 +512,12 @@ process svdb_sawFish2_jointCall_all {
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
+    bgzip ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${params.rundir}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -505,9 +543,9 @@ process sawFish2_jointCall_caseID{
     --sample-csv ${manifest} \
     --output-dir ${caseID}.sawfishSV_jointCall 
     
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.vcf.gz
+    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz
 
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -526,17 +564,17 @@ process svdb_sawFish2_jointCall_caseID {
     
     output:
     path("*_jointCall.svdb.*")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
     script:
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
+    bgzip ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSet}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -545,7 +583,7 @@ process svTopo {
     label "high"
     conda "${params.svtopo}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/SVtopo/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/SVtopo/"}, mode: 'copy'
 
 
     input:
@@ -580,7 +618,7 @@ process svTopo_filtered {
     label "high"
     conda "${params.svtopo}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo_filtered/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/SVtopo_filtered/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo_filtered/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/SVtopo_filtered/"}, mode: 'copy'
 
 
     input:
@@ -621,7 +659,7 @@ process mitorsaw {
     label "medium"
     conda "${params.mitorsaw}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/mitochondrialVariants/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/mitochondrialVariants/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/mitochondrialVariants/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/specialAnalysis/mitochondrialVariants/"}, mode: 'copy'
 
 
 
@@ -636,8 +674,8 @@ process mitorsaw {
     mitorsaw haplotype \
     --reference ${genome_fasta} \
     --bam ${data.bam} \
-    --output-vcf ${meta.id}.${genome_version}.${readSet}.mitorsaw.vcf.gz \
-    --output-hap-stats ${meta.id}.${genome_version}.${readSet}.mitorsaw.hapstats.json 
+    --output-vcf ${meta.id}.${genome_version}.${readSubset}.mitorsaw.vcf.gz \
+    --output-hap-stats ${meta.id}.${genome_version}.${readSubset}.mitorsaw.hapstats.json 
 
     """
 }
@@ -648,33 +686,49 @@ process trgt4_diseaseSTRs{
     label "low"
     conda "${params.trgt4}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
 
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
     input:
-    tuple val(meta), path(data)
+    tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
     
     tuple val(meta),path ("*.sorted.*")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
+    
+    def readsInput
+    
+    if (params.hifiReads ) {
+        readsInput="""
+        --reads ${data.mainBamFile}"
+        --output-prefix ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive
+        """.stripIndent()
+    }
 
+
+    = params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}" 
+    
+    
+    
+    
+    
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
-    --reads ${data[0]} \
+    $readsInput \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive
+    --output-prefix ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz
 
     samtools sort -o ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.spanning.bam
     samtools index ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam
@@ -686,7 +740,7 @@ process trgt4_diseaseSTRs_plots{
     label "low"
     conda "${params.trgt4}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/Plots/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/Plots/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
 
     input:
     tuple val(meta), val(data)
@@ -724,9 +778,9 @@ process trgt4_all {
     label "high"
     conda "${params.trgt4}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/allSTRs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/allSTRs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
 
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/all/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
@@ -739,11 +793,13 @@ process trgt4_all {
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
+    def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
+    
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_all} \
-    --reads ${data[0]} \
+    $readsInput \
     $karyotype \
     --output-prefix ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR
 
@@ -759,7 +815,7 @@ process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/Kivvi_D4Z4/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/Kivvi_D4Z4/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/Kivvi_D4Z4/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/Kivvi_D4Z4/"}, mode: 'copy'
 
 
     input:
@@ -769,6 +825,7 @@ process kivvi_d4z4{
     tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.kivviD4Z4")
     
     script:
+
     """
     ${params.kivvi_dir}/kivvi \
     -r ${genome_fasta} \
@@ -783,7 +840,7 @@ process kivvi05_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/kivviD4Z4_05/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/kivviD4Z4_05/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
 
 
     input:
@@ -803,14 +860,13 @@ process kivvi05_d4z4{
     """
 }
 
-
 process paraphase {
 
     tag "$meta.id"
     label "medium"
     conda "${params.paraphaseMinimap2}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/paraphase/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/paraphase/"},mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/paraphase/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/specialAnalysis/paraphase/"},mode: 'copy'
 
 
 
@@ -846,7 +902,7 @@ process starphase {
     label "medium"
     conda "${params.starphase}"
     
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/starphase/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/starphase/"},mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/starphase/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/specialAnalysis/starphase/"},mode: 'copy'
 
 
     input:
@@ -875,7 +931,7 @@ process advntr {
     errorStrategy 'ignore'
     tag "$meta.id"
     cpus 8
-    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/advntr/", mode: 'copy', pattern: "*.advntr.*"
+    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/advntr/", mode: 'copy', pattern: "*.advntr.*"
 
     conda "${params.advntr15}"
 
@@ -1007,7 +1063,7 @@ process methylationBW{
     label "medium"
     conda "${params.pbCPGtools}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/BigWigBed/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/methylation/BigWigBed/"}, mode: 'copy', pattern: "*.methylation.{hap1,hap2,combined}.*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/BigWigBed/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/specialAnalysis/methylation/BigWigBed/"}, mode: 'copy', pattern: "*.methylation.{hap1,hap2,combined}.*"
 
     publishDir "${lrsStorage}/methylation/pbCpGtools/${meta.id}/", mode: 'copy', pattern:"*.bed.*"
 
@@ -1030,7 +1086,7 @@ process methylationSegm{
     label "medium"
     conda "${params.methbat}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/methylation/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/specialAnalysis/methylation/"}, mode: 'copy'
 
     publishDir "${lrsStorage}/methylation/methBatProfiles/", mode: 'copy', pattern:"*.profile"
 
@@ -1069,10 +1125,10 @@ process mosdepthROI {
     label "low"
     conda "${params.mosdepth}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/mosdepth/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/mosdepth/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/mosdepth/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/mosdepth/"}, mode: 'copy'
 
     input: 
-    tuple val(meta), path(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
+    tuple val(meta), val(data)  
 
     output:
     tuple val(meta), path("${meta.id}.${genome_version}_roi.*"),emit: mosdepth_roi
@@ -1084,7 +1140,7 @@ process mosdepthROI {
     -t ${task.cpus} \
     $callable \
     ${meta.id}.${genome_version}_roi \
-    ${data[0]}
+    ${data.mainBamFile}
 
     """
 }
@@ -1095,7 +1151,7 @@ process whatsHap_stats {
     label "low"
     conda "${params.whatshap}" 
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/whatsHap/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/whatsHap/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/whatsHap/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/whatsHap/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data)  
@@ -1115,7 +1171,7 @@ process cramino {
     label "low"
     conda "${params.cramino}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/cramino/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/cramino/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/cramino/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/cramino/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
@@ -1138,10 +1194,10 @@ process nanoStat {
     label "low"
     conda "${params.nanostats}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/nanoStat/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/nanoStat/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/nanoStat/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/nanoStat/"}, mode: 'copy'
 
     input: 
-    tuple val(meta), path(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
+    tuple val(meta), val(data) 
 
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.nanostat.txt"),emit: multiqc
@@ -1151,7 +1207,7 @@ process nanoStat {
     NanoStat \
     -t ${task.cpus} \
     -n ${meta.id}.${genome_version}.${readSet}.nanostat.txt \
-    --bam ${data[0]}
+    --bam ${data.mainBamFile}
     """
 }
 
@@ -1160,7 +1216,7 @@ process multiQC {
     label "low"
     conda "${params.multiqc}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/"}, mode: 'copy'
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/"}, mode: 'copy'
 
     when:
     !params.groupedOutput
@@ -1175,11 +1231,11 @@ process multiQC {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
+    -f -q ${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/ \
     -n ${meta.id}.MultiQC.DNA.html
     """
 }
-//    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
+//    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/QC/ \
 
 
 process multiQC_ALL {
@@ -1305,7 +1361,7 @@ process hifiasm {
     errorStrategy 'ignore'
     tag "$meta.id"
     cpus 8
-    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.advntr.*"
+    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.advntr.*"
 
     conda "${params.hifiasm}"
 
@@ -1333,7 +1389,7 @@ process asm_to_fasta {
     errorStrategy 'ignore'
     tag "$meta.id"
     cpus 4
-    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.fasta"
+    publishDir "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.fasta"
 
 
 
