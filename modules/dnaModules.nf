@@ -694,46 +694,41 @@ process trgt4_diseaseSTRs{
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
     
     tuple val(meta),path ("*.sorted.*")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
     
-
     def bamArgs 
     if (params.allReads || params.hifiReads|| params.failedReads) {
         bamArgs="""
         --reads ${data.mainBamFile}
-        --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive
         """.stripIndent()
     }
     else  {
         bamArgs="""
-        --bam ${data.bamAll}
-        --output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam
+        --reads ${data.bamAll}
         """.stripIndent()
     }
- 
- 
-    def readsInput
-  
+
+
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
     $bamArgs \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive
+    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.spanning.bam
+    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam
     """
 }
 
@@ -749,6 +744,8 @@ process trgt4_diseaseSTRs_plots{
     
     output:
     tuple val(meta), path("*.{pdf,png,svg}")
+
+
     script:
 
     """
@@ -759,7 +756,7 @@ process trgt4_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id ${data.strID} \
     --squished \
-    -o ${meta.id}.${genome_version}.${readSet}.${data.strID}.allele.pdf
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.allele.pdf
 
     trgt plot \
     --genome ${genome_fasta} \
@@ -768,7 +765,7 @@ process trgt4_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id ${data.strID} \
     --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${readSet}.${data.strID}.waterfall.pdf
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
 
     """
 }
@@ -790,26 +787,26 @@ process trgt4_all {
     tuple val(meta), path(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.bam"), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.bam.bai"),emit: str_spanning_bam
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz.tbi"),emit: str4All_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam.bai"),emit: str_spanning_bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz.tbi"),emit: str4All_vcf
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
     def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
-    
+
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_all} \
     $readsInput \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR
+    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.bam ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${readSet}.trgt4.allSTR.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.spanning.bam
+    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam
     """
 }
 
@@ -824,7 +821,7 @@ process kivvi_d4z4{
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.kivviD4Z4")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4")
     
     script:
 
@@ -833,7 +830,7 @@ process kivvi_d4z4{
     -r ${genome_fasta} \
     --bam ${data.bam} \
     -p ${meta.id}.${genome_version} \
-    -o ${meta.id}.${genome_version}.${readSet}.kivviD4Z4 \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4 \
     d4z4
     """
 }
@@ -849,7 +846,7 @@ process kivvi05_d4z4{
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.kivviD4Z4_05")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4_05")
     
     script:
     """
@@ -857,7 +854,7 @@ process kivvi05_d4z4{
     -r ${genome_fasta} \
     --bam ${data.bam} \
     -p ${meta.id}.${genome_version} \
-    -o ${meta.id}.${genome_version}.${readSet}.kivviD4Z4_05 \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4_05 \
     d4z4
     """
 }
@@ -876,7 +873,7 @@ process paraphase {
  //   tuple val(meta), path(aln)
     tuple val(meta), val(data)
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
         //-b ${aln[0]} \
     script:
     """
@@ -884,16 +881,16 @@ process paraphase {
     -b ${data.bam} \
     --reference ${genome_fasta} \
     -t ${task.cpus} \
-    -o ${meta.id}.${genome_version}.${readSet}.hiphase.paraphase
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
 
     python ${localPythonScripts}/flatten_paraphaseSMN.py \
-    --json ${meta.id}.${genome_version}.${readSet}.hiphase.paraphase/${meta.id}.paraphase.json \
-    --out ${meta.id}.${genome_version}.${readSet}.hiphase.paraphase/${meta.id}.${genome_version}.${readSet}.paraphase.flattened.tsv
+    --json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    --out ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.${genome_version}.${readSubset_hifiDefault}.paraphase.flattened.tsv
 
     python ${localPythonScripts}/flatten_paraphaseSMN.py \
-    --json ${meta.id}.${genome_version}.${readSet}.hiphase.paraphase/${meta.id}.paraphase.json \
+    --json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
     --loci SMN1,PMS2,IKBKG \
-    --out ${meta.id}.${genome_version}.${readSet}.hiphase.paraphase/${meta.id}.${genome_version}.${readSet}.paraphase.flattened.SMN_PMS2_IKBKG.tsv
+    --out ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.${genome_version}.${readSubset_hifiDefault}.paraphase.flattened.SMN_PMS2_IKBKG.tsv
     """
 }
 
@@ -911,7 +908,7 @@ process starphase {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.starphase.*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.*")
     
     script:
     """
@@ -921,8 +918,8 @@ process starphase {
     --reference ${genome_fasta} \
     --vcf ${data.dv_vcf} \
     --sv-vcf ${data.sawfish_vcf} \
-    --pharmcat-tsv ${meta.id}.${genome_version}.${readSet}.starphase.pharmcat.tsv \
-    --output-calls ${meta.id}.${genome_version}.${readSet}.starphase.json
+    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmcat.tsv \
+    --output-calls ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.json
 
     """
 }
@@ -1073,13 +1070,13 @@ process methylationBW{
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.hiphase.methylation*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation*")
     
     script:
     """
     aligned_bam_to_cpg_scores \
     --bam ${data.bam} \
-    --output-prefix ${meta.id}.${genome_version}.${readSet}.hiphase.methylation
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation
     """
 }
 
@@ -1097,23 +1094,23 @@ process methylationSegm{
     tuple val(meta), path(data)
     
     output:
-    tuple val(meta), path("${meta.id}.met.*")
+    tuple val(meta), path("*.met.*")
     
     script:
     """
     methbat segment \
-    --input-prefix ${meta.id}.${genome_version}.${readSet}.hiphase.methylation \
-    --output-prefix ${meta.id}.met.segments
+    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.segments
 
     methbat profile \
-    --input-prefix ${meta.id}.${genome_version}.${readSet}.hiphase.methylation \
+    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
     --input-regions ${methylationBackground} \
-    --output-region-profile ${meta.id}.met.profile
+    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.profile
 
     methbat profile \
-    --input-prefix ${meta.id}.${genome_version}.${readSet}.hiphase.methylation \
+    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
     --input-regions ${methylationBackgroundLocal} \
-    --output-region-profile ${meta.id}.met.profileLOCAL
+    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.profileLOCAL
     """
 }
 
@@ -1179,7 +1176,7 @@ process cramino {
     tuple val(meta), val(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.craminoQC.txt")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.craminoQC.txt")
 
     script:
     """
@@ -1187,7 +1184,7 @@ process cramino {
     -t ${task.cpus} \
     --karyotype \
     --phased \
-    ${data.bam} > ${meta.id}.${genome_version}.${readSet}.craminoQC.txt
+    ${data.bam} > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.craminoQC.txt
     """
 }
 
@@ -1202,13 +1199,13 @@ process nanoStat {
     tuple val(meta), val(data) 
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSet}.nanostat.txt"),emit: multiqc
-    path("${meta.id}.${genome_version}.${readSet}.nanostat.txt")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt"),emit: multiqc
+    path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt")
     script:
     """
     NanoStat \
     -t ${task.cpus} \
-    -n ${meta.id}.${genome_version}.${readSet}.nanostat.txt \
+    -n ${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt \
     --bam ${data.mainBamFile}
     """
 }
