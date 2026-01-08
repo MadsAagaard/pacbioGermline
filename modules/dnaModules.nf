@@ -13,8 +13,8 @@ log.info """\
 Clinical Genetics Vejle: PacBio LRS v2
 ======================================================
 Genome        : $params.genome
-Input Readset : $inputReadSet
-read Subset   : $readSubset
+Input Readset : $inputReadSet_allDefault
+read Subset   : $readSubset_hifiDefault
 RunID         : $runID
 Script start  : $date2
 Genome FASTA  : ${genome_fasta}
@@ -50,7 +50,7 @@ process write_input_summary {
 
     script:
     """
-    cat > ${ssBase}.${inputReadSet}.input.allSamples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet_allDefault}.input.allSamples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -66,7 +66,7 @@ process write_dropped_samples_summary {
 
     script:
     """
-    cat > ${ssBase}.${inputReadSet}.dropped.samples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet_allDefault}.dropped.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -82,7 +82,7 @@ process write_analyzed_samples_summary {
 
     script:
     """
-    cat > ${ssBase}.${inputReadSet}.analyzed.samples.summary.txt << 'EOF'
+    cat > ${ssBase}.${inputReadSet_allDefault}.analyzed.samples.summary.txt << 'EOF'
     ${summary_ch}
     """
 }
@@ -152,7 +152,7 @@ process pbmm2_align {
     tuple val(meta), path(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2*bai"),  emit: bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2*bai"),  emit: bam
  
     script:
     """
@@ -164,7 +164,7 @@ process pbmm2_align {
     --sample ${meta.id} \
     ${genome_mmi} \
     ${data[0]} \
-    ${meta.id}.${genome_version}.${inputReadSet}.pbmm2.bam
+    ${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.bam
     """
 }
 
@@ -177,7 +177,7 @@ process pbmm2_align_mergedData {
     tuple val(meta), path(fofn)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged*bai"),  emit: bamAll
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged*bai"),  emit: bamAll
 
 
     script:
@@ -190,7 +190,7 @@ process pbmm2_align_mergedData {
     --sample ${meta.id} \
     ${genome_mmi} \
     ${fofn} \
-    ${meta.id}.${genome_version}.${inputReadSet}.pbmm2.merged.bam
+    ${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged.bam
     """
 }
 
@@ -203,14 +203,14 @@ process extractHifi {
     tuple val(meta), path(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset}.pbmm2.merged*bai"),  emit: bamHifi
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged*bai"),  emit: bamHifi
 
     script:
     """
     extracthifi \
     -j ${task.cpus} \
     ${data[0]} \
-    ${meta.id}.${genome_version}.${readSubset}.pbmm2.merged.bam
+    ${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam
     """
 
 }
@@ -232,17 +232,17 @@ process deepvariant{
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
     //path("${meta.id}.deepvariant.vcf_stats_report.txt")
     """
     singularity run -B ${s_bind} ${simgpath}/deepvariant190.sif /opt/deepvariant/bin/run_deepvariant \
     --model_type=PACBIO \
     --ref=${genome_fasta} \
     --reads=${data.mainBamFile} \
-    --output_vcf=${meta.id}.${genome_version}.${readSubset}.deepVariant.vcf.gz \
-    --output_gvcf=${meta.id}.${genome_version}.${readSubset}.deepVariant.g.vcf.gz \
+    --output_vcf=${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz \
+    --output_gvcf=${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz \
     --num_shards=${task.cpus}
     """    
 }
@@ -260,9 +260,9 @@ process glNexus_jointCall {
     tuple val(caseID), path(manifest)
 
     output:
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz"), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz"), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
     tuple val(caseID), path("${manifest}")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
     
     script:
     """
@@ -271,11 +271,11 @@ process glNexus_jointCall {
     --threads ${task.cpus} \
     --list ${manifest} > ${caseID}.glnexus.bcf
 
-    bcftools view -Oz -o ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz ${caseID}.glnexus.bcf
-    bcftools index -t ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz
+    bcftools view -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz ${caseID}.glnexus.bcf
+    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz
 
-    bcftools view -R ${ROI} ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSubset}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools view -R ${ROI} ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
 
     """
 }
@@ -307,20 +307,20 @@ process hiPhase {
     tuple val(meta), val(data), path(vcf), path(sv), path(str)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.bam.bai"),  emit: hiphase_bam                 
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.cram.crai"), emit: hiphase_cram       
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram.crai"), emit: hiphase_cram       
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
 
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
     }
 
     script:
@@ -328,15 +328,15 @@ process hiPhase {
     if (params.allReads || params.hifiReads|| params.failedReads) {
         bamArgs="""
         --bam ${data.mainBamFile}
-        --output-bam ${meta.id}.${genome_version}.${readSubset}.hiphase.bam
+        --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam
         """.stripIndent()
     }
     else  {
         bamArgs="""
         --bam ${data.mainBamFile}
-        --output-bam ${meta.id}.${genome_version}.${readSubset}.hiphase.bam
+        --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam
         --bam ${data.bamAll}
-        --output-bam ${meta.id}.${genome_version}.${InputReadSet}.hiphase.bam 
+        --output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam 
         """.stripIndent()
     }
 
@@ -345,29 +345,29 @@ process hiPhase {
     hiphase \
     $bamArgs \
     --vcf ${vcf[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
     --vcf ${sv[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.sawfish.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
     --vcf ${str[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
-    -V  ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.vcf.gz \
+    -V  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
     -L ${ROI} \
-    -O  ${meta.id}.${genome_version}.${readSubset}.hiphase.deepvariant.WES_ROI.vcf.gz
+    -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
 
     samtools view \
     -T ${genome_fasta} \
     -C \
-    -o ${meta.id}.${genome_version}.${readSubset}.hiphase.cram  ${meta.id}.${genome_version}.${readSubset}.hiphase.bam 
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam 
 
-    samtools index ${meta.id}.${genome_version}.${readSubset}.hiphase.cram
+    samtools index ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram
 
 
     """
@@ -418,17 +418,17 @@ process sawFish2{
     --sample ${meta.id}.sawfishDiscover \
     --output-dir ${meta.id}.sawfishSV 
     
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.${readSubset}.sawfishSV.vcf.gz
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.vcf.gz
 
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.${readSubset}.sawfishSV.vcf.gz.tbi
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.vcf.gz.tbi
 
-    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.${readSubset}.sawfishSV.supporting_reads.json.gz
+    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.supporting_reads.json.gz
 
-    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.${readSubset}.sawfishSV.gc_bias_corrected_depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.gc_bias_corrected_depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSubset}.sawfishSV.depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSubset}.sawfishSV.copynum.bedgraph
+    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.copynum.bedgraph
     """
 }
 
@@ -449,20 +449,20 @@ process svdb_SawFish {
     
     output:
     tuple val(meta), path("*.sawfishSV.hiphase.svdb.*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
     script:
     """
     svdb --query \
     --query_vcf ${data.sawfish_vcf} \
-    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf
+    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf
     
-    bgzip ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf
+    bgzip ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf
     
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
     """
 }
@@ -486,9 +486,9 @@ process sawFish2_jointCall_all{
     ${x} \
     --output-dir ${params.rundir}.sawfishSV_jointCall 
     
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
 
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -512,12 +512,12 @@ process svdb_sawFish2_jointCall_all {
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bgzip ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${params.rundir}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -543,9 +543,9 @@ process sawFish2_jointCall_caseID{
     --sample-csv ${manifest} \
     --output-dir ${caseID}.sawfishSV_jointCall 
     
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz
+    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
 
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -564,17 +564,17 @@ process svdb_sawFish2_jointCall_caseID {
     
     output:
     path("*_jointCall.svdb.*")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
+    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
     script:
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bgzip ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSubset}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -674,8 +674,8 @@ process mitorsaw {
     mitorsaw haplotype \
     --reference ${genome_fasta} \
     --bam ${data.bam} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset}.mitorsaw.vcf.gz \
-    --output-hap-stats ${meta.id}.${genome_version}.${readSubset}.mitorsaw.hapstats.json 
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.mitorsaw.vcf.gz \
+    --output-hap-stats ${meta.id}.${genome_version}.${readSubset_hifiDefault}.mitorsaw.hapstats.json 
 
     """
 }
@@ -694,41 +694,43 @@ process trgt4_diseaseSTRs{
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
     
     tuple val(meta),path ("*.sorted.*")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
     
-    def readsInput
-    
-    if (params.hifiReads ) {
-        readsInput="""
-        --reads ${data.mainBamFile}"
-        --output-prefix ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive
+
+    def bamArgs 
+    if (params.allReads || params.hifiReads|| params.failedReads) {
+        bamArgs="""
+        --reads ${data.mainBamFile}
+        --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive
         """.stripIndent()
     }
-
-
-    = params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}" 
-    
-    
-    
-    
-    
+    else  {
+        bamArgs="""
+        --bam ${data.bamAll}
+        --output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam
+        """.stripIndent()
+    }
+ 
+ 
+    def readsInput
+  
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
-    $readsInput \
+    $bamArgs \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset}.trgt4.STRchive.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.trgt4.STRchive.sorted.vcf.gz
 
     samtools sort -o ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.spanning.bam
     samtools index ${meta.id}.${genome_version}.${readSet}.trgt4.STRchive.sorted.bam
