@@ -37,7 +37,7 @@ process check_tmpdir {
 }
 
 process write_input_summary {
-    publishDir "${outputDir}/runInfo/${date}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/allSamples/", mode: 'copy', pattern: "*.txt"
 
     //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, mode: 'copy', pattern: "*.txt"
@@ -55,7 +55,7 @@ process write_input_summary {
 }
 
 process write_dropped_samples_summary {
-    publishDir "${outputDir}/runInfo/${date}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/droppedSamples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
@@ -71,7 +71,7 @@ process write_dropped_samples_summary {
 }
 
 process write_analyzed_samples_summary {
-    publishDir "${outputDir}/runInfo/${date}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/analyzedSamples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
@@ -129,7 +129,7 @@ process inputFiles_symlinks_ubam{
 process symlinks_ubam_dropped {
     label "low"
     
-    publishDir "${outputDir}/runInfo/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir "${outputDir}/runInfo/${date}_${ssBase}/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
@@ -268,7 +268,7 @@ process glNexus_jointCall {
 process hiPhase {
     
     tag "$meta.id"
-    label "medium"
+    label "intermediate"
     conda "${params.hiphase}"
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/"}, mode: 'copy', pattern: "*.hiphase.ba*"
