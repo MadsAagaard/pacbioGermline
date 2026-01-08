@@ -73,23 +73,23 @@ if (params.aligned) {
 if (!params.aligned) {
 
     if (params.input) {
-        if (params.hifiReads && !params.failedReads){
+        if (params.hifiReads){
             inputBam="${params.input}/**/*.hifi_reads.*.bam"
         }
-        if (params.failedReads && !params.hifiReads){
+        if (params.failedReads){
             inputBam="${params.input}/**/*.fail_reads.*.bam"
         }
     }
     
     if (!params.input) {
-        if (params.hifiReads && !params.failedReads){
+        if (params.hifiReads){
             inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
         }
-        if (params.failedReads && !params.hifiReads){
+        if (params.failedReads){
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
         else {
-            inputBam="${params.input}/**/*.bam"
+            inputBam="${params.dataArchive}/**/*.bam"
         }
     }
 
