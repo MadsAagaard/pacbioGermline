@@ -148,7 +148,7 @@ if (!params.aligned) {
             meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,ssBase:ssBase]
             meta
             }
-            |view
+
         | set {samplesheet_full}
     }
     // intermediate naming scheme:
