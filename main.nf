@@ -88,6 +88,9 @@ if (!params.aligned) {
         if (params.failedReads && !params.hifiReads){
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
+        else {
+            inputBam="${params.input}/**/*.bam"
+        }
     }
 
     /*
