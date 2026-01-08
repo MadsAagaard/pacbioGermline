@@ -233,7 +233,7 @@ if (!params.aligned) {
         ubam_ss_merged_size_split.drop
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${outputDirSuffixTMP}\t${gb}\t${meta.caseID}"
+            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.caseID}"
         }
         .collect()
         | map { lines ->
@@ -245,7 +245,7 @@ if (!params.aligned) {
         ubam_ss_merged_size_split.keep 
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${outputDirSuffixTMP}\t${gb}\t${meta.caseID}"
+            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.caseID}"
         }
         .collect()
         | map { lines ->
