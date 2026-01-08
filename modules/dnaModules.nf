@@ -785,7 +785,7 @@ process trgt4_all {
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/all/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
     input:
-    tuple val(meta), path(data)
+    tuple val(meta), val(data)
     
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam.bai"),emit: str_spanning_bam
