@@ -408,7 +408,7 @@ process sawFish2{
     sawfish discover \
     --threads ${task.cpus} \
     --ref ${genome_fasta} \
-    --bam ${data.bamHifi} \
+    --bam ${data.mainBamFile} \
     $exclude \
     $sex \
     --output-dir ${meta.id}.sawfishDiscover 
@@ -706,14 +706,10 @@ process trgt4_diseaseSTRs{
     
     def bamArgs 
     if (params.allReads || params.hifiReads|| params.failedReads) {
-        bamArgs="""
-        --reads ${data.mainBamFile}
-        """.stripIndent()
+        bamArgs="--reads ${data.mainBamFile}"
     }
     else  {
-        bamArgs="""
-        --reads ${data.bamAll}
-        """.stripIndent()
+        bamArgs="--reads ${data.bamAll}"
     }
 
 
