@@ -211,6 +211,8 @@ process extractHifi {
     -j ${task.cpus} \
     ${bam} \
     ${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam
+
+    samtools index -@ ${task.cpus} ${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam
     """
 
 }
