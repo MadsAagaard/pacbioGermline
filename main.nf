@@ -538,7 +538,7 @@ workflow {
             | set {strchannel}
 
             alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel)
-            | map {meta,bamdata,dvvcf,dv} 
+            //| map {meta,bamdata,dvvcf,dv} 
             |set {hiphaseInput}
 
             hiPhase(hiphaseInput)
