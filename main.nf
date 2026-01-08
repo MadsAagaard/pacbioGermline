@@ -379,12 +379,12 @@ workflow PREPROCESS {
 
     emit:
     alignedAll=pbmm2_align_mergedData.out.bamAll
-    alignedHifi=extractHifi.out.bamHifi
-    /*
+    //alignedHifi=extractHifi.out.bamHifi
+  
     if (!params.failedReads && !params.allReads && !params.hifiReads) { 
     alignedHifi=extractHifi.out.bamHifi
     }
-    */
+    
 }
 
 workflow VARIANTS {
