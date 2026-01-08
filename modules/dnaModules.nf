@@ -714,7 +714,6 @@ process trgt4_diseaseSTRs{
         bamArgs="--reads ${data.bamAll}"
     }
 
-
     """
     trgt genotype \
     --genome ${genome_fasta} \
