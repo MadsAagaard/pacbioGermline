@@ -79,6 +79,9 @@ if (!params.aligned) {
         if (params.failedReads){
             inputBam="${params.input}/**/*.fail_reads.*.bam"
         }
+        if (!params.hifiReads && !params.failedReads) {
+            inputBam="${params.dataArchive}/**/*.bam"
+        }
     }
     
     if (!params.input) {
@@ -88,7 +91,7 @@ if (!params.aligned) {
         if (params.failedReads){
             inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
         }
-        else {
+        if (!params.hifiReads && !params.failedReads) {
             inputBam="${params.dataArchive}/**/*.bam"
         }
     }
