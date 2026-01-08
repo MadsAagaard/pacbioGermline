@@ -383,7 +383,7 @@ workflow PREPROCESS {
 
     
 }
-alignedHifi=extractHifi.out.bamHifi
+
 
 workflow VARIANTS {
 

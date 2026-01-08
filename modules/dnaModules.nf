@@ -203,7 +203,7 @@ process extractHifi {
     tuple val(meta), path(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged*bai"),  emit: bamHifi
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.pbmm2.merged*bai"),  emit: alignedHifi
 
     script:
     """
@@ -319,6 +319,7 @@ process hiPhase {
    
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai")//,  emit: hiphase_allReads_bam  
+    
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
    // tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
     }
