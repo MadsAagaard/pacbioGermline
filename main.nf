@@ -495,7 +495,7 @@ workflow {
             if (!params.failedReads && !params.allReads && !params.hifiReads) {
                 PREPROCESS.out.alignedHifi.join(PREPROCESS.out.alignedAll)
                 | map {meta,bamHifi,baiHifi,bamAll,baiAll ->
-                tuple(meta,[mainBamFile:bamHifi,mainBaiFile:baiHifi,bamAll:bamAll,baiAll:baiAll])}
+                tuple(meta, [mainBamFile:bamHifi, mainBaiFile:baiHifi, bamAll:bamAll, baiAll:baiAll])}
                 |set {alignedFinal}
             }
             if (params.allReads || params.hifiReads || params.failedReads) {
@@ -538,7 +538,6 @@ workflow {
             | set {strchannel}
 
             alignedFinal.join(dv_vcf).join(sawfish_ch).join(strchannel)
-            //| map {meta,bamdata,dvvcf,dv} 
             |set {hiphaseInput}
 
             hiPhase(hiphaseInput)
