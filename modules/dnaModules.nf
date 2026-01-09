@@ -382,7 +382,7 @@ process hiPhase {
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
 ///////////////////////////////////////////////////
 
-process sawFish2{
+process sawFish2 {
     tag "$meta.id"
     label "high"
     conda "${params.sawfish2}"
@@ -398,7 +398,7 @@ process sawFish2{
     tuple val(meta),  path("*.sawfishSV.*") //path(data),
     tuple val(meta), path("*.sawfishSV.vcf.gz"),path("*.sawfishSV.vcf.gz.tbi"),emit: sv_vcf
     path("${meta.id}.sawfishDiscover"), emit: sv_discover_dir
-    tuple val(meta), path("${meta.id}.sawfishDiscover"), path("${data[0]}"), emit: sv_discover_dir2
+    tuple val(meta), path("${meta.id}.sawfishDiscover"), path("${data.mainBamFile}"), emit: sv_discover_dir2
     tuple val(meta), path("*.sawfishSV.supporting_reads.json.gz"), emit: sv_supporting_reads
     tuple val(meta), path("${meta.id}.sawfishSV/"), emit: sawfish_out_dir
 
