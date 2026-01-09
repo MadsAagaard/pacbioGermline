@@ -362,7 +362,7 @@ process hiPhase {
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
+    
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
@@ -381,7 +381,7 @@ process hiPhase {
     """
 }
 
-
+//bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
 
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
