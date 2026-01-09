@@ -327,26 +327,31 @@ process hiPhase {
     }
 
     script:
-    def bamArgs 
-    if (params.allReads || params.hifiReads|| params.failedReads) {
-        bamArgs="""
-        --bam ${data.mainBamFile}
-        --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam
-        """.stripIndent()
+    def bamArgs = []
+
+    if (params.allReads || params.hifiReads || params.failedReads) {
+
+        bamArgs += [
+            "--bam ${data.mainBamFile}",
+            "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
+        ]
     }
-    else  {
-        bamArgs="""
-        --bam ${data.mainBamFile}
-        --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam
-        --bam ${data.bamAll}
-        --output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam 
-        """.stripIndent()
+    else {
+
+        bamArgs += [
+            "--bam ${data.mainBamFile}",
+            "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam",
+            "--bam ${data.bamAll}",
+            "--output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
+        ]
     }
+
+    def bamArgsStr = bamArgs.join(' ')
 
 
     """
     hiphase \
-    $bamArgs \
+    $bamArgsStr \
     --vcf ${vcf[0]} \
     --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
     --vcf ${sv[0]} \
