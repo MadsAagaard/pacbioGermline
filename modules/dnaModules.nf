@@ -588,7 +588,7 @@ process svTopo {
     tag "$meta.id"
     //label "high"
     conda "${params.svtopo}"
-    cpus: 4
+    cpus 4
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/SVtopo/"}, mode: 'copy'
 
 
