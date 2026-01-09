@@ -357,7 +357,7 @@ process hiPhase {
     --vcf ${sv[0]} \
     --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
     --vcf ${str[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
