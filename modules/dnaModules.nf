@@ -319,7 +319,7 @@ process hiPhase {
 
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai")//,  emit: hiphase_allReads_bam  
     
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
@@ -361,8 +361,6 @@ process hiPhase {
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
-
-    
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
