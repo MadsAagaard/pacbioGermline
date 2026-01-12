@@ -300,8 +300,8 @@ process hiPhase {
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
     
-    publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.hiphase.ba*"
-    publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.hiphase.cra*"
+   // publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.ba*"
+    publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.cra*"
     publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
 
 
@@ -328,16 +328,13 @@ process hiPhase {
 
     script:
     def bamArgs = []
-
     if (params.allReads || params.hifiReads || params.failedReads) {
-
         bamArgs += [
             "--bam ${data.mainBamFile}",
             "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
         ]
     }
     else {
-
         bamArgs += [
             "--bam ${data.mainBamFile}",
             "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam",
@@ -345,10 +342,7 @@ process hiPhase {
             "--output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
         ]
     }
-
     def bamArgsStr = bamArgs.join(' ')
-
-
     """
     hiphase \
     $bamArgsStr \
@@ -390,7 +384,7 @@ process sawFish2 {
     label "high"
     conda "${params.sawfish2}"
 
-    publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
+    //publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
 
 
@@ -444,7 +438,7 @@ process svdb_SawFish {
     label "low"
     conda "${params.svdb}"
 
-    publishDir "${lrsStorage}/structuralVariants/sawfish/svdb/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
+    publishDir "${lrsStorage}/structuralVariants/sawfish/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/vcfs/" : "${outputDir}/${meta.caseID}/${meta.rekv}_${meta.id}_${meta.groupKey}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
