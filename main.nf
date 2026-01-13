@@ -153,7 +153,7 @@ if (!params.aligned) {
             }
 
         | set {samplesheet_full}
-        sampplesheet_full
+        samplesheet_full
         |branch {row ->
             singleSample: (row.groupKey=~/singleSample/)
                 return [row]
