@@ -148,7 +148,7 @@ if (!params.aligned) {
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
-            def outKey = (intRef == 'noInfo') ? "singleSample" : "multiSample"
+            def outKey = (intRef == 'noInfo') ? "singleSampleAnalysis" : "multiSampleAnalysis"
             meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,outKey:outKey,ssBase:ssBase]
             meta
             }
