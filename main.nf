@@ -161,7 +161,7 @@ if (!params.aligned) {
                 return [row]
         }
         |set {samplesheetBranch}
-        samplesheetBranch.singleSample.view()
+        samplesheetBranch.singleSample
     }
     // intermediate naming scheme:
     if (params.samplesheet && params.intSS) {
@@ -209,13 +209,18 @@ if (!params.aligned) {
             | map { meta, bam -> tuple(meta.id,meta,bam) }
         |set {ubam_input_samples}    
 
-        samplesheet_full
+        if (!params.singleOnly) {
+            samplesheet_full
             |map {row -> meta2=[row.id,row]}
-        |set {samplesheet_join}
-
+            |set {samplesheet_join}
+        }
+        if (params.singleOnly) {
+            samplesheetBranch.singleSample
+            |map {row -> meta2=[row.id,row]}
+            |set {samplesheet_join}
+        }
         samplesheet_join.join(ubam_input_samples)
             |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
-            |view
         |set {ubam_ss_merged} // full unfiltered set
 
         //write info of full set to summary file:
