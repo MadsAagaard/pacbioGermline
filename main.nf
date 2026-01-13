@@ -215,6 +215,7 @@ if (!params.aligned) {
 
         samplesheet_join.join(ubam_input_samples)
             |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
+            |view
         |set {ubam_ss_merged} // full unfiltered set
 
         //write info of full set to summary file:
