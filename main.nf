@@ -148,7 +148,8 @@ if (!params.aligned) {
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,ssBase:ssBase]
+            def outKey = (intRef == 'noInfo') ? "singleSample" : "multiSample"
+            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,outKey:outKey,ssBase:ssBase]
             meta
             }
 
@@ -169,7 +170,7 @@ if (!params.aligned) {
         | splitCsv(sep:'\t')
         |map { row -> 
             (caseID, samplename, sex) =tuple(row)
-            meta=[caseID:caseID,id:samplename,sex:sex]
+            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"customSamplesheet",outKey:"customSamplesheet"]
             meta
         }
         | set {samplesheet_full}
