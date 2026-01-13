@@ -213,6 +213,7 @@ if (!params.aligned) {
             samplesheet_full
             |view
             |map {row -> meta2=[row.id,row]}
+            |view
             |set {samplesheet_join}
         }
         if (params.singleOnly) {
