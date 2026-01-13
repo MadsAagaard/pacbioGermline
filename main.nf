@@ -211,11 +211,13 @@ if (!params.aligned) {
 
         if (!params.singleOnly) {
             samplesheet_full
+            |view
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
         if (params.singleOnly) {
             samplesheetBranch.singleSample
+            |view
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
