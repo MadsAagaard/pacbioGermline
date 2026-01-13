@@ -153,6 +153,15 @@ if (!params.aligned) {
             }
 
         | set {samplesheet_full}
+        sampplesheet_full
+        |branch {row ->
+            singleSample: (row.groupKey=~/singleSample/)
+                return [row]
+            multiSample: true
+                return [row]
+        }
+        |set {samplesheetBranch}
+        samplesheetBranch.singleSample.view()
     }
     // intermediate naming scheme:
     if (params.samplesheet && params.intSS) {
