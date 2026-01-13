@@ -156,7 +156,7 @@ if (!params.aligned) {
         samplesheet_full
         |branch {row ->
             singleSample: (row.groupKey=~/singleSample/)
-                return [row]
+                return tuple(row)
             multiSample: true
                 return [row]
         }
