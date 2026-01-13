@@ -158,10 +158,9 @@ if (!params.aligned) {
             singleSample: (row.groupKey=~/singleSample/)
                 return row
             multiSample: true
-                return [row]
+                return row
         }
         |set {samplesheetBranch}
-        samplesheetBranch.singleSample
     }
     // intermediate naming scheme:
     if (params.samplesheet && params.intSS) {
@@ -211,12 +210,13 @@ if (!params.aligned) {
 
         if (!params.singleOnly) {
             samplesheet_full
-            |map {row -> meta2=[row.id,row]}
             |view
+            |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
         if (params.singleOnly) {
             samplesheetBranch.singleSample
+            |view
             |map {row -> meta2=tuple(row.id,[row])}
             |view
             |set {samplesheet_join}
