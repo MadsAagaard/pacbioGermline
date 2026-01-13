@@ -217,7 +217,7 @@ if (!params.aligned) {
         if (params.singleOnly) {
             samplesheetBranch.singleSample
             |view
-            |map {row -> meta2=tuple(row.id,[row])}
+            |map {row -> meta2=[row.id,row]}
             |view
             |set {samplesheet_join}
         }
