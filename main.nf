@@ -210,16 +210,12 @@ if (!params.aligned) {
 
         if (!params.singleOnly) {
             samplesheet_full
-            |view
             |map {row -> meta2=[row.id,row]}
-            |view
             |set {samplesheet_join}
         }
         if (params.singleOnly) {
             samplesheetBranch.singleSample
-            |view
             |map {row -> meta2=[row.id,row]}
-            |view
             |set {samplesheet_join}
         }
         samplesheet_join.join(ubam_input_samples)
