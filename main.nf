@@ -27,6 +27,11 @@ if (params.hifiReads) {
     params.minGB=30
 }
 
+if (params.failedReads) {
+    params.minGB=2
+}
+
+
 if (params.hpo) {
     channel.fromPath(params.hpo)
     |set { hpo_ch }
