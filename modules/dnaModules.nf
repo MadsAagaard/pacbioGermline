@@ -1236,7 +1236,7 @@ process multiQC_ALL {
     label "low"
     conda "${params.multiqc}"
 
-    publishDir "${outputDir}/", mode: 'copy'
+    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy'
 
     when:
     params.groupedOutput
