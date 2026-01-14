@@ -167,11 +167,17 @@ if (!params.aligned) {
     // intermediate naming scheme:
     if (params.samplesheet && params.intSS) {
 
+        def ssBase = params.samplesheet
+                    .toString()
+                    .tokenize('/')
+                    .last()
+                    .replaceFirst(/\.txt$/, '')
+
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row -> 
             (caseID, samplename, sex) =tuple(row)
-            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"customSamplesheet",outKey:"customSamplesheet"]
+            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"customSamplesheet",outKey:"customSamplesheet",ssBase:ssBase]
             meta
         }
         | set {samplesheet_full}

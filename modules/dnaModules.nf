@@ -300,8 +300,8 @@ process hiPhase {
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
     
-   // publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.ba*"
-    publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.cra*"
+    //publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.ba*"
+    //publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.cra*"
     publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
 
 
