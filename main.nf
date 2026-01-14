@@ -23,7 +23,9 @@ def hpoInputError() {
 if (!params.samplesheet && !params.input) exit 0, inputError() 
 if (!params.samplesheet && params.hpo) exit 0, hpoInputError() 
 
-
+if (params.hifiReads) {
+    params.minGB=30
+}
 
 if (params.hpo) {
     channel.fromPath(params.hpo)

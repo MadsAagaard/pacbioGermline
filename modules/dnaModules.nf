@@ -10,7 +10,7 @@ runID="${date}.${user}"
 
 log.info """\
 ======================================================
-Clinical Genetics Vejle: PacBio LRS v2
+Clinical Genetics Vejle: PacBio LRS v3
 ======================================================
 Genome        : $params.genome
 Input Readset : $inputReadSet_allDefault
