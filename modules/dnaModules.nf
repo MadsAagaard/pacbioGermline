@@ -295,7 +295,10 @@ process hiPhase {
     label "intermediate"
     conda "${params.hiphase}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/"}, mode: 'copy', pattern: "*.hiphase.ba*"
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/HifiReads/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.HiFiReads.hiphase.ba*"
+
+    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/allReads/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/allReads/"}, mode: 'copy', pattern: "*.allReads.hiphase.ba*"
+
 
     publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
