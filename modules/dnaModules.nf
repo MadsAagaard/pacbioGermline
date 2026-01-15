@@ -13,6 +13,7 @@ log.info """\
 Clinical Genetics Vejle: PacBio LRS v3
 ======================================================
 Genome        : $params.genome
+GenomeDir     : $refFilesDir
 Input Readset : $inputReadSet_allDefault
 read Subset   : $readSubset_hifiDefault
 RunID         : $runID
