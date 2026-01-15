@@ -21,7 +21,7 @@ Script start  : $date2
 Genome FASTA  : ${genome_fasta}
 Archive RAW   : ${dataArchive}
 OutputDir     : ${outputDir}
-sbind         : ${s_bind}
+workDir       : ${workflow.workDir}
 min input GB  : $params.minGB
 """
 
