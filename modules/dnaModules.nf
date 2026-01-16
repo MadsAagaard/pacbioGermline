@@ -7,6 +7,16 @@ date2=new Date().format( 'yyMMdd HH:mm:ss' )
 user="$USER"
 runID="${date}.${user}"
 
+def baseOutDir = { meta, readSet ->
+    def outputDirBase = params.outputDir
+    if( params.intSS ) {
+        "${outputDirBase}/${meta.caseID}/${meta.id}_${meta.groupKey}_${readSet}"
+    } else if( params.groupedOutput ) {
+        "${outputDirBase}/${meta.caseID}"
+    } else {
+        "${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}"
+    }
+}
 
 log.info """\
 ======================================================
@@ -22,6 +32,7 @@ Genome FASTA  : ${genome_fasta}
 Archive RAW   : ${dataArchive}
 OutputDir     : ${outputDir}
 workDir       : ${workflow.workDir}
+BaseOutDir    : ${baseOutDir}
 min input GB  : $params.minGB
 """
 
