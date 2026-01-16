@@ -7,17 +7,6 @@ date2=new Date().format( 'yyMMdd HH:mm:ss' )
 user="$USER"
 runID="${date}.${user}"
 
-def baseOutDir = { meta, readSet ->
-    def outputDirBase = params.outputDir
-    if( params.intSS ) {
-        "${outputDirBase}/${meta.caseID}/${meta.id}_${meta.groupKey}_${readSet}"
-    } else if( params.groupedOutput ) {
-        "${outputDirBase}/${meta.caseID}"
-    } else {
-        "${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}"
-    }
-}
-
 log.info """\
 ======================================================
 Clinical Genetics Vejle: PacBio LRS v3
