@@ -21,7 +21,6 @@ Genome FASTA  : ${genome_fasta}
 Archive RAW   : ${dataArchive}
 OutputDir     : ${outputDir}
 workDir       : ${workflow.workDir}
-BaseOutDir    : ${baseOutDir}
 min input GB  : $params.minGB
 """
 
