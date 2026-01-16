@@ -176,7 +176,7 @@ if (!params.aligned) {
         channel.fromPath(params.samplesheet)
         | splitCsv(sep:'\t')
         |map { row -> 
-            (caseID, samplename, sex,outKey,) =tuple(row)
+            (caseID, samplename, sex,outKey) =tuple(row)
             meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"validation",outKey:outKey,ssBase:ssBase,rekv:""]
             meta
         }
