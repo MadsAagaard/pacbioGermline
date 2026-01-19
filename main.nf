@@ -473,38 +473,6 @@ workflow QC {
     nanoStat=nanoStat.out.multiqc
 }
 
-
-/*
-workflow PHASED {
-
-    take:
-    phasedAll
-
-    main:
-
-    methylationBW(phasedAll)
-    methylationSegm(methylationBW.out)
-    cramino(phasedAll)
-    mitorsaw(phasedAll)
-    whatsHap_stats(phasedAll)
-
-    if (params.genome=="hg38") {
-        paraphase(phasedAll)
-        kivvi_d4z4(phasedAll)
-        starphase(phasedAll)
-        svTopo(phasedAll)
-        svdb_SawFish(phasedAll)
-    }
-
-    emit:
-
-
-}
-*/
-
-
-
-//Channel.topic('versions') as versions_ch
 workflow {
     if (params.test ||params.summary) {
         finalUbamInput.view()
@@ -700,6 +668,53 @@ workflow {
         }
     }
 }
+
+workflow.onComplete {
+
+    if( !params.run_symlink_maintenance ) {
+        log.info "Symlink maintenance disabled by config."
+        return
+    }
+
+    if( !workflow.success ) {
+        log.warn "Workflow failed – skipping symlink maintenance."
+        return
+    }
+
+    def mirrorScript  = params.mirrorSampleData
+    def collectScript = params.collectDataTypeSymlink
+
+    if( !mirrorScript || !collectScript ) {
+        log.warn "Symlink script paths not defined in config – skipping."
+        return
+    }
+
+    def cmds = [
+        "bash '${mirrorScript}'",
+        "bash '${collectScript}'"
+    ]
+
+    cmds.each { cmd ->
+        log.info "onComplete: running: ${cmd}"
+
+        try {
+            def p = ["bash", "-lc", cmd].execute()
+            p.waitForProcessOutput(System.out, System.err)
+
+            if( p.exitValue() != 0 ) {
+                log.warn "onComplete: command failed (exit ${p.exitValue()}): ${cmd}"
+            } else {
+                log.info "onComplete: finished OK: ${cmd}"
+            }
+        }
+        catch(Exception e) {
+            log.warn "onComplete: exception while running '${cmd}': ${e.message}"
+        }
+    }
+}
+
+
+
 
 
 
