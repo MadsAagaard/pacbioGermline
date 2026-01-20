@@ -671,7 +671,7 @@ workflow {
 
 workflow.onComplete {
 
-    if( !params.run_symlink_maintenance ) {
+    if( !params.createSymlinks ) {
         log.info "Symlink maintenance disabled by config."
         return
     }
