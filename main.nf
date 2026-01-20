@@ -690,8 +690,9 @@ workflow.onComplete {
     }
 
     def cmds = [
-        "bash '${mirrorScript}'",
-        "bash '${collectScript}'"
+        "bash '${collectScript}'",
+        "bash '${mirrorScript}'"
+        
     ]
 
     cmds.each { cmd ->
