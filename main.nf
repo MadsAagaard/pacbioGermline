@@ -177,7 +177,7 @@ if (!params.aligned) {
         | splitCsv(sep:'\t')
         |map { row -> 
             (caseID, samplename, sex,outKey) =tuple(row)
-            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"validation",outKey:caseID,ssBase:ssBase,rekv:outKey] // edit back to normal, if needed.
+            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"customSampleSheet",outKey:caseID,ssBase:ssBase,rekv:outKey] // edit back to normal, if needed.
             meta
         }
         | set {samplesheet_full}
