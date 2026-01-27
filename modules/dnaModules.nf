@@ -22,6 +22,7 @@ Archive RAW   : ${dataArchive}
 OutputDirBase : ${outputDirBase}
 workDir       : ${workflow.workDir}
 outBase        :$params.outBase        
+layout:         $params.layoutMode
 min input GB  : $params.minGB
 """
 
