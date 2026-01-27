@@ -642,6 +642,38 @@ workflow {
                 |map {it.text.trim()}
                 |set {sawfish_discover_bam_list_ch}
     
+                STRUCTURALVARIANTS.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
+                | map { meta, dir, bam ->
+                    // Emit key + a record line we’ll write into the manifest
+                    tuple(
+                    meta.caseID,
+                    tuple(meta, "${dir.toString()}, ${bam.toString()}")
+                    )
+                }
+                | groupTuple()   // -> caseID, [ (meta,line), (meta,line), ... ]
+                |view
+                | map { caseID, records ->
+
+                    // pick one meta as the “family meta” anchor
+                    def anchorMeta = records[0][0]
+
+                    // OPTIONAL sanity check: ensure all share same testlist (good to catch weird inputs)
+                    // assert records.every { it[0].testlist == anchorMeta.testlist } : "Mixed testlist within caseID=${caseID}"
+
+                    // build manifest file content
+                    def content = records.collect { it[1] }.join("\n") + "\n"
+
+                    // write the manifest to a file in the work dir
+                    def mf = file("${caseID}.sawFishJoinCall.manifest.csv")
+                    mf.text = content
+
+                    // emit tuple(meta, manifest)
+                    tuple(anchorMeta, mf)
+                }
+                | set { sawfish_jointCall_manifest_ch }
+
+
+                /*
                 STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
                 | map {meta, dir, bam ->
                     def dirPath = dir.toString()
@@ -658,8 +690,33 @@ workflow {
                     return tuple(caseID, [manifestFile])
                     }
                 | set { sawfish_jointCall_manifest_ch }
+                */
+                VARIANTS.out.dv_gvcf
+                //glnexus_manifest_ch = dv_gvcf
+                .map { meta, gvcf, tbi ->
+                    // store one record per sample: (caseID, meta, gvcfPath)
+                    tuple(meta.caseID, tuple(meta, gvcf.toString()))
+                }
+                .groupTuple()
+                .map { caseID, records ->
 
+                    // pick one meta as the family anchor
+                    def anchorMeta = records[0][0]
 
+                    // OPTIONAL sanity check
+                    // assert records.every { it[0].testlist == anchorMeta.testlist } : "Mixed testlist within caseID=${caseID}"
+
+                    // create the manifest content (one gvcf per line)
+                    def content = records.collect { it[1] }.join('\n') + '\n'
+
+                    def mf = file("${caseID}.manifest")
+                    mf.text = content
+
+                    tuple(anchorMeta, mf)
+                }
+                .set { glnexus_manifest_ch }
+
+                /*
                 manifestChannel =dv_gvcf
                 | map { meta, files ->
                     def vcfPath = files[0].toString()
@@ -677,7 +734,7 @@ workflow {
                     return tuple(caseID, [manifestFile])
                 }
                 | set { glnexus_manifest_ch }
-
+                */
                 if (!params.groupedOutput) {           
                     sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
                     svdb_sawFish2_jointCall_all(sawFish2_jointCall_all.out.sv_jointCall_vcf)
