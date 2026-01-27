@@ -150,6 +150,7 @@ if (!params.aligned) {
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
             def outKey = (intRef == 'noInfo') ? "singleSampleAnalysis" : "multiSampleAnalysis"
+            def sex = (gender =="K") ? "female" : "male"
             meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,outKey:outKey,ssBase:ssBase]
             meta
             }
@@ -182,6 +183,76 @@ if (!params.aligned) {
         }
         | set {samplesheet_full}
     }
+
+    if (params.samplesheet && params.familySS) {
+            // familySS (from metadata.txt):
+            //rekv_npn_materia_testlist_sex_proband_intref
+        def ssBase = params.samplesheet
+                    .toString()
+                    .tokenize('/')
+                    .last()
+                    .replaceFirst(/\.txt$/, '')
+
+    Channel
+    .fromPath(params.samplesheet)
+    .splitCsv(sep: '\t')
+    .map { row ->
+        def (rekv, npn, material, testlist, gender, proband, intRef) = row
+        def sex = (gender == 'K') ? 'female' : 'male'
+
+        def meta = [
+        rekv     : rekv,
+        id      : npn,
+        material : material,
+        testlist : testlist,
+        gender   : gender,
+        sex      : sex,
+        proband  : proband,
+        intRef   : intRef
+        ssBase   : ssBase
+        ]
+
+        tuple(intRef, meta)
+    }
+    .groupTuple()
+    .flatMap { intRef, metas ->
+
+        // Find all probands (allow 1+)
+        def probands = metas.findAll { it.proband == 'T' }
+        assert probands && probands.size() >= 1 : "No proband (T) found for intRef=${intRef}"
+
+        // Use first proband as "anchor" for caseID (stable across family)
+        def anchor = probands[0]
+        def caseID = "${anchor.rekv}_${anchor.testlist}_${intRef}"
+
+        // Optional sanity checks (enable if you want strictness)
+        // assert metas.every { it.intRef == intRef } : "Mixed intRef values in group: ${intRef}"
+
+        metas.collect { m ->
+            def relation
+            if( m.proband == 'T' ) {
+                relation = 'index'
+            } else if( m.gender == 'M' ) {
+                relation = 'pater'
+            } else if( m.gender == 'K' ) {
+                relation = 'mater'
+            } else {
+                relation = 'unknown_relation'
+                // Or: assert false : "Cannot infer parent role (gender=${m.gender}) for intRef=${intRef}, npn=${m.npn}"
+            }
+
+            // Return NEW map (don’t mutate original)
+            m + [
+                caseID: caseID,
+                relation: relation
+            ]
+        }
+    }
+.set { chSamplesWithCaseID }
+
+        | set {samplesheet_full}
+    }
+
 
     if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)

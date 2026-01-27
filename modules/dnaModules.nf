@@ -966,9 +966,10 @@ process exo14_2508_exome {
 
     script:
     """
-    python3 ${localPythonScripts}/make_ped_and_family.py \
+    python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
     --vcf ${vcf} \
+    --caseid ${caseID} \
     --hpo ${hpo}
 
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
@@ -999,9 +1000,10 @@ process exo14_2508_genome {
 
     script:
     """
-    python3 ${localPythonScripts}/make_ped_and_family.py \
+    python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
     --vcf ${vcf} \
+    --caseid ${caseID} \
     --hpo ${hpo}
     
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
@@ -1033,9 +1035,10 @@ process exo14_2508_SV {
     """
     zcat ${vcf} | sed 's/^##fileformat=VCFv4\\.4/##fileformat=VCFv4.2/'| bgzip > ${caseID}.sawfish.forExomiser.vcf.gz
 
-    python3 ${localPythonScripts}/make_ped_and_family.py \
+    python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
     --vcf ${caseID}.sawfish.forExomiser.vcf.gz \
+    --caseid ${caseID} \
     --hpo ${hpo}
 
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
