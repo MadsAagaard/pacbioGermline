@@ -245,31 +245,31 @@ process deepvariant{
 
 process glNexus_jointCall { 
     label "high"
-    tag "$caseID"
+    tag "$meta.caseID"
     conda "${params.glnexus}"
     publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*.jointCall.*"
     publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy', pattern: "*.manifest"
 
     input:
-    tuple val(caseID), path(manifest)
+    tuple val(meta), path(manifest)
 
     output:
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz"), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
-    tuple val(caseID), path("${manifest}")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
+    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz"), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
+    tuple val(meta), path("${manifest}")
+    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
     
     script:
     """
     glnexus_cli \
     --config DeepVariant \
     --threads ${task.cpus} \
-    --list ${manifest} > ${caseID}.glnexus.bcf
+    --list ${manifest} > ${meta.caseID}.glnexus.bcf
 
-    bcftools view -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz ${caseID}.glnexus.bcf
-    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz
+    bcftools view -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz ${meta.caseID}.glnexus.bcf
+    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz
 
-    bcftools view -R ${ROI} ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools view -R ${ROI} ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
 
     """
 }
@@ -289,7 +289,7 @@ process hiPhase {
 
     publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.ba*"
 
-    publishDir {"${params.outBase(meta)}/alignments/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
+    publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
     publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
 
@@ -517,21 +517,21 @@ process sawFish2_jointCall_caseID{
     publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
     input:
-    tuple val(caseID), path(manifest)
+    tuple val(meta), path(manifest)
     
     output:
-    tuple val(caseID), path("*.sawfishSV_jointCall.vcf.gz"),path("*.sawfishSV_jointCall.vcf.gz.tbi"),emit: sv_jointCall_caseID_vcf
+    tuple val(meta), path("*.sawfishSV_jointCall.vcf.gz"),path("*.sawfishSV_jointCall.vcf.gz.tbi"),emit: sv_jointCall_caseID_vcf
 
     script:
     """
     sawfish joint-call \
     --threads ${task.cpus} \
     --sample-csv ${manifest} \
-    --output-dir ${caseID}.sawfishSV_jointCall 
+    --output-dir ${meta.caseID}.sawfishSV_jointCall 
     
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
+    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
 
-    mv ${caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -546,21 +546,21 @@ process svdb_sawFish2_jointCall_caseID {
     params.jointCall
 
     input:
-    tuple val(caseID), path(vcf), path(idx)
+    tuple val(meta), path(vcf), path(idx)
     
     output:
     path("*_jointCall.svdb.*")
-    tuple val(caseID), path("${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
+    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
     script:
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bgzip ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -943,7 +943,7 @@ process exo14_2508_exome {
     publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiser/"}, mode: 'copy'
     publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern:"*.{hpo.txt,yml,ped}"
     input:
-    tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
+    tuple val(meta), path(vcf), path(idx), path(hpo), path(samplesheet)
 
     output:
     path("*.{html,tsv,vcf,json,hpo.txt,yml,ped}")
@@ -953,19 +953,19 @@ process exo14_2508_exome {
     python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
     --vcf ${vcf} \
-    --caseid ${caseID} \
+    --caseid ${meta.caseID} \
     --hpo ${hpo}
 
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
-    --sample ${caseID}-family.yml \
+    --sample ${meta.caseID}-family.yml \
     --analysis ${exome_yml} \
     --spring.config.location=${localProgramPath}/exomiser-cli-14.1.0/
     
     mv results/* .
-    mv exomiser_tmp.html ${caseID}.exo14_2508.html
-    mv exomiser_tmp.variants.tsv ${caseID}.exo14_2508.Variants.tsv
-    mv exomiser_tmp.genes.tsv ${caseID}.exo14_2508.Genes.tsv
-    mv exomiser_tmp.json ${caseID}.exo14_2508.json
+    mv exomiser_tmp.html ${meta.caseID}.exo14_2508.html
+    mv exomiser_tmp.variants.tsv ${meta.caseID}.exo14_2508.Variants.tsv
+    mv exomiser_tmp.genes.tsv ${meta.caseID}.exo14_2508.Genes.tsv
+    mv exomiser_tmp.json ${meta.caseID}.exo14_2508.json
     """
 
 }
@@ -977,7 +977,7 @@ process exo14_2508_genome {
     publishDir {"${params.outBase(meta)}/exomiser14_2508/genomiser/"}, mode: 'copy'
 
     input:
-    tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
+    tuple val(meta), path(vcf), path(idx), path(hpo), path(samplesheet)
 
     output:
     path("*.{html,tsv,vcf,json}")
@@ -987,54 +987,54 @@ process exo14_2508_genome {
     python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
     --vcf ${vcf} \
-    --caseid ${caseID} \
+    --caseid ${meta.caseID} \
     --hpo ${hpo}
     
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
-    --sample ${caseID}-family.yml \
+    --sample ${meta.caseID}-family.yml \
     --analysis ${genome_yml} \
     --spring.config.location=${localProgramPath}/exomiser-cli-14.1.0/
     
     mv results/* .
-    mv exomiser_tmp.html ${caseID}.genomiser14_2508.html
-    mv exomiser_tmp.variants.tsv ${caseID}.genomiser14_2508.Variants.tsv
-    mv exomiser_tmp.genes.tsv ${caseID}.genomiser14_2508.Genes.tsv
-    mv exomiser_tmp.json ${caseID}.genomiser14_2508.json
+    mv exomiser_tmp.html ${meta.caseID}.genomiser14_2508.html
+    mv exomiser_tmp.variants.tsv ${meta.caseID}.genomiser14_2508.Variants.tsv
+    mv exomiser_tmp.genes.tsv ${meta.caseID}.genomiser14_2508.Genes.tsv
+    mv exomiser_tmp.json ${meta.caseID}.genomiser14_2508.json
     """
 }
 
 process exo14_2508_SV {
     label "medium"
-    tag "$caseID"
+    tag "$meta.caseID"
 
     publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiserStructuralVariants/"}, mode: 'copy'
 
     input:
-    tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
+    tuple val(meta), path(vcf), path(idx), path(hpo), path(samplesheet)
 
     output:
     path("*.{html,tsv,vcf,json,hpo.txt,yml,ped}")
 
     script:
     """
-    zcat ${vcf} | sed 's/^##fileformat=VCFv4\\.4/##fileformat=VCFv4.2/'| bgzip > ${caseID}.sawfish.forExomiser.vcf.gz
+    zcat ${vcf} | sed 's/^##fileformat=VCFv4\\.4/##fileformat=VCFv4.2/'| bgzip > ${meta.caseID}.sawfish.forExomiser.vcf.gz
 
     python3 ${localPythonScripts}/make_ped_and_family_v2.py \
     --samplesheet ${samplesheet} \
-    --vcf ${caseID}.sawfish.forExomiser.vcf.gz \
-    --caseid ${caseID} \
+    --vcf ${meta.caseID}.sawfish.forExomiser.vcf.gz \
+    --caseid ${meta.caseID} \
     --hpo ${hpo}
 
     java -jar ${localProgramPath}/exomiser-cli-14.1.0/exomiser-cli-14.1.0.jar \
-    --sample ${caseID}-family.yml \
+    --sample ${meta.caseID}-family.yml \
     --analysis ${exome_yml} \
     --spring.config.location=${localProgramPath}/exomiser-cli-14.1.0/
     
     mv results/* .
-    mv exomiser_tmp.html ${caseID}.SVs.exo14_2508.html
-    mv exomiser_tmp.variants.tsv ${caseID}.SVs.exo14_2508.Variants.tsv
-    mv exomiser_tmp.genes.tsv ${caseID}.SVs.exo14_2508.Genes.tsv
-    mv exomiser_tmp.json ${caseID}.SVs.exo14_2508.json
+    mv exomiser_tmp.html ${meta.caseID}.SVs.exo14_2508.html
+    mv exomiser_tmp.variants.tsv ${meta.caseID}.SVs.exo14_2508.Variants.tsv
+    mv exomiser_tmp.genes.tsv ${meta.caseID}.SVs.exo14_2508.Genes.tsv
+    mv exomiser_tmp.json ${meta.caseID}.SVs.exo14_2508.json
     """
 
 }
@@ -1203,9 +1203,6 @@ process multiQC {
     conda "${params.multiqc}"
 
     publishDir {"${params.outBase(meta)}/QC/"}, mode: 'copy'
-
-    when:
-    !params.groupedOutput
 
     input:
     tuple val(meta),  path(data)  

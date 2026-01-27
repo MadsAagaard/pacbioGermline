@@ -674,22 +674,22 @@ workflow {
 
 
                 /*
-                STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
-                | map {meta, dir, bam ->
-                    def dirPath = dir.toString()
-                    def bamPath = bam.toString()
-                    return [ meta.caseID, dirPath+", "+ bamPath ]
-                }
-                | collectFile(newLine: true) { item  ->
-                    def caseID = item[0]
-                    def line = item[1]
-                    return [ "${caseID}.sawFishJoinCall.manifest.csv", line ]
-                }
-                | map { manifestFile -> 
-                    def caseID = manifestFile.getName().tokenize(".")[0]
-                    return tuple(caseID, [manifestFile])
+                    STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
+                    | map {meta, dir, bam ->
+                        def dirPath = dir.toString()
+                        def bamPath = bam.toString()
+                        return [ meta.caseID, dirPath+", "+ bamPath ]
                     }
-                | set { sawfish_jointCall_manifest_ch }
+                    | collectFile(newLine: true) { item  ->
+                        def caseID = item[0]
+                        def line = item[1]
+                        return [ "${caseID}.sawFishJoinCall.manifest.csv", line ]
+                    }
+                    | map { manifestFile -> 
+                        def caseID = manifestFile.getName().tokenize(".")[0]
+                        return tuple(caseID, [manifestFile])
+                        }
+                    | set { sawfish_jointCall_manifest_ch }
                 */
                 VARIANTS.out.dv_gvcf
                 //glnexus_manifest_ch = dv_gvcf
@@ -717,23 +717,23 @@ workflow {
                 .set { glnexus_manifest_ch }
 
                 /*
-                manifestChannel =dv_gvcf
-                | map { meta, files ->
-                    def vcfPath = files[0].toString()
-                    return [ meta.caseID, "${vcfPath}" ]
-                }
-                | collectFile(newLine: true) { item ->
-                    def caseID = item[0]
-                    def line   = item[1]
-                    return [ "${caseID}.manifest", line ]
-                }
-                
-                manifestChannel
-                | map { manifestFile -> manifestFile
-                    def caseID = manifestFile.getName().tokenize(".")[0]
-                    return tuple(caseID, [manifestFile])
-                }
-                | set { glnexus_manifest_ch }
+                    manifestChannel =dv_gvcf
+                    | map { meta, files ->
+                        def vcfPath = files[0].toString()
+                        return [ meta.caseID, "${vcfPath}" ]
+                    }
+                    | collectFile(newLine: true) { item ->
+                        def caseID = item[0]
+                        def line   = item[1]
+                        return [ "${caseID}.manifest", line ]
+                    }
+                    
+                    manifestChannel
+                    | map { manifestFile -> manifestFile
+                        def caseID = manifestFile.getName().tokenize(".")[0]
+                        return tuple(caseID, [manifestFile])
+                    }
+                    | set { glnexus_manifest_ch }
                 */
                 if (!params.groupedOutput) {           
                     sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
