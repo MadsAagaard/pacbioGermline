@@ -183,7 +183,7 @@ if (!params.aligned) {
         }
         | set {samplesheet_full}
     }
-
+/*
     if (params.samplesheet && params.familySS) {
             // familySS (from metadata.txt):
             //rekv_npn_materia_testlist_sex_proband_intref
@@ -208,7 +208,7 @@ if (!params.aligned) {
         gender   : gender,
         sex      : sex,
         proband  : proband,
-        intRef   : intRef
+        intRef   : intRef,
         ssBase   : ssBase
         ]
 
@@ -252,7 +252,7 @@ if (!params.aligned) {
 
         | set {samplesheet_full}
     }
-
+*/
 
     if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
