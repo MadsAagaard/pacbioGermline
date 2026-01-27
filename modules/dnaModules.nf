@@ -939,7 +939,7 @@ process exo14_2508_exome {
     tag "$caseID"
 
     publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiser/"}, mode: 'copy'
-    publishDir {"${params.outBase(meta)}/documents/", mode: 'copy'},pattern:"*.{hpo.txt,yml,ped}"
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern:"*.{hpo.txt,yml,ped}"
     input:
     tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
 
