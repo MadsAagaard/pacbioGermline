@@ -20,6 +20,7 @@ def hpoInputError() {
 }
 
 
+
 if (!params.samplesheet && !params.input) exit 0, inputError() 
 if (!params.samplesheet && params.hpo) exit 0, hpoInputError() 
 
@@ -30,6 +31,11 @@ if (params.hpo) {
     channel.fromPath(params.hpo)
     |set { hpo_ch }
 }
+
+
+
+
+
 
 if (params.aligned) {
 
@@ -136,7 +142,7 @@ if (!params.aligned) {
    
     // default from dec. 5th, 2025:
 
-    if (params.samplesheet && !params.intSS) {
+    if (params.samplesheet && !params.intSS && !params.familySS) {
               
         def ssBase = params.samplesheet
                     .toString()
@@ -148,10 +154,18 @@ if (!params.aligned) {
         | splitCsv(sep:'\t')
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
-            def outKey = (intRef == 'noInfo') ? "singleSampleAnalysis" : "multiSampleAnalysis"
-            def sex = (gender =="K") ? "female" : "male"
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,outKey:outKey,ssBase:ssBase]
+            def groupKey    = (intRef == 'noInfo')  ? "singleSample" : intRef
+            def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
+            def sex         = (gender =="K")        ? "female" : "male"
+            meta=[  id          :npn,
+                    testlist    :testlist,
+                    sex         :sex,
+                    proband     :proband,
+                    intRef      :intRef,
+                    rekv        :rekv,
+                    groupKey    :groupKey,
+                    outKey      :outKey,
+                    ssBase      :ssBase]
             meta
             }
 
@@ -202,14 +216,16 @@ if (!params.aligned) {
 
         def meta = [
         rekv     : rekv,
-        id      : npn,
+        id       : npn,
         material : material,
         testlist : testlist,
         gender   : gender,
         sex      : sex,
         proband  : proband,
-        intRef   : intRef
-        ssBase   : ssBase
+        intRef   : intRef,
+        ssBase   : ssBase,
+        outKey   : 'multiSampleAnalysis',
+        groupKey : intRef
         ]
 
         tuple(intRef, meta)
@@ -248,9 +264,7 @@ if (!params.aligned) {
             ]
         }
     }
-.set { chSamplesWithCaseID }
-
-        | set {samplesheet_full}
+    | set {samplesheet_full}
     }
 
 
@@ -306,7 +320,7 @@ if (!params.aligned) {
         ubam_ss_merged
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.caseID}"
+            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
         }
         .collect()
         | map { lines ->
@@ -329,7 +343,7 @@ if (!params.aligned) {
         ubam_ss_merged_size_split.drop
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.caseID}"
+            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
         }
         .collect()
         | map { lines ->
@@ -341,7 +355,7 @@ if (!params.aligned) {
         ubam_ss_merged_size_split.keep 
         .map { meta, bams ->
             def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.caseID}"
+            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
         }
         .collect()
         | map { lines ->

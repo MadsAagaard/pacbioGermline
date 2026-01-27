@@ -19,7 +19,7 @@ RunID         : $runID
 Script start  : $date2
 Genome FASTA  : ${genome_fasta}
 Archive RAW   : ${dataArchive}
-OutputDir     : ${outputDir}
+OutputDirBase : ${outputDirBase}
 workDir       : ${workflow.workDir}
 min input GB  : $params.minGB
 """
@@ -38,10 +38,10 @@ process check_tmpdir {
 }
 
 process write_input_summary {
-    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/allSamples/", mode: 'copy', pattern: "*.txt"
 
-    //publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/documents/" : ""${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, mode: 'copy', pattern: "*.txt"
+    //publishDir {params.groupedOutput ? "${outputDirBase}/${meta.caseID}/documents/" : ""${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
@@ -56,7 +56,7 @@ process write_input_summary {
 }
 
 process write_dropped_samples_summary {
-    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/droppedSamples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
@@ -72,7 +72,7 @@ process write_dropped_samples_summary {
 }
 
 process write_analyzed_samples_summary {
-    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/analyzedSamples/", mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
@@ -91,10 +91,7 @@ process write_analyzed_samples_summary {
 process create_fofn {
     label "low"
     
-    publishDir {params.groupedOutput ? \
-    "${outputDir}/${meta.caseID}/documents/" : \
-    "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, \
-    mode: 'copy',pattern: '*.fofn'
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn'
 
     cpus 4
     input:
@@ -110,11 +107,7 @@ process create_fofn {
 
 process inputFiles_symlinks_ubam{
     label "low"
-    
-    publishDir {params.groupedOutput ? \
-    "${outputDir}/${meta.caseID}/documents/inputSymlinks/" : \
-    "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/inputSymlinks/"}, \
-     mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir {"${params.outBase(meta)}/documents/inputSymlinks/"}, mode: 'symlink', pattern: '*.{bam,pbi}'
     
     input:
     tuple val(meta), path(data)   
@@ -130,7 +123,7 @@ process inputFiles_symlinks_ubam{
 process symlinks_ubam_dropped {
     label "low"
     
-    publishDir "${outputDir}/runInfo/${date}_${ssBase}/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
 
     input:
     tuple val(meta), path(data)   
@@ -226,8 +219,7 @@ process deepvariant{
     tag "$meta.id"
 
     publishDir "${lrsStorage}/deepVariant/gvcf/", mode: 'copy', pattern: "*.deepVariant.g.vcf.*"    
-   
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/gvcf/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
+    publishDir {"${params.outBase(meta)}/SNV_and_INDELs/gvcf/"}, mode: 'copy', pattern: "*.deepVariant.g.vcf.*"
 
 
     input:
@@ -253,10 +245,8 @@ process glNexus_jointCall {
     label "high"
     tag "$caseID"
     conda "${params.glnexus}"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${caseID}/jointCalls/" : "${outputDir}/jointCalls/"}, mode: 'copy', pattern: "*.jointCall.*"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${caseID}/documents/" : "${outputDir}/documents/"}, mode: 'copy', pattern: "*.manifest"
+    publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*.jointCall.*"
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy', pattern: "*.manifest"
 
     input:
     tuple val(caseID), path(manifest)
@@ -293,20 +283,15 @@ process hiPhase {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/HifiReads/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.ba*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/alignments/allReads/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/SNV_and_INDELs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
-    
-    //publishDir "${lrsStorage}/alignment/BAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.ba*"
-    //publishDir "${lrsStorage}/alignment/CRAM/", mode: 'copy', pattern:"*.${readSubset_hifiDefault}.hiphase.cra*"
     publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
-
 
     input:
     tuple val(meta), val(data), path(vcf), path(sv), path(str)
@@ -390,8 +375,7 @@ process sawFish2 {
     conda "${params.sawfish2}"
 
     //publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
-
+    publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
 
     input:
     tuple val(meta), val(data)
@@ -445,9 +429,7 @@ process svdb_SawFish {
 
     publishDir "${lrsStorage}/structuralVariants/sawfish/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/vcfs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
-
-
+    publishDir {"${params.outBase(meta)}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
     input:
     tuple val(meta), val(data)
@@ -476,7 +458,6 @@ process sawFish2_jointCall_all{
     label "high"
     conda "${params.sawfish2}"
 
-    //publishDir "${outputDir}/jointCalls_All/", mode: 'copy', pattern: "*.sawfishSV_jointCall.*"
 
     input:
     val(x)
@@ -501,7 +482,7 @@ process svdb_sawFish2_jointCall_all {
     label "low"
     conda "${params.svdb}"
     
-    publishDir "${outputDir}/jointCalls_All/", mode: 'copy', pattern: "*_jointCall.svdb.*"
+    publishDir {"${params.outBase(meta)}/jointCalls_All/"}, mode: 'copy', pattern: "*_jointCall.svdb.*"
 
 
     when:
@@ -531,9 +512,7 @@ process sawFish2_jointCall_caseID{
     label "high"
     conda "${params.sawfish2}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${caseID}/jointCalls/" : "${outputDir}/jointCalls/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
-
-    //publishDir "${outputDir}/jointCalls_CaseID/", mode: 'copy', pattern: "*.sawfishSV_jointCall.*"
+    publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
     input:
     tuple val(caseID), path(manifest)
@@ -558,7 +537,7 @@ process svdb_sawFish2_jointCall_caseID {
     label "low"
     conda "${params.svdb}"
     
-    publishDir {params.groupedOutput ? "${outputDir}/${caseID}/jointCalls/" : "${outputDir}/jointCalls/"}, mode: 'copy', pattern: "*_jointCall.svdb.*"
+    publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*_jointCall.svdb.*"
 
 
     when:
@@ -588,7 +567,8 @@ process svTopo {
     //label "high"
     conda "${params.svtopo}"
     cpus 4
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/SVtopo/"}, mode: 'copy'
+
+    publishDir {"${params.outBase(meta)}/structuralVariants/SVtopo/"}, mode: 'copy'
 
 
     input:
@@ -623,7 +603,8 @@ process svTopo_filtered {
     label "high"
     conda "${params.svtopo}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/structuralVariants/SVtopo_filtered/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/structuralVariants/SVtopo_filtered/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/structuralVariants/SVtopo_filtered/"}, mode: 'copy'
+
 
 
     input:
@@ -664,7 +645,8 @@ process mitorsaw {
     label "medium"
     conda "${params.mitorsaw}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/mitochondrialVariants/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/mitochondrialVariants/"}, mode: 'copy'
+ 
+    publishDir {"${params.outBase(meta)}/specialAnalysis/mitochondrialVariants/"}, mode: 'copy'
 
 
 
@@ -690,8 +672,8 @@ process trgt4_diseaseSTRs{
     tag "$meta.id"
     label "low"
     conda "${params.trgt4}"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
 
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
@@ -736,8 +718,8 @@ process trgt4_diseaseSTRs_plots{
     tag "$meta.id"
     label "low"
     conda "${params.trgt4}"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/diseaseSTRs/Plots/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
 
     input:
     tuple val(meta), val(data)
@@ -776,10 +758,10 @@ process trgt4_all {
     tag "$meta.id"
     label "high"
     conda "${params.trgt4}"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/bam" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
-
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/TRGT/allSTRs/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/TRGT/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
+  
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
 
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/all/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
@@ -814,7 +796,7 @@ process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/Kivvi_D4Z4/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/Kivvi_D4Z4/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4/"}, mode: 'copy'
 
 
     input:
@@ -839,7 +821,7 @@ process kivvi05_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/repeatExpansions/kivviD4Z4_05/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
 
 
     input:
@@ -865,7 +847,7 @@ process paraphase {
     label "medium"
     conda "${params.paraphaseMinimap2}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/paraphase/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/paraphase/"},mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
 
 
 
@@ -901,7 +883,7 @@ process starphase {
     label "medium"
     conda "${params.starphase}"
     
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/starphase/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/starphase/"},mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/starphase/"},mode: 'copy'
 
 
     input:
@@ -930,7 +912,7 @@ process advntr {
     errorStrategy 'ignore'
     tag "$meta.id"
     cpus 8
-    publishDir "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/advntr/", mode: 'copy', pattern: "*.advntr.*"
+    publishDir {"${params.outBase(meta)}/advntr/"}, mode: 'copy', pattern: "*.advntr.*"
 
     conda "${params.advntr15}"
 
@@ -956,8 +938,8 @@ process exo14_2508_exome {
     label "medium"
     tag "$caseID"
 
-    publishDir "${outputDir}/${caseID}/exomiser14_2508/exomiser/", mode: 'copy'
-    publishDir "${outputDir}/${caseID}/documents/", mode: 'copy',pattern:"*.{hpo.txt,yml,ped}"
+    publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiser/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/documents/", mode: 'copy'},pattern:"*.{hpo.txt,yml,ped}"
     input:
     tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
 
@@ -990,7 +972,7 @@ process exo14_2508_genome {
     label "medium"
     tag "$caseID"
 
-    publishDir "${outputDir}/${caseID}/exomiser14_2508/genomiser/", mode: 'copy'
+    publishDir {"${params.outBase(meta)}/exomiser14_2508/genomiser/"}, mode: 'copy'
 
     input:
     tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
@@ -1023,7 +1005,7 @@ process exo14_2508_SV {
     label "medium"
     tag "$caseID"
 
-    publishDir "${outputDir}/${caseID}/exomiser14_2508/exomiserStructuralVariants/", mode: 'copy'
+    publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiserStructuralVariants/"}, mode: 'copy'
 
     input:
     tuple val(caseID), path(vcf), path(idx), path(hpo), path(samplesheet)
@@ -1065,7 +1047,7 @@ process methylationBW{
     label "medium"
     conda "${params.pbCPGtools}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/BigWigBed/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/methylation/BigWigBed/"}, mode: 'copy', pattern: "*.methylation.{hap1,hap2,combined}.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/BigWigBed/"}, mode: 'copy', pattern: "*.methylation.{hap1,hap2,combined}.*"
 
     publishDir "${lrsStorage}/methylation/pbCpGtools/${meta.id}/", mode: 'copy', pattern:"*.bed.*"
 
@@ -1088,7 +1070,7 @@ process methylationSegm{
     label "medium"
     conda "${params.methbat}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/specialAnalysis/methylation/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/specialAnalysis/methylation/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/"}, mode: 'copy'
 
     publishDir "${lrsStorage}/methylation/methBatProfiles/", mode: 'copy', pattern:"*.profile"
 
@@ -1127,7 +1109,7 @@ process mosdepthROI {
     label "low"
     conda "${params.mosdepth}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/mosdepth/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/mosdepth/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/QC/mosdepth/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data)  
@@ -1153,7 +1135,7 @@ process whatsHap_stats {
     label "low"
     conda "${params.whatshap}" 
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/whatsHap/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/whatsHap/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/QC/whatsHap/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data)  
@@ -1173,7 +1155,7 @@ process cramino {
     label "low"
     conda "${params.cramino}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/cramino/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/cramino/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/QC/cramino/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
@@ -1196,7 +1178,7 @@ process nanoStat {
     label "low"
     conda "${params.nanostats}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/nanoStat/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/nanoStat/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/QC/nanoStat/"}, mode: 'copy'
 
     input: 
     tuple val(meta), val(data) 
@@ -1218,7 +1200,7 @@ process multiQC {
     label "low"
     conda "${params.multiqc}"
 
-    publishDir {params.groupedOutput ? "${outputDir}/${meta.caseID}/QC/" : "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/QC/"}, mode: 'copy'
 
     when:
     !params.groupedOutput
@@ -1244,7 +1226,7 @@ process multiQC_ALL {
     label "low"
     conda "${params.multiqc}"
 
-    publishDir "${outputDir}/runInfo/${date}_${ssBase}/", mode: 'copy'
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/", mode: 'copy'
 
     when:
     params.groupedOutput
@@ -1306,7 +1288,7 @@ process collect_versions {
 
 process vntyper2 {
     errorStrategy 'ignore'
-    publishDir "${outputDir}/MUC1-VNTR_kestrel/", mode: 'copy'
+    publishDir "${outputDirBase}/MUC1-VNTR_kestrel/", mode: 'copy'
     cpus 16
 
     input:
@@ -1363,7 +1345,7 @@ process hifiasm {
     errorStrategy 'ignore'
     tag "$meta.id"
     cpus 8
-    publishDir "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.advntr.*"
+    publishDir {"${params.outBase(meta)}/hifiasm/"}, mode: 'copy', pattern: "*.advntr.*"
 
     conda "${params.hifiasm}"
 
