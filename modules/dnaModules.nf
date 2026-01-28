@@ -1214,10 +1214,11 @@ process multiQC {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
+    -f -q . \
     -n ${meta.id}.MultiQC.DNA.html
     """
 }
+//${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/
 //    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
 
 

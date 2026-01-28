@@ -651,14 +651,9 @@ workflow {
                     )
                 }
                 | groupTuple()   // -> caseID, [ (meta,line), (meta,line), ... ]
-                |view
                 | map { caseID, records ->
 
-                    // pick one meta as the “family meta” anchor
                     def anchorMeta = records[0][0]
-
-                    // OPTIONAL sanity check: ensure all share same testlist (good to catch weird inputs)
-                    // assert records.every { it[0].testlist == anchorMeta.testlist } : "Mixed testlist within caseID=${caseID}"
 
                     // build manifest file content
                     def content = records.collect { it[1] }.join("\n") + "\n"
