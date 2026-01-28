@@ -1198,7 +1198,7 @@ process nanoStat {
 }
 
 process multiQC {
-    tag "$meta.id"
+    tag { params.layoutMode == 'familyAnalysis' ? meta.caseID : meta.id }
     label "low"
     conda "${params.multiqc}"
 
