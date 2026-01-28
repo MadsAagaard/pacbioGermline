@@ -822,7 +822,7 @@ workflow {
                     tuple(meta0, qcfiles)
                 }
                 .set { multiqc_inputs_ch }
-                //multiQC(multiqc_inputs_ch)
+                multiQC(multiqc_inputs_ch)
             }
         }
     }
