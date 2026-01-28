@@ -810,7 +810,7 @@ workflow {
                 .mix(QC.out.nanoStat)          
                 .mix(whatsHap_stats.out.multiqc)    
                 .map { meta, qcfile ->
-                    tuple(multiqcKey(meta), meta, qcfile)
+                    tuple(params.multiqcKey(meta), meta, qcfile)
                 }
                 .groupTuple(by: 0)   
                 .map { key, items ->
