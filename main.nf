@@ -812,6 +812,7 @@ workflow {
                 .map { meta, qcfile ->
                     tuple(params.multiqcKey(meta), meta, qcfile)
                 }
+                |view
                 .groupTuple(by: 0)   
                 .map { key, items ->
                     // items is a list of [key, meta, qcfile]
@@ -819,7 +820,6 @@ workflow {
                     def files = items.collect { it[2] }
                     tuple(meta0, files)
                 }
-                |view
                 .set { multiqc_inputs_ch }
                 multiQC(multiqc_inputs_ch)
             }
