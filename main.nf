@@ -694,23 +694,13 @@ workflow {
                 }
                 .groupTuple()
                 .map { caseID, records ->
-
-                    // pick one meta as the family anchor
                     def anchorMeta = records[0][0]
-
-                    // OPTIONAL sanity check
-                    // assert records.every { it[0].testlist == anchorMeta.testlist } : "Mixed testlist within caseID=${caseID}"
-
-                    // create the manifest content (one gvcf per line)
                     def content = records.collect { it[1] }.join('\n') + '\n'
-
                     def mf = file("${caseID}.manifest")
                     mf.text = content
-
                     tuple(anchorMeta, mf)
                 }
                 .set { glnexus_manifest_ch }
-
 
                 glNexus_jointCall(glnexus_manifest_ch)
                 sawFish2_jointCall_caseID(sawfish_jointCall_manifest_ch)
@@ -758,28 +748,6 @@ workflow {
             }
 
 
-                /*
-
-                QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
-                | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
-                |set {multiqcSingleInput}   
-                multiQC(multiqcSingleInput)
-
-                    def allOutputs = Channel.empty()
-                allOutputs = allOutputs.mix(QC.out.mosdepth)    
-                allOutputs = allOutputs.mix(QC.out.nanoStat)          
-                allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
-
-                allOutputs
-                |groupTuple
-                |view
-                |set {multiqcAllInput}
-                if (params.groupedOutput) {
-                    multiQC_ALL(multiqcAllInput)
-                */
-
-
-            // input channel for multiQC
             if (!params.skipQC) {
 
                 Channel.empty()
@@ -877,7 +845,29 @@ workflow.onComplete {
                     sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
                     svdb_sawFish2_jointCall_all(sawFish2_jointCall_all.out.sv_jointCall_vcf)
                 }
-                 */
+
+                
+
+
+                QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
+                | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
+                |set {multiqcSingleInput}   
+                multiQC(multiqcSingleInput)
+
+                    def allOutputs = Channel.empty()
+                allOutputs = allOutputs.mix(QC.out.mosdepth)    
+                allOutputs = allOutputs.mix(QC.out.nanoStat)          
+                allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
+
+                allOutputs
+                |groupTuple
+                |view
+                |set {multiqcAllInput}
+                if (params.groupedOutput) {
+                    multiQC_ALL(multiqcAllInput)
+
+
+
 
 
 /*
