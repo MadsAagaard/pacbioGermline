@@ -819,6 +819,7 @@ workflow {
                     def files = items.collect { it[2] }
                     tuple(meta0, files)
                 }
+                |view
                 .set { multiqc_inputs_ch }
                 multiQC(multiqc_inputs_ch)
             }
