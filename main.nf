@@ -781,16 +781,14 @@ workflow {
             }
 
 
+                /*
 
-
-            // input channel for multiQC
-            if (!params.skipQC) {
                 QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
                 | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
                 |set {multiqcSingleInput}   
                 multiQC(multiqcSingleInput)
 
-                def allOutputs = Channel.empty()
+                    def allOutputs = Channel.empty()
                 allOutputs = allOutputs.mix(QC.out.mosdepth)    
                 allOutputs = allOutputs.mix(QC.out.nanoStat)          
                 allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
@@ -801,7 +799,28 @@ workflow {
                 |set {multiqcAllInput}
                 if (params.groupedOutput) {
                     multiQC_ALL(multiqcAllInput)
+                */
+
+
+            // input channel for multiQC
+            if (!params.skipQC) {
+
+                Channel.empty()
+                .mix(QC.out.mosdepth)    
+                .mix(QC.out.nanoStat)          
+                .mix(whatsHap_stats.out.multiqc)    
+                .map { meta, qcfile ->
+                    tuple(multiqcKey(meta), meta, qcfile)
                 }
+                .groupTuple(by: 0)   
+                .map { key, items ->
+                    // items is a list of [key, meta, qcfile]
+                    def meta0 = items[0][1]
+                    def files = items.collect { it[2] }
+                    tuple(meta0, files)
+                }
+                .set { multiqc_inputs_ch }
+                multiQC(multiqc_inputs_ch)
             }
         }
     }

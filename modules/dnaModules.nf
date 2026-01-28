@@ -1205,17 +1205,22 @@ process multiQC {
     publishDir {"${params.outBase(meta)}/QC/"}, mode: 'copy'
 
     input:
-    tuple val(meta),  path(data)  
+    tuple val(meta),  path(qcfiles)  
 
     output:
     path ("*MultiQC*.html")
 
     script:
+    def reportName = (params.layoutMode == 'familyAnalysis') ? "${meta.caseID}.MultiQC.DNA.html" : "${meta.id}.MultiQC.DNA.html"
+
     """
+    mkdir -p qc_in
+    cp -L ${qcfiles} qc_in/
+    
     multiqc \
     -c ${multiqc_config} \
-    -f -q . \
-    -n ${meta.id}.MultiQC.DNA.html
+    -f -q qc_in \
+    -n ${reportName}
     """
 }
 //${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/
@@ -1236,9 +1241,6 @@ process multiQC_ALL {
 
     output:
     path ("${params.rundir}.MultiQC.ALL.html")
-
- //   def exclude=params.genome=="hg38" ? "--cnv-excluded-regions ${cnv_exclude_sawfish}" : ""
-   // def sex = (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--expected-cn ${sawfishMaleExpectedCN}" : "--expected-cn ${sawfishFemaleExpectedCN}"
 
 
     script:
