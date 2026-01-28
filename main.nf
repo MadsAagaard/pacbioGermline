@@ -646,8 +646,7 @@ workflow {
                 | map { meta, dir, bam ->
                     // Emit key + a record line we’ll write into the manifest
                     tuple(
-                    meta.caseID,
-                    tuple(meta, "${dir.toString()}, ${bam.toString()}")
+                    meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
                     )
                 }
                 | groupTuple()   // -> caseID, [ (meta,line), (meta,line), ... ]
