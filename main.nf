@@ -746,7 +746,6 @@ workflow {
                 exo14_2508_SV(exomiserSV_ch)
             }
 
-
             if (!params.skipQC) {
 
                 Channel.empty()
