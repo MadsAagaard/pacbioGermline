@@ -811,7 +811,7 @@ workflow {
                 .mix(whatsHap_stats.out.multiqc)
  
                 .map { meta, qcfile ->
-                    tuple(params.multiqcKey(beta), meta, qcfile)
+                    tuple(params.multiqcKey(meta), meta, qcfile)
                 }
 
                 .groupTuple(by: 0)   
