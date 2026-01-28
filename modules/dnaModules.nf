@@ -1253,39 +1253,6 @@ process multiQC_ALL {
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
-//    -f -q ${launchDir}/${outputDir}/*/*/QC/ \
-/////////////// TO DO /////////////////////
-/*
-process collect_versions {
-    input:
-    val versions from versions_ch.collect()
-
-    output:
-    path 'software_versions.tsv'
-
-    script:
-    """
-    echo -e "process\\ttool\\tversion" > software_versions.tsv
-    for row in "${versions[@]}"; do
-        echo "$row" | tr -d '[]' | tr ',' '\\t' >> software_versions.tsv
-    done
-    """
-}
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 process vntyper2 {
