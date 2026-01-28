@@ -797,6 +797,7 @@ workflow {
 
                 allOutputs
                 |groupTuple
+                |view
                 |set {multiqcAllInput}
                 if (params.groupedOutput) {
                     multiQC_ALL(multiqcAllInput)

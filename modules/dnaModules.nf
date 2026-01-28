@@ -1247,7 +1247,7 @@ process multiQC_ALL {
     """
     multiqc \
     -c ${multiqc_config} \
-    -f -q ${outputDir}/${meta.caseID}/QC/ \
+    -f -q . \
     -n ${params.rundir}.MultiQC.ALL.html
     """
 }
