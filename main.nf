@@ -808,11 +808,12 @@ workflow {
                 Channel.empty()
                 .mix(QC.out.mosdepth)    
                 .mix(QC.out.nanoStat)          
-                .mix(whatsHap_stats.out.multiqc)    
+                .mix(whatsHap_stats.out.multiqc)
+                .view()
                 .map { meta, qcfile ->
                     tuple(params.multiqcKey(meta), meta, qcfile)
                 }
-                |view
+
                 .groupTuple(by: 0)   
                 .map { key, items ->
                     // items is a list of [key, meta, qcfile]
