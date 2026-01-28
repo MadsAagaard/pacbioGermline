@@ -487,9 +487,6 @@ process svdb_sawFish2_jointCall_all {
     publishDir {"${params.outBase(meta)}/jointCalls_All/"}, mode: 'copy', pattern: "*_jointCall.svdb.*"
 
 
-    when:
-    params.jointCall
-
     input:
     tuple path(vcf), path(idx)
     
@@ -540,10 +537,6 @@ process svdb_sawFish2_jointCall_caseID {
     conda "${params.svdb}"
     
     publishDir {"${params.outBase(meta)}/jointCalls/"}, mode: 'copy', pattern: "*_jointCall.svdb.*"
-
-
-    when:
-    params.jointCall
 
     input:
     tuple val(meta), path(vcf), path(idx)
