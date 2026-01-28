@@ -806,22 +806,21 @@ workflow {
             if (!params.skipQC) {
 
                 Channel.empty()
-                .mix(QC.out.mosdepth)    
-                .mix(QC.out.nanoStat)          
+                .mix(QC.out.mosdepth)
+                .mix(QC.out.nanoStat)
                 .mix(whatsHap_stats.out.multiqc)
- 
                 .map { meta, qcfile ->
                     tuple(params.multiqcKey(meta), meta, qcfile)
                 }
+                .groupTuple(by: 0)
+                .map { key, metas, qcfiles ->
 
-                .groupTuple(by: 0)   
-                .map { key, items ->
-                    // items is a list of [key, meta, qcfile]
-                    def meta0 = items[0][1]
-                    def files = items.collect { it[2] }
-                    tuple(meta0, files)
+                    // pick one representative meta for publishDir + naming
+                    // (in family mode you may prefer proband/index)
+                    def meta0 = metas.find { it.relation == 'index' } ?: metas[0]
+
+                    tuple(meta0, qcfiles)
                 }
-                .view()
                 .set { multiqc_inputs_ch }
                 //multiQC(multiqc_inputs_ch)
             }
