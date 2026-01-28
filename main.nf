@@ -733,7 +733,7 @@ workflow {
             // trio specific analysis. 
             //NB: Currently only works for single-family or single-trio analysis!
 
-            if (params.hpo && params.samplesheet && params.jointCall && params.groupedOutput) {
+            if (params.hpo && params.samplesheet && (params.jointCall || params.familySS)) {
             glNexus_jointCall.out.glnexus_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
             |set {genomiser_ch}
             glNexus_jointCall.out.glnexus_wes_roi_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
