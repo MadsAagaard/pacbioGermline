@@ -809,9 +809,9 @@ workflow {
                 .mix(QC.out.mosdepth)    
                 .mix(QC.out.nanoStat)          
                 .mix(whatsHap_stats.out.multiqc)
-                .view()
+ 
                 .map { meta, qcfile ->
-                    tuple(params.multiqcKey(meta), meta, qcfile)
+                    tuple(params.multiqcKey(beta), meta, qcfile)
                 }
 
                 .groupTuple(by: 0)   
@@ -821,8 +821,9 @@ workflow {
                     def files = items.collect { it[2] }
                     tuple(meta0, files)
                 }
+                .view()
                 .set { multiqc_inputs_ch }
-                multiQC(multiqc_inputs_ch)
+                //multiQC(multiqc_inputs_ch)
             }
         }
     }
