@@ -507,7 +507,7 @@ process svdb_sawFish2_jointCall_all {
 }
 
 process sawFish2_jointCall_caseID{
-    tag "$caseID"
+    tag "$meta.caseID"
     label "high"
     conda "${params.sawfish2}"
 

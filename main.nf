@@ -154,7 +154,7 @@ if (!params.aligned) {
         | splitCsv(sep:'\t')
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            def groupKey    = (intRef == 'noInfo')  ? "singleSample" : intRef
+            def groupKey    = (intRef == 'noInfo')  ? "single" : intRef
             def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
             def sex         = (gender =="K")        ? "female" : "male"
             meta=[  id          :npn,
@@ -172,7 +172,7 @@ if (!params.aligned) {
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
-            singleSample: (row.groupKey=~/singleSample/)
+            singleSample: (row.groupKey=~/single/)
                 return row
             multiSample: true
                 return row
