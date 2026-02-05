@@ -126,7 +126,7 @@ Note: GENDER should be either male/female, RELATION should be either mater/index
 
     ### Slurm Execution parameters:
     -profile slurm:         Run pipeline using KGVejle SLURM cluster
-                                Default: Run pipeline on local server (where scrit is started)
+                                Default: Run pipeline on local server (where script is started)
     --slurmA        [bool]: Use secondary fast tmp storage (nfs_fast_a)
                                 Default: Use primary fast tmp storage location at KGVejle                                        
 
