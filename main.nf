@@ -142,7 +142,7 @@ if (!params.aligned) {
    
     // default from dec. 5th, 2025:
 
-    if (params.samplesheet && !params.intSS && !params.familySS) {
+    if (params.samplesheet && !params.intSS && !params.jointSS) {
               
         def ssBase = params.samplesheet
                     .toString()
@@ -198,8 +198,8 @@ if (!params.aligned) {
         | set {samplesheet_full}
     }
 
-    if (params.samplesheet && params.familySS) {
-            // familySS (from metadata.txt):
+    if (params.samplesheet && params.jointSS) {
+            // jointSS (from metadata.txt):
             //rekv_npn_materia_testlist_sex_proband_intref
         def ssBase = params.samplesheet
                     .toString()
@@ -635,7 +635,7 @@ workflow {
             tuple(meta,[bam:bam,bai:bai,dv_vcf:dv_vcf,dv_idx:dv_idx,sawfish_vcf:sv_vcf,sawfish_idx:sv_idx,sawfish_reads:sv_jsonReads])}
             |set {phasedAll}    // use for val(data) instead of path(data) setup in modules 
 
-            if (params.jointCall || params.familySS) {
+            if (params.jointCall || params.jointSS) {
                 STRUCTURALVARIANTS.out.sawfish_discover_dir
                 | map {" --sample "+it}
                 |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
@@ -733,7 +733,7 @@ workflow {
             // trio specific analysis. 
             //NB: Currently only works for single-family or single-trio analysis!
 
-            if (params.hpo && params.samplesheet && (params.jointCall || params.familySS)) {
+            if (params.hpo && params.samplesheet && (params.jointCall || params.jointSS)) {
             glNexus_jointCall.out.glnexus_vcf.combine(hpo_ch).combine(samplesheet_path_ch)
             |set {genomiser_ch}
             glNexus_jointCall.out.glnexus_wes_roi_vcf.combine(hpo_ch).combine(samplesheet_path_ch)

@@ -1191,7 +1191,7 @@ process nanoStat {
 }
 
 process multiQC {
-    tag { params.layoutMode == 'familyAnalysis' ? meta.caseID : meta.id }
+    tag { params.layoutMode == 'jointAnalysis' ? meta.caseID : meta.id }
     label "low"
     conda "${params.multiqc}"
 
@@ -1204,7 +1204,7 @@ process multiQC {
     path ("*MultiQC*.html")
 
     script:
-    def reportName = (params.layoutMode == 'familyAnalysis') ? "${meta.caseID}.MultiQC.DNA.html" : "${meta.id}.MultiQC.DNA.html"
+    def reportName = (params.layoutMode == 'jointAnalysis') ? "${meta.caseID}.MultiQC.DNA.html" : "${meta.id}.MultiQC.DNA.html"
 
     """
     mkdir -p qc_in

@@ -1,7 +1,7 @@
 # KG Vejle Germline PacBio LRS pipeline
 
 ## General info:
-This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
+This pipeline is used for PacBio LRS germline WGS at Clinical Genetics, Vejle
 
 
 ## Default analysis steps and tools used
@@ -21,9 +21,8 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 
 ## Additional user-defined output
 - Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf) and structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
-- JointGenotyping is disabled by default, but can be activated with --jointCall (see parameter section)
-- Grouped output (e.g. collect data for all samples for each tool in a single outputfolder based on the used samplesheet) is disabled by default (i.e. output data is collected per sample by default). Grouped output can be activated with --groupedOutput (see parameter section).
-- Joint genotyping (GLNexus for small variants, Sawfish for structural variants) can be added with the --jointCall option
+- JointGenotyping is disabled by default for single genome analyses, but can be added with --jointCall or when analyzing family or other multisample analyses using --jointSS (see parameter section)
+- Joint genotyping uses GLNexus for small variants and Sawfish for structural variants
 - Tools and modules can be disabled using e.g. --skipQC, --skipVariants, --skipSV, --skipSTR (see parameter section)
 
 # Usage
@@ -31,18 +30,29 @@ This pipeline is used for PacBio germline WGS at Clinical Genetics, Vejle
 The tools used and output generated depends on how the pipeline is run. See below for instructions.
 The script requires a samplesheet as input:
 
-## Samplesheet format, unrelated samples
-The most basic samplesheet contains 3 tab-separated columns in this specific order:
+## Default samplesheet format (based on LabWare metadata output)
+The default samplesheet is derived from the labWare metadata output generated per run.
+The samplesheet is structured as single column, 1 sample per row. Each entry consists of 7 fields separated by underscore ("_"):
+1. rekvisition
+2. NPN / sampleID
+3. Bio. material
+4. Analysis testlist
+5. Gender (M=male, K=female)
+6. Proband (T=true, F=false)
+7. Internal reference (if absent, i.e. single sample: "noInfo")
+
+Example:
+0000012345_123456789012_11_SL-LWG-CNV_K_F_noInfo
+
+
+## Custom samplesheet format, unrelated samples
+A custom samplesheet can be envoked with the --intSS parameter (see parameter section)
+
+A custom samplesheet consists of at least 3 tab separated columns, in this particular order:
 
     CASE_GROUP NPN GENDER
 
-Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" etc.
-
-Example: Unrelated samples, separate output for each sample, use NPN as CASE_GROUP, so each sampleoutput is stored in an output folder named {NPN}
-
-    123456789012  123456789012   female
-    234567890123  234567890123   male
-    345678901234  345678901234   male
+Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" "PROJECT_A" etc.
 
 Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP
 
@@ -53,17 +63,18 @@ Example: Unrelated samples, but collect sampleoutput per group based on values i
     ManualKey    567890123456    male
     ManualKey    678901234567    female
 
-When using the above samplesheet with the --groupedOutput option, the output will be separated into WGS_CNV, Pseudogene and ManualKey.
+When using the above samplesheet with the --jointSS option, the output will be separated into WGS_CNV, Pseudogene and ManualKey.
 
-## Samplesheet format, trios
-
+## Custom samplesheet format, trios
+A custom samplesheet for family analysis /trios etc., requires the same 3 columns described above, and an additional 2 columns describing the relation and affection status, e.g.
+:
     CASEID  NPN  GENDER  RELATION  AFFECTED_STATUS
 
 Example:
 
-    trio_name	113648565123	female	mater	normal
-    trio_name	345678965123	female	index	affected
-    trio_name	123456789123	male	pater	normal
+    trioID	113648565123	female	mater	normal
+    trioID	345678965123	female	index	affected
+    trioID	123456789123	male	pater	normal
 
 For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
 
@@ -71,17 +82,35 @@ Note: GENDER should be either male/female, RELATION should be either mater/index
 
 ## Options and parameters:
     --help                  Show this help menu with available options
-    --input [path]:         Path to data to use as input. Default: Search KG Vejle archive for input unmapped bams (search across all previous PacBio runs)
-    --allReads [bool]:      Use allreads, i.e. HiFi reads and failed reads as input. Default: Only uses HiFi reads as input.
-    --noMerge [bool]:       Do not use all available unmapped bam files as input. Only use files in folder set with --input). Requires that the --input parameter is set
-    --samplesheet [path]:   path to samplesheet to use. Required
-    --skipQC [bool]:        Do not run QC module
-    --skipVariants [bool]:  Do not call small variants (i.e. skip DeepVariant)
-    --skipSV [bool]:        Do not call structural variants (i.e. skip Sawfish)
-    --skipSTR [bool]:       Do not call repeat expansions (i.e. skip TRGT and Kivvi)
-    --groupedOutput [bool]: Merge output based on value in first column of samplesheet
-    --jointCall [bool]:     Perform joint genotyping of samples based on value in first column of samplesheet
-    --hpo [path]:           Path to file with hpo terms (only relevant for trios / family analyses)
+    
+    --samplesheet   [path]: Path to samplesheet to use. Required
+    
+    --jointSS       [bool]: Use jointGenotyping, and group output for all samples (use for trio and family analysis)
+                                Default: Not set
+
+    --input         [path]: Path to data to use as input. 
+                                Default: Not set. Instead, Search KG Vejle archive for input unmapped bams (search across all previous PacBio runs)
+    
+    --allReads      [bool]: Use allreads, i.e. HiFi reads and failed reads as input.
+                                Default: Uses a combination of AllReads (for STR analysis) and HiFi reads for everything else
+    
+    --hifiReads     [bool]: Use HiFi reads only, for all analysis. Default: Uses a combination 
+                             of AllReads (for STR analysis) and HiFi reads for everything else
+
+    --singleOnly    [bool]: Only analyze single genomes in samplesheet (i.e. "noInfo" in int ref)
+
+    --skipQC        [bool]: Do not run QC module
+    
+    --skipVariants  [bool]: Do not call small variants (i.e. skip DeepVariant)
+    
+    --skipSV        [bool]: Do not call structural variants (i.e. skip Sawfish)
+    
+    --skipSTR       [bool]: Do not call repeat expansions (i.e. skip TRGT and Kivvi)
+    
+    --jointCall     [bool]: Perform joint genotyping of samples based on value in first column of samplesheet
+    
+    --hpo           [path]: Path to file with hpo terms (only relevant for trios / family analyses)
+
 
 NOTE:
 If any of the parameters --skipVariants, --skipSV or --skipSTR is set, phasing of the data is disabled. 
