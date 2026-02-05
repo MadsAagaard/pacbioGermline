@@ -166,12 +166,6 @@ The script is run locally by default, but can use the SLURM cluster by adding "-
 # Output
 
 Based on the options shown above, and the samplesheet used, output is either stored per sample (individual tools as subfolders for each sample), or grouped by tools and analysis (e.g. all DeepVariant data for all samples stored in a single outputfolder).
-
-## Default output structure
-
-Per sample, 
-
-
 See KG Vejle infonet for further details.
 
 
