@@ -806,7 +806,7 @@ process kivvi_d4z4{
     ${params.kivvi_dir}/kivvi \
     -r ${genome_fasta} \
     --bam ${data.bam} \
-    -p ${meta.id}.${genome_version} \
+    -p ${meta.id}.${genome_version}.${readSubset_hifiDefault} \
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4 \
     d4z4
     """
@@ -830,7 +830,7 @@ process kivvi05_d4z4{
     ${params.kivvi_dir2}/kivvi \
     -r ${genome_fasta} \
     --bam ${data.bam} \
-    -p ${meta.id}.${genome_version} \
+    -p ${meta.id}.${genome_version}.${readSubset_hifiDefault} \
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4_05 \
     d4z4
     """
