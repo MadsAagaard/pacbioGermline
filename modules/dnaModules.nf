@@ -43,7 +43,6 @@ process write_input_summary {
     publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/", mode: 'copy', pattern: "*.txt"
     publishDir "${lrsDocuments}/summaryData/allSamples/", mode: 'copy', pattern: "*.txt"
 
-    //publishDir {params.groupedOutput ? "${outputDirBase}/${meta.caseID}/documents/" : ""${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/documents/"}, mode: 'copy', pattern: "*.txt"
     input:
     val(summary_ch)
 
@@ -365,7 +364,6 @@ process hiPhase {
     """
 }
 
-//bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
 
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
@@ -376,7 +374,6 @@ process sawFish2 {
     label "high"
     conda "${params.sawfish2}"
 
-    //publishDir "${lrsStorage}/structuralVariants/sawfish/raw/", mode: 'copy', pattern:"*.sawfishSV.vcf.*"
     publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
 
     input:
@@ -559,7 +556,6 @@ process svdb_sawFish2_jointCall_caseID {
 
 process svTopo {
     tag "$meta.id"
-    //label "high"
     conda "${params.svtopo}"
     cpus 4
 
