@@ -666,7 +666,7 @@ workflow {
             
             if (params.genome=="hg38") {
                 paraphase(phasedAll)
-                kivvi_d4z4(phasedAll)
+                //kivvi_d4z4(phasedAll)
                 kivvi05_d4z4(phasedAll)
                 starphase(phasedAll)
                 svTopo(phasedAll)
