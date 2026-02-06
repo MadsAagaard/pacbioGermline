@@ -812,14 +812,14 @@ process kivvi05_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/kivviD4Z4_05/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/kivvi_D4Z4_05/"}, mode: 'copy'
 
 
     input:
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4_05")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivvi_D4Z4_05")
     
     script:
     """
@@ -827,7 +827,7 @@ process kivvi05_d4z4{
     -r ${genome_fasta} \
     --bam ${data.bam} \
     -p ${meta.id}.${genome_version}.${readSubset_hifiDefault} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4_05 \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivvi_D4Z4_05 \
     d4z4
     """
 }
