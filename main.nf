@@ -265,6 +265,11 @@ if (!params.aligned) {
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
+        if (params.intrefOnly) {
+            samplesheetBranch.multiSample
+            |map {row -> meta2=[row.id,row]}
+            |set {samplesheet_join}
+        }
         samplesheet_join.join(ubam_input_samples)
             |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
         |set {ubam_ss_merged} // full unfiltered set
