@@ -103,7 +103,7 @@ if (!params.aligned) {
         }
     }
 
-    if (params.samplesheet && !params.intSS && !params.jointSS) {
+    if (params.samplesheet && !params.customSS && !params.jointSS) {
               
         def ssBase = params.samplesheet
                     .toString()
@@ -142,7 +142,7 @@ if (!params.aligned) {
     }
 
     // intermediate naming scheme:
-    if (params.samplesheet && params.intSS) {
+    if (params.samplesheet && params.customSS) {
 
         def ssBase = params.samplesheet
                     .toString()
