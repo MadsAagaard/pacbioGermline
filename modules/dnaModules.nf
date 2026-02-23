@@ -284,9 +284,9 @@ process hiPhase {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
-    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.cra*"
 
-    publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.cra*"
 
     publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
@@ -301,7 +301,7 @@ process hiPhase {
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
    
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram.crai"), emit: hiphase_cram       
-
+    
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
 
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
@@ -310,7 +310,9 @@ process hiPhase {
    
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai")//,  emit: hiphase_allReads_bam  
-    
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram.crai")//,  emit: hiphase_allReads_cram  
+
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
    // tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
     }
@@ -322,6 +324,9 @@ process hiPhase {
             "--bam ${data.mainBamFile}",
             "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
         ]
+        hiphaseBams += [
+            "${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
+        ]
     }
     else {
         bamArgs += [
@@ -330,8 +335,21 @@ process hiPhase {
             "--bam ${data.bamAll}",
             "--output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
         ]
+        hiphaseBams += [
+            "${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam",
+            "${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
+        ]
     }
     def bamArgsStr = bamArgs.join(' ')
+
+    def cramCmds = hiphaseBams.collect { bam ->
+    def cram = bam.replaceFirst(/\.bam$/, '.cram')
+    """
+    samtools view -@ ${task.cpus} -T ${genome_fasta} --write-index -C -O cram,version=3.1,level=6 -o ${cram} ${bam}
+    """.stripIndent().trim()
+}.join("\n\n")
+
+
     """
     hiphase \
     $bamArgsStr \
@@ -353,6 +371,13 @@ process hiPhase {
     -L ${ROI} \
     -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
 
+    ${cramCmds}
+
+    """
+}
+
+
+/*
     samtools view \
     -T ${genome_fasta} \
     -C \
@@ -360,11 +385,7 @@ process hiPhase {
 
     samtools index ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram
 
-
-    """
-}
-
-
+*/
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
 ///////////////////////////////////////////////////
