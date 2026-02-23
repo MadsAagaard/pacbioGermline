@@ -284,7 +284,7 @@ process hiPhase {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
-    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.cra*"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
 
     publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.cra*"
 
