@@ -319,6 +319,7 @@ process hiPhase {
 
     script:
     def bamArgs = []
+    def hiphaseBams = []
     if (params.allReads || params.hifiReads || params.failedReads) {
         bamArgs += [
             "--bam ${data.mainBamFile}",
