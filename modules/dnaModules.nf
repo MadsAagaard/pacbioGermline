@@ -396,7 +396,7 @@ process sawFish2 {
     label "high"
     conda "${params.sawfish2}"
 
-    publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw}"
+    publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw,json,json.gz}"
 
     input:
     tuple val(meta), val(data)
@@ -439,6 +439,8 @@ process sawFish2 {
     mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.depth.bw
 
     mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.copynum.bedgraph
+
+    mv ${meta.id}.sawfishSV/samples/*/copynum.summary.json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.copynum.summary.json
     """
 }
 
