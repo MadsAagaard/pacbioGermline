@@ -387,6 +387,9 @@ include {pbmm2_align;
         trgt4_diseaseSTRs_plots;
         trgt4_diseaseSTRs_plots_meth;
         trgt4_all;
+        trgt5_diseaseSTRs;
+        trgt5_diseaseSTRs_plots;
+        trgt5_diseaseSTRs_plots_meth;
         kivvi_d4z4;
         methylationBW;
         paraphase;
@@ -415,6 +418,47 @@ include {pbmm2_align;
         } from "./modules/dnaModules.nf" 
 
 
+    puretargetPlotGenes         =[
+        "DRPLA_ATN1",
+        "SCA1_ATXN1",
+        "SCA10_ATXN10",
+        "SCA2_ATXN2",
+        "SCA3_ATXN3",
+        "SCA7_ATXN7",
+        "SCA8_ATXN8OS",
+        "SCA31_BEAN1",
+        "SCA6_CACNA1A",
+        "SCA37_DAB1",
+        "SCA27B_FGF14",
+        "SCA27B_FGF14_KGVejle_reduced",
+        "SCA27B_FGF14_KGVejle_minimal",
+        "SCA36_NOP56",
+        "SCA12_PPP2R2B",
+        "SCA17_TBP",
+        "SCA4_ZFHX3",
+        "FXS_FMR1",
+        "FRAXE_AFF2",
+        "FTDALS1_C9orf72",
+        "FRDA_FXN",
+        "CANVAS_RFC1",
+        "NIID_NOTCH2NLC",
+        "DM1_DMPK",
+        "DM2_CNBP",
+        "HD_HTT",
+        "HDL2_JPH3",
+        "SBMA_AR",
+        "OPMD_PABPN1",
+        "OPDM5_ABCD3",
+        "OPDM2_GIPC1",
+        "OPDM1_LRP12",
+        "OPDM4_RILPL1",
+        "CCHS_PHOX2B",
+        "CJD_PRNP",
+        "FAME1_SAMD12",
+        "EPM1_CSTB",
+    ]
+
+/*
 puretargetPlotGenes=[
         "DRPLA_ATN1",
         "SCA1_ATXN1",
@@ -451,6 +495,8 @@ puretargetPlotGenes=[
         "CJD_PRNP",
         "FAME1_SAMD12",
         "EPM1_CSTB",]
+*/
+
 
 
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
@@ -515,9 +561,9 @@ workflow STR {
     trgt4_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
     |map {meta,bam,bai,vcf,tbi,genes -> 
     tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
-    |set {trgt_plot_ch}
+    |set {trgt4_plot_ch}
 
-    trgt4_diseaseSTRs_plots(trgt_plot_ch)
+    trgt4_diseaseSTRs_plots(trgt4_plot_ch)
 
     trgt4_diseaseSTRs.out.trgt_full
     |map {meta,bam,bai,vcf,tbi -> 
@@ -525,6 +571,21 @@ workflow STR {
     |set {trgt4_plot_ch_meth}
 
     trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
+
+    trgt5_diseaseSTRs(aligned)
+    trgt5_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
+    |map {meta,bam,bai,vcf,tbi,genes -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
+    |set {trgt5_plot_ch}
+
+    trgt4_diseaseSTRs_plots(trgt5_plot_ch)
+
+    trgt4_diseaseSTRs.out.trgt_full
+    |map {meta,bam,bai,vcf,tbi -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
+    |set {trgt5_plot_ch_meth}
+
+    trgt4_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
 
     emit:
     str4_vcf=trgt4_diseaseSTRs.out.str4_vcf

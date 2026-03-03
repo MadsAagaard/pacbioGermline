@@ -846,6 +846,132 @@ process trgt4_all {
     """
 }
 
+process trgt5_diseaseSTRs{
+   
+    tag "$meta.id"
+    label "low"
+    conda "${params.trgt5}"
+    
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/diseaseSTRs"}, mode: 'copy', pattern: "*.sorted.vcf*"
+
+    //publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
+
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    
+    tuple val(meta),path ("*.sorted.*")
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    
+    script:
+    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
+    
+    def bamArgs 
+    if (params.allReads || params.hifiReads|| params.failedReads) {
+        bamArgs="--reads ${data.mainBamFile}"
+    }
+    else  {
+        bamArgs="--reads ${data.bamAll}"
+    }
+
+    """
+    trgt genotype \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    $bamArgs \
+    $karyotype \
+    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive
+
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz
+
+    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.spanning.bam
+    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam
+    """
+}
+
+process trgt5_diseaseSTRs_plots{
+    tag "$meta.id"
+    label "low"
+    conda "${params.trgt5}"
+    
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("*.{pdf,png,svg}")
+
+
+    script:
+
+    """
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id ${data.strID} \
+    --squished \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.allele.pdf
+
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id ${data.strID} \
+    --plot-type waterfall \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
+
+    """
+}
+
+process trgt5_diseaseSTRs_plots_meth{
+    tag "$meta.id"
+    label "medium"
+    conda "${params.trgt5}"
+
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("*.{pdf,png,svg}")
+    script:
+
+    """
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id FXS_FMR1 \
+    --show meth \
+    --squished \
+    --max-allele-reads 75 \
+    -o FXS_FMR1.${meta.id}.${genome_version}.${readSet}.METH.alleleSquished.pdf
+
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id FXS_FMR1 \
+    --plot-type waterfall \
+    --show meth \
+    --max-allele-reads 75 \
+    -o FXS_FMR1.${meta.id}.${genome_version}.${readSet}.METH.waterfall.pdf
+
+    """
+}
+
+
+
 process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
