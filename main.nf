@@ -385,6 +385,7 @@ include {pbmm2_align;
         glNexus_jointCall;
         trgt4_diseaseSTRs;
         trgt4_diseaseSTRs_plots;
+        trgt4_diseaseSTRs_plots_meth;
         trgt4_all;
         kivvi_d4z4;
         methylationBW;
@@ -515,7 +516,15 @@ workflow STR {
     |map {meta,bam,bai,vcf,tbi,genes -> 
     tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
     |set {trgt_plot_ch}
+
     trgt4_diseaseSTRs_plots(trgt_plot_ch)
+
+    trgt4_diseaseSTRs.out.trgt_full
+    |map {meta,bam,bai,vcf,tbi -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
+    |set {trgt4_plot_ch_meth}
+
+    trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
 
     emit:
     str4_vcf=trgt4_diseaseSTRs.out.str4_vcf
