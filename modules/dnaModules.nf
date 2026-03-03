@@ -767,6 +767,45 @@ process trgt4_diseaseSTRs_plots{
     """
 }
 
+process trgt4_diseaseSTRs_plots_meth{
+    tag "$meta.id"
+    label "medium"
+    conda "${params.trgt4}"
+
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("*.{pdf,png,svg}")
+    script:
+
+    """
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id FXS_FMR1 \
+    --show meth \
+    --squished \
+    --max-allele-reads 75 \
+    -o FXS_FMR1.${meta.id}.${genome_version}.${readSet}.METH.alleleSquished.pdf
+
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id FXS_FMR1 \
+    --plot-type waterfall \
+    --show meth \
+    --max-allele-reads 75 \
+    -o FXS_FMR1.${meta.id}.${genome_version}.${readSet}.METH.waterfall.pdf
+
+    """
+}
+
 
 process trgt4_all {
 
