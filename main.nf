@@ -116,7 +116,6 @@ if (!params.aligned) {
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey    = (intRef == 'noInfo')  ? "single" : intRef
-            def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
             def sex         = (gender =="K")        ? "female" : "male"
             meta=[  id          :npn,
                     testlist    :testlist,
@@ -125,7 +124,6 @@ if (!params.aligned) {
                     intRef      :intRef,
                     rekv        :rekv,
                     groupKey    :groupKey,
-                    outKey      :outKey,
                     ssBase      :ssBase]
             meta
             }
@@ -133,14 +131,16 @@ if (!params.aligned) {
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
-            singleSample: (row.groupKey=~/single/)
+            singleSample: (row.groupKey== "single")
                 return row
             multiSample: true
                 return row
         }
         |set {samplesheetBranch}
     }
+                //def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
 
+                    //outKey      :outKey,
     // intermediate naming scheme:
     if (params.samplesheet && params.customSS) {
 
@@ -255,7 +255,7 @@ if (!params.aligned) {
             | map { meta, bam -> tuple(meta.id,meta,bam) }
         |set {ubam_input_samples}    
 
-        if (!params.singleOnly) {
+        if (!params.singleOnly && !params.intrefOnly) {
             samplesheet_full
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
