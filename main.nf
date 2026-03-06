@@ -585,7 +585,7 @@ workflow STR {
     tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
     |set {trgt5_plot_ch_meth}
 
-    trgt4_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
+    trgt5_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
 
     emit:
     str4_vcf=trgt4_diseaseSTRs.out.str4_vcf

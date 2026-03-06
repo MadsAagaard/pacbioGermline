@@ -46,7 +46,7 @@ Example:
 
 
 ## Custom samplesheet format, unrelated samples
-A custom samplesheet can be envoked with the --intSS parameter (see parameter section)
+A custom samplesheet can be envoked with the --customSS parameter (see parameter section)
 
 A custom samplesheet consists of at least 3 tab separated columns, in this particular order:
 
@@ -88,7 +88,7 @@ Note: GENDER should be either male/female, RELATION should be either mater/index
     --jointSS       [bool]: Use jointGenotyping, and group output for all samples (use for trio and family analysis)
                                 Default: Not set
     
-    --intSS         [bool]: Use custom samplesheet format (tab separated, 3 mandatory columns)
+    --customSS         [bool]: Use custom samplesheet format (tab separated, 3 mandatory columns)
                                 Default: Not set
 
     --input         [path]: Path to data to use as input. 
@@ -101,6 +101,9 @@ Note: GENDER should be either male/female, RELATION should be either mater/index
                                 Default: Uses a combination of AllReads (for STR analysis) and HiFi reads for everything else
 
     --singleOnly    [bool]: Only analyze single genomes in samplesheet (i.e. "noInfo" in int ref)
+                                Default: Not set - analyze all samples in samplesheet
+
+    --intrefOnly    [bool]: Only analyze samples with internal reference in samplesheet (i.e. NOT "noInfo" in int ref)
                                 Default: Not set - analyze all samples in samplesheet
 
     --skipQC        [bool]: Do not run QC module
@@ -157,7 +160,7 @@ The script is run locally by default, but can use the SLURM cluster by adding "-
 #### Analyze all samples in custom samplesheet. Run joint genotyping for DeepVariant and Sawfish, use SLURM to execute the script:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --jointCall --profile slurm
 
-#### Analyze samples in default samplesheet. Use only unmapped bam files available in subfolders under /input: for each sample. Run all default analysis steps:
+#### Analyze samples in default samplesheet. Use only unmapped bam files available in subfolders under /input/ for each sample. Run all default analysis steps:
     nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --input /path/to/selected/rawData/
 
 
