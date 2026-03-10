@@ -578,7 +578,7 @@ workflow STR {
     tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
     |set {trgt5_plot_ch}
 
-    trgt4_diseaseSTRs_plots(trgt5_plot_ch)
+    trgt5_diseaseSTRs_plots(trgt5_plot_ch)
 
     trgt4_diseaseSTRs.out.trgt_full
     |map {meta,bam,bai,vcf,tbi -> 
