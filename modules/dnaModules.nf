@@ -1028,6 +1028,7 @@ process paraphase {
     conda "${params.paraphaseMinimap2}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate/"},mode: 'copy'
 
 
 
@@ -1036,7 +1037,8 @@ process paraphase {
     tuple val(meta), val(data)
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
-        //-b ${aln[0]} \
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+
     script:
     """
     paraphase \
@@ -1053,6 +1055,10 @@ process paraphase {
     --json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
     --loci SMN1,PMS2,IKBKG \
     --out ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.${genome_version}.${readSubset_hifiDefault}.paraphase.flattened.SMN_PMS2_IKBKG.tsv
+
+    python ${pbParaphaseAnnotationScript} \
+    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
     """
 }
 
@@ -1276,6 +1282,12 @@ process methylationSegm{
     --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
     --input-regions ${methylationBackgroundLocal} \
     --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.profileLOCAL
+
+    methbat report \
+    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
+    --input-regions ${methylationICRegions} \
+    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.imprintingReport.tsv 
+
     """
 }
 

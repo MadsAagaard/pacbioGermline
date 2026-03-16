@@ -429,9 +429,8 @@ include {pbmm2_align;
         "SCA31_BEAN1",
         "SCA6_CACNA1A",
         "SCA37_DAB1",
-        "SCA27B_FGF14",
-        "SCA27B_FGF14_KGVejle_reduced",
         "SCA27B_FGF14_KGVejle_minimal",
+        "SCA27B_FGF14_KGVejle_minimal_GTA",
         "SCA36_NOP56",
         "SCA12_PPP2R2B",
         "SCA17_TBP",
@@ -514,7 +513,6 @@ workflow PREPROCESS {
 
     emit:
     alignedAll=pbmm2_align_mergedData.out.bamAll
-
 
     
 }
