@@ -1227,7 +1227,7 @@ process exo14_2508_SV {
 ///////////////////////////////////////////////////
 /////// ------- METHYLATION ------- ///////////////
 ///////////////////////////////////////////////////
-process methylationBW{
+process pbCPGtools {
     
     tag "$meta.id"
     label "medium"
@@ -1251,7 +1251,7 @@ process methylationBW{
     """
 }
 
-process methylationSegm{
+process methBat{
     tag "$meta.id"
     label "medium"
     conda "${params.methbat}"

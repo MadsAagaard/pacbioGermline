@@ -391,10 +391,10 @@ include {pbmm2_align;
         trgt5_diseaseSTRs_plots;
         trgt5_diseaseSTRs_plots_meth;
         kivvi_d4z4;
-        methylationBW;
+        pbCPGtools;
         paraphase;
         starphase;
-        methylationSegm;
+        methBat;
         multiQC;
         multiQC_ALL;
         mosdepthROI;
@@ -731,8 +731,8 @@ workflow {
                 svdb_sawFish2_jointCall_caseID(sawFish2_jointCall_caseID.out.sv_jointCall_caseID_vcf)
             }
 
-            methylationBW(phasedAll)
-            methylationSegm(methylationBW.out)
+            pbCPGtools(phasedAll)
+            methBat(pbCPGtools.out)
             cramino(phasedAll)
             mitorsaw(phasedAll)
             whatsHap_stats(phasedAll)
