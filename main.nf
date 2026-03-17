@@ -33,10 +33,6 @@ if (params.hpo) {
 }
 
 
-
-
-
-
 if (params.aligned) {
 
     inputBam="${params.input}/*.bam"
