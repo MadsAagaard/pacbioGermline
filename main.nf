@@ -386,6 +386,7 @@ include {pbmm2_align;
         kivvi_d4z4;
         pbCPGtools;
         paraphase;
+        paraphase35
         starphase;
         methBat;
         multiQC;
@@ -732,6 +733,7 @@ workflow {
             
             if (params.genome=="hg38") {
                 paraphase(phasedAll)
+                paraphase35(phasedAll)
                 //kivvi_d4z4(phasedAll)
                 kivvi05_d4z4(phasedAll)
                 starphase(phasedAll)

@@ -1027,7 +1027,7 @@ process paraphase {
     conda "${params.paraphaseMinimap2}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
-    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate/"},mode: 'copy'
+   // publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate/"},mode: 'copy'
 
 
 
@@ -1036,7 +1036,7 @@ process paraphase {
     tuple val(meta), val(data)
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+    //tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
 
     script:
     """
@@ -1058,9 +1058,41 @@ process paraphase {
      """
 }
 
-//   python ${pbParaphaseAnnotationScript} \
-//    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
-//    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+process paraphase35 {
+
+    tag "$meta.id"
+    label "medium"
+    conda "${params.paraphase_35}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase35/"},mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate35/"},mode: 'copy'
+
+
+
+    input:
+ //   tuple val(meta), path(aln)
+    tuple val(meta), val(data)
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+
+    script:
+    """
+    paraphase \
+    -b ${data.bam} \
+    --reference ${genome_fasta} \
+    -t ${task.cpus} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+
+    python ${pbParaphaseAnnotationScript} \
+    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+     """
+}
+
+
+
+
 
 process starphase {
 
