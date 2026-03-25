@@ -1065,8 +1065,6 @@ process paraphase35 {
     conda "${params.paraphase_35}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase35/"},mode: 'copy'
-    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate35/"},mode: 'copy'
-
 
 
     input:
