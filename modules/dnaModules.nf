@@ -229,7 +229,7 @@ process deepvariant{
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
 
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
-    //path("${meta.id}.deepvariant.vcf_stats_report.txt")
+
     """
     singularity run -B ${s_bind} ${simgpath}/deepvariant190.sif /opt/deepvariant/bin/run_deepvariant \
     --model_type=PACBIO \
@@ -312,9 +312,6 @@ process hiPhase {
 
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram.crai")//,  emit: hiphase_allReads_cram  
 
-    if (!params.failedReads && !params.allReads && !params.hifiReads) {
-   // tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai"),  emit: hiphase_allReads_bam      
-    }
 
     script:
     def bamArgs = []
@@ -376,16 +373,6 @@ process hiPhase {
     """
 }
 
-
-/*
-    samtools view \
-    -T ${genome_fasta} \
-    -C \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam 
-
-    samtools index ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram
-
-*/
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
 ///////////////////////////////////////////////////
@@ -975,7 +962,7 @@ process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_v1.0/"}, mode: 'copy'
 
 
     input:
@@ -1000,7 +987,7 @@ process kivvi05_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/kivvi_D4Z4_05/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/kivvi_D4Z4_v0.5/"}, mode: 'copy'
 
 
     input:
@@ -1020,6 +1007,9 @@ process kivvi05_d4z4{
     """
 }
 
+
+
+
 process paraphase {
 
     tag "$meta.id"
@@ -1027,16 +1017,14 @@ process paraphase {
     conda "${params.paraphaseMinimap2}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
-   // publishDir {"${params.outBase(meta)}/specialAnalysis/paraphaseAnnotate/"},mode: 'copy'
+
 
 
 
     input:
- //   tuple val(meta), path(aln)
     tuple val(meta), val(data)
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
-    //tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
 
     script:
     """
@@ -1068,7 +1056,6 @@ process paraphase35 {
 
 
     input:
- //   tuple val(meta), path(aln)
     tuple val(meta), val(data)
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
@@ -1151,7 +1138,7 @@ process advntr {
 
 process exo14_2508_exome {
     label "medium"
-    tag "$caseID"
+    tag "$meta.caseID"
 
     publishDir {"${params.outBase(meta)}/exomiser14_2508/exomiser/"}, mode: 'copy'
     publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern:"*.{hpo.txt,yml,ped}"
@@ -1185,7 +1172,7 @@ process exo14_2508_exome {
 
 process exo14_2508_genome {
     label "medium"
-    tag "$caseID"
+    tag "$meta.caseID"
 
     publishDir {"${params.outBase(meta)}/exomiser14_2508/genomiser/"}, mode: 'copy'
 
@@ -1474,37 +1461,6 @@ process multiQC_ALL {
 }
 
 
-process vntyper2 {
-    errorStrategy 'ignore'
-    publishDir "${outputDirBase}/MUC1-VNTR_kestrel/", mode: 'copy'
-    cpus 16
-
-    input:
-    tuple val(meta), path(reads)
-
-    output:
-    //tuple val(meta), path("vntyper${meta.id}.vntyper/*")
-    tuple val(meta), path("*/*.{tsv,vcf}")
-    script:
-    
-    def reads_command = "--fastq1 ${reads[0]} --fastq2 ${reads[1]}"
-    
-    """
-    singularity run -B ${s_bind} ${simgpath}/vntyper20.sif \
-    -ref ${vntyperREF}/chr1.fa \
-    --fastq1 ${r1} --fastq2 ${r2} \
-    -t ${task.cpus} \
-    -w vntyper \
-    -m ${vntyperREF}/hg19_genic_VNTRs.db \
-    -o ${meta.id} \
-    -ref_VNTR ${vntyperREF}/MUC1-VNTR_NEW.fa \
-    --fastq \
-    --ignore_advntr \
-    -p ${localProgramPath}/vntyper/VNtyper/
-    """
-}
-
-
 process build_symlinks {
     tag "build_symlinks"
 
@@ -1516,7 +1472,7 @@ process build_symlinks {
 
     script:
     """
-    @{localBashScripts}/createSymlinks_after_nextflow.sh ${testLinksInput} ${testLinksOutput}
+    ${localBashScripts}/createSymlinks_after_nextflow.sh ${testLinksInput} ${testLinksOutput}
     touch symlinks.done
     """
 }
@@ -1555,47 +1511,6 @@ process hifiasm {
 
     """
 }
-
-/*
-process asm_to_fasta {
-    errorStrategy 'ignore'
-    tag "$meta.id"
-    cpus 4
-    publishDir "${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/deNovoAssembly/hifiasm/", mode: 'copy', pattern: "*.fasta"
-
-
-
-    input:
-    tuple val(meta), path(data)
-
-    output:
-    tuple val(meta), path("${meta.id}.asm.p_ctg.fasta"), emit: asm_fasta
-
-    script:
-    """
-    awk '/^>/ {print ">"$0; next} {print}' ${data[0]} | sed 's/ /_/g' > ${meta.id}.asm.p_ctg.fasta
-    """
-
-}
-
-*/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

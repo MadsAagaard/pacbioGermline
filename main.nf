@@ -683,7 +683,6 @@ workflow {
     
                 STRUCTURALVARIANTS.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
                 | map { meta, dir, bam ->
-                    // Emit key + a record line we’ll write into the manifest
                     tuple(
                     meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
                     )
