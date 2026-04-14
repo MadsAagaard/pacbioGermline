@@ -20,21 +20,14 @@ def hpoInputError() {
 }
 
 
-
 if (!params.samplesheet && !params.input) exit 0, inputError() 
 if (!params.samplesheet && params.hpo) exit 0, hpoInputError() 
-
-
 
 
 if (params.hpo) {
     channel.fromPath(params.hpo)
     |set { hpo_ch }
 }
-
-
-
-
 
 
 if (params.aligned) {
@@ -103,7 +96,7 @@ if (!params.aligned) {
         }
     }
 
-    if (params.samplesheet && !params.intSS && !params.jointSS) {
+    if (params.samplesheet && !params.customSS && !params.jointSS) {
               
         def ssBase = params.samplesheet
                     .toString()
@@ -116,7 +109,6 @@ if (!params.aligned) {
         |map { row ->
             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
             def groupKey    = (intRef == 'noInfo')  ? "single" : intRef
-            def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
             def sex         = (gender =="K")        ? "female" : "male"
             meta=[  id          :npn,
                     testlist    :testlist,
@@ -125,7 +117,6 @@ if (!params.aligned) {
                     intRef      :intRef,
                     rekv        :rekv,
                     groupKey    :groupKey,
-                    outKey      :outKey,
                     ssBase      :ssBase]
             meta
             }
@@ -133,15 +124,18 @@ if (!params.aligned) {
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
-            singleSample: (row.groupKey=~/single/)
+            singleSample: (row.groupKey== "single")
                 return row
             multiSample: true
                 return row
         }
         |set {samplesheetBranch}
     }
+                //def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
+
+                    //outKey      :outKey,
     // intermediate naming scheme:
-    if (params.samplesheet && params.intSS) {
+    if (params.samplesheet && params.customSS) {
 
         def ssBase = params.samplesheet
                     .toString()
@@ -160,8 +154,6 @@ if (!params.aligned) {
     }
 
     if (params.samplesheet && params.jointSS) {
-            // jointSS (from metadata.txt):
-            //rekv_npn_materia_testlist_sex_proband_intref
         def ssBase = params.samplesheet
                     .toString()
                     .tokenize('/')
@@ -256,13 +248,18 @@ if (!params.aligned) {
             | map { meta, bam -> tuple(meta.id,meta,bam) }
         |set {ubam_input_samples}    
 
-        if (!params.singleOnly) {
+        if (!params.singleOnly && !params.intrefOnly) {
             samplesheet_full
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
         if (params.singleOnly) {
             samplesheetBranch.singleSample
+            |map {row -> meta2=[row.id,row]}
+            |set {samplesheet_join}
+        }
+        if (params.intrefOnly) {
+            samplesheetBranch.multiSample
             |map {row -> meta2=[row.id,row]}
             |set {samplesheet_join}
         }
@@ -287,7 +284,7 @@ if (!params.aligned) {
         //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
         ubam_ss_merged
             |branch { meta, bams ->
-                keep:   (meta.totalsizeGB as double) >= params.minGB //30
+                keep:   (meta.totalsizeGB as double) >= params.minGB 
                     return [meta, bams]
                 drop:   true
                     return [meta, bams]
@@ -381,12 +378,17 @@ include {pbmm2_align;
         glNexus_jointCall;
         trgt4_diseaseSTRs;
         trgt4_diseaseSTRs_plots;
+        trgt4_diseaseSTRs_plots_meth;
         trgt4_all;
+        trgt5_diseaseSTRs;
+        trgt5_diseaseSTRs_plots;
+        trgt5_diseaseSTRs_plots_meth;
         kivvi_d4z4;
-        methylationBW;
+        pbCPGtools;
         paraphase;
+        paraphase35
         starphase;
-        methylationSegm;
+        methBat;
         multiQC;
         multiQC_ALL;
         mosdepthROI;
@@ -407,22 +409,87 @@ include {pbmm2_align;
         write_dropped_samples_summary;
         symlinks_ubam_dropped;
         write_analyzed_samples_summary;
-        //collect_versions;
         } from "./modules/dnaModules.nf" 
 
 
-puretargetPlotGenes=["SCA1_ATXN1",
-                     "SCA2_ATXN2",
-                     "SCA3_ATXN3",
-                     "SCA6_CACNA1A",
-                     "SCA7_ATXN7",
-                     "CANVAS_RFC1",
-                     "DM1_DMPK",
-                     "DM2_CNBP",
-                     "FTDALS1_C9orf72",
-                     "FXS_FMR1",
-                     "FRDA_FXN",
-                     "HD_HTT"]
+    puretargetPlotGenes         =[
+        "DRPLA_ATN1",
+        "SCA1_ATXN1",
+        "SCA10_ATXN10",
+        "SCA2_ATXN2",
+        "SCA3_ATXN3",
+        "SCA7_ATXN7",
+        "SCA8_ATXN8OS",
+        "SCA31_BEAN1",
+        "SCA6_CACNA1A",
+        "SCA37_DAB1",
+        "SCA27B_FGF14_KGVejle_minimal",
+        "SCA27B_FGF14_KGVejle_minimal_GTA",
+        "SCA36_NOP56",
+        "SCA12_PPP2R2B",
+        "SCA17_TBP",
+        "SCA4_ZFHX3",
+        "FXS_FMR1",
+        "FRAXE_AFF2",
+        "FTDALS1_C9orf72",
+        "FRDA_FXN",
+        "CANVAS_RFC1",
+        "NIID_NOTCH2NLC",
+        "DM1_DMPK",
+        "DM2_CNBP",
+        "HD_HTT",
+        "HDL2_JPH3",
+        "SBMA_AR",
+        "OPMD_PABPN1",
+        "OPDM5_ABCD3",
+        "OPDM2_GIPC1",
+        "OPDM1_LRP12",
+        "OPDM4_RILPL1",
+        "CCHS_PHOX2B",
+        "CJD_PRNP",
+        "FAME1_SAMD12",
+        "EPM1_CSTB",
+    ]
+
+/*
+puretargetPlotGenes=[
+        "DRPLA_ATN1",
+        "SCA1_ATXN1",
+        "SCA10_ATXN10",
+        "SCA2_ATXN2",
+        "SCA3_ATXN3",
+        "SCA7_ATXN7",
+        "SCA8_ATXN8OS",
+        "SCA31_BEAN1",
+        "SCA6_CACNA1A",
+        "SCA37_DAB1",
+        "SCA27B_FGF14",
+        "SCA36_NOP56",
+        "SCA12_PPP2R2B",
+        "SCA17_TBP",
+        "SCA4_ZFHX3",
+        "FXS_FMR1",
+        "FRAXE_AFF2",
+        "FTDALS1_C9orf72",
+        "FRDA_FXN",
+        "CANVAS_RFC1",
+        "NIID_NOTCH2NLC",
+        "DM1_DMPK",
+        "DM2_CNBP",
+        "HD_HTT",
+        "HDL2_JPH3",
+        "SBMA_AR",
+        "OPMD_PABPN1",
+        "OPDM5_ABCD3",
+        "OPDM2_GIPC1",
+        "OPDM1_LRP12",
+        "OPDM4_RILPL1",
+        "CCHS_PHOX2B",
+        "CJD_PRNP",
+        "FAME1_SAMD12",
+        "EPM1_CSTB",]
+*/
+
 
 
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
@@ -437,14 +504,9 @@ workflow PREPROCESS {
     inputFiles_symlinks_ubam(finalUbamInput)
     create_fofn(finalUbamInput)
     pbmm2_align_mergedData(create_fofn.out)
-/*    
-    if (!params.failedReads && !params.allReads && !params.hifiReads) {
-        extractHifi(pbmm2_align_mergedData.out.bamAll)
-    }
-*/
+
     emit:
     alignedAll=pbmm2_align_mergedData.out.bamAll
-    //alignedHifi=extractHifi.out.bamHifi
 
     
 }
@@ -491,9 +553,31 @@ workflow STR {
     trgt4_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
     |map {meta,bam,bai,vcf,tbi,genes -> 
     tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
-    //tuple(meta,bam,genes)}
-    |set {trgt_plot_ch}
-    trgt4_diseaseSTRs_plots(trgt_plot_ch)
+    |set {trgt4_plot_ch}
+
+    trgt4_diseaseSTRs_plots(trgt4_plot_ch)
+
+    trgt4_diseaseSTRs.out.trgt_full
+    |map {meta,bam,bai,vcf,tbi -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
+    |set {trgt4_plot_ch_meth}
+
+    trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
+
+    trgt5_diseaseSTRs(aligned)
+    trgt5_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
+    |map {meta,bam,bai,vcf,tbi,genes -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
+    |set {trgt5_plot_ch}
+
+    trgt5_diseaseSTRs_plots(trgt5_plot_ch)
+
+    trgt4_diseaseSTRs.out.trgt_full
+    |map {meta,bam,bai,vcf,tbi -> 
+    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
+    |set {trgt5_plot_ch_meth}
+
+    trgt5_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
 
     emit:
     str4_vcf=trgt4_diseaseSTRs.out.str4_vcf
@@ -599,7 +683,6 @@ workflow {
     
                 STRUCTURALVARIANTS.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
                 | map { meta, dir, bam ->
-                    // Emit key + a record line we’ll write into the manifest
                     tuple(
                     meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
                     )
@@ -621,27 +704,7 @@ workflow {
                 }
                 | set { sawfish_jointCall_manifest_ch }
 
-
-                /*
-                    STRUCTURALVARIANTS.out.sawfish_discover_dir2 //meta, sawfishDir,bam,bai
-                    | map {meta, dir, bam ->
-                        def dirPath = dir.toString()
-                        def bamPath = bam.toString()
-                        return [ meta.caseID, dirPath+", "+ bamPath ]
-                    }
-                    | collectFile(newLine: true) { item  ->
-                        def caseID = item[0]
-                        def line = item[1]
-                        return [ "${caseID}.sawFishJoinCall.manifest.csv", line ]
-                    }
-                    | map { manifestFile -> 
-                        def caseID = manifestFile.getName().tokenize(".")[0]
-                        return tuple(caseID, [manifestFile])
-                        }
-                    | set { sawfish_jointCall_manifest_ch }
-                */
                 VARIANTS.out.dv_gvcf
-                //glnexus_manifest_ch = dv_gvcf
                 .map { meta, gvcf, tbi ->
                     // store one record per sample: (caseID, meta, gvcfPath)
                     tuple(meta.caseID, tuple(meta, gvcf.toString()))
@@ -661,15 +724,16 @@ workflow {
                 svdb_sawFish2_jointCall_caseID(sawFish2_jointCall_caseID.out.sv_jointCall_caseID_vcf)
             }
 
-            methylationBW(phasedAll)
-            methylationSegm(methylationBW.out)
+            pbCPGtools(phasedAll)
+            methBat(pbCPGtools.out)
             cramino(phasedAll)
             mitorsaw(phasedAll)
             whatsHap_stats(phasedAll)
             
             if (params.genome=="hg38") {
                 paraphase(phasedAll)
-                kivvi_d4z4(phasedAll)
+                //paraphase35(phasedAll)
+                //kivvi_d4z4(phasedAll)
                 kivvi05_d4z4(phasedAll)
                 starphase(phasedAll)
                 svTopo(phasedAll)
@@ -714,7 +778,6 @@ workflow {
                 .map { key, metas, qcfiles ->
 
                     // pick one representative meta for publishDir + naming
-                    // (in family mode you may prefer proband/index)
                     def meta0 = metas.find { it.relation == 'index' } ?: metas[0]
 
                     tuple(meta0, qcfiles)
@@ -771,207 +834,3 @@ workflow.onComplete {
     }
 }
 
-
-
-
-                /*
-                Removed 260128 - groupedOutput currently obsolete
-                    manifestChannel =dv_gvcf
-                    | map { meta, files ->
-                        def vcfPath = files[0].toString()
-                        return [ meta.caseID, "${vcfPath}" ]
-                    }
-                    | collectFile(newLine: true) { item ->
-                        def caseID = item[0]
-                        def line   = item[1]
-                        return [ "${caseID}.manifest", line ]
-                    }
-                    
-                    manifestChannel
-                    | map { manifestFile -> manifestFile
-                        def caseID = manifestFile.getName().tokenize(".")[0]
-                        return tuple(caseID, [manifestFile])
-                    }
-                    | set { glnexus_manifest_ch }
-               
-                if (!params.groupedOutput) {           
-                    sawFish2_jointCall_all(sawfish_discover_bam_list_ch)   
-                    svdb_sawFish2_jointCall_all(sawFish2_jointCall_all.out.sv_jointCall_vcf)
-                }
-
-                
-
-
-                QC.out.mosdepth.join(QC.out.nanoStat).join(whatsHap_stats.out.multiqc)
-                | map {meta,mosdepth,nanoStat,whatshap -> tuple(meta,[mosdepth,nanoStat,whatshap])}
-                |set {multiqcSingleInput}   
-                multiQC(multiqcSingleInput)
-
-                    def allOutputs = Channel.empty()
-                allOutputs = allOutputs.mix(QC.out.mosdepth)    
-                allOutputs = allOutputs.mix(QC.out.nanoStat)          
-                allOutputs = allOutputs.mix(whatsHap_stats.out.multiqc)    
-
-                allOutputs
-                |groupTuple
-                |view
-                |set {multiqcAllInput}
-                if (params.groupedOutput) {
-                    multiQC_ALL(multiqcAllInput)
-
-
-
-
-
-/*
-
-251223 working - backup:
-
-
-
-
-
-
-    if (params.samplesheet && !params.oldSS && !params.intSS) {
-
-        // new samplesheet - directly from metadata extracted from LabWare:
-        channel.fromPath(params.samplesheet)
-        | splitCsv(sep:'\t')
-        |map { row ->
-             (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv]
-            meta
-            }
-        | set {samplesheet_full}
-
-
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
-        |map {id,bam -> 
-                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
-                (instrument,date,time)                      =pacbioID.tokenize("_")     
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-               // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
-               meta=[id:samplename]
-                tuple(meta,bam)        
-            }
-        |groupTuple(sort:true)
-        |branch  {meta,bam -> 
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta,bam]
-            samples: true
-                        return [meta,bam]
-        }
-        | set {ubam_input }
-    }
-
-
-
- 260105 - working backup def. input ch:
-
-
-    if (params.samplesheet && !params.intSS) {
-        
-        
-        def ssBase = params.samplesheet
-                    .toString()
-                    .tokenize('/')
-                    .last()
-                    .replaceFirst(/_metadata$/, '')
-
-
-        channel.fromPath(params.samplesheet)
-        | splitCsv(sep:'\t')
-        |map { row ->
-            (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            def groupKey = (intRef == 'noInfo') ? "singleSample" : intRef
-            meta=[id:npn,caseID:testlist, sex:gender, proband:proband,intRef:intRef, rekv:rekv,groupKey:groupKey,ssBase:ssBase]
-            meta
-            }
-        | set {samplesheet_full}
-
-        Channel.fromPath(inputBam, followLinks: true)
-        | map { tuple(it.baseName, it) }
-            |map {id,bam -> 
-            (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
-            (instrument,date,time)                      =pacbioID.tokenize("_")     
-            (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-            // meta=[id:samplename,genderFile:gender,testlistFile:testlist]
-            meta=[id:samplename]
-            tuple(meta,bam)        
-            }
-        | groupTuple(sort:true)   // now emits: (meta, [bam1,bam2,...])
-        | map { meta, bams ->
-            long totalBytes = (bams.sum { it.size() } as long)
-            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
-            def meta2 = meta + [
-                nBams       : bams.size(),
-                totalsizeGB : totalGB
-            ]
-            tuple(meta2, bams)
-        }
-        | branch { meta, bams ->
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta, bams]
-            samples: true
-                        return [meta, bams]
-        }
-        |set { ubam_input_all }
-
-        ubam_input_all.samples
-            | map { meta, bam -> tuple(meta.id,meta,bam) }
-        |set {ubam_input_all_samples}    
-
-        samplesheet_full
-            |map {row -> meta2=[row.id,row]}
-        |set {samplesheet_join}
-
-        samplesheet_join.join(ubam_input_all_samples)
-            |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
-        |set {ubam_ss_merged} // full unfiltered set
-
-        //write info of full set to summary file:
- 
-       ubam_ss_merged
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${readSet}\t${gb}\t${meta.caseID}"
-        }
-        .collect()
-        | map { lines ->
-            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
-            ([header] + lines).join("\n")
-        }
-        |set {ubam_size_summary_ch}
-
-        //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
-        ubam_ss_merged
-            |branch { meta, bams ->
-                keep:   (meta.totalsizeGB as double) >= params.minGB //30
-                    return [meta, bams]
-                drop:   true
-                    return [meta, bams]
-            }
-        |set { ubam_ss_merged_size_split }
-
-        //write out dropped samples info
-        ubam_ss_merged_size_split.drop
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${readSet}\t${gb}\t${meta.caseID}"
-        }
-        .collect()
-        | map { lines ->
-            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
-            ([header] + lines).join("\n")
-        }
-        |set {ubam_size_dropped_ch}
-
-        ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
-            |set {finalUbamInput}
-           
-    }
-
-
-
-*/
