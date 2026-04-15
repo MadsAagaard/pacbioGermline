@@ -478,13 +478,8 @@ workflow {
 
 
     if (params.jointCall || params.jointSS) {
-        PRE_PHASING.out.sawfish_discover_dir
-        | map {" --sample "+it}
-        |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
-        |map {it.text.trim()}
-        |set {sawfish_discover_bam_list_ch}
 
-        PRE_PHASING.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
+        PRE_PHASING.out.sawfish_discover_dir   // tuple(meta), path(dir), val(bam)
         | map { meta, dir, bam ->
             tuple(
             meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
@@ -535,6 +530,14 @@ workflow {
 
 
 /*
+
+        PRE_PHASING.out.sawfish_discover_dir
+        | map {" --sample "+it}
+        |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
+        |map {it.text.trim()}
+        |set {sawfish_discover_bam_list_ch}
+
+
     if (params.test ||params.summary) {
         finalUbamInput.view()
         samplesheet_full.view()

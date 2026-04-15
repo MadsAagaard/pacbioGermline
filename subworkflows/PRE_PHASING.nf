@@ -128,8 +128,8 @@ workflow PRE_PHASING {
     dv_gvcf                  = dv_gvcf_ch
     glnexus_manifest         = glnexus_manifest_ch
     sawfish_vcf              = sawfish_vcf_ch
-    sawfish_discover_dir     = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir
-    sawfish_discover_dir2    = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir2
+    //sawfish_discover_dir     = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir
+    sawfish_discover_dir    = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir2
     sawfish_supporting_reads = params.skipSV ? Channel.empty() : sawFish2.out.sv_supporting_reads
     str4_vcf                 = params.skipSTR ? Channel.empty() : trgt4_diseaseSTRs.out.str4_vcf
     mosdepth                 = params.skipQC  ? Channel.empty() : mosdepthROI.out.multiqc
