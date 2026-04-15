@@ -3,6 +3,7 @@ nextflow.enable.dsl = 2
 
 include {pbmm2_align;
         create_fofn;
+        inputFiles_symlinks_ubam;
         pbmm2_align_mergedData;
         extractHifi;
         } from "../modules/dnaModules.nf" 
