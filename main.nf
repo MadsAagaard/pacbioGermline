@@ -427,46 +427,6 @@ include { PRE_PHASING }       from './subworkflows/PRE_PHASING.nf'
 include { POST_PHASING }      from './subworkflows/POST_PHASING.nf'
 include { FAMILY_ANALYSIS }   from './subworkflows/FAMILY_ANALYSIS.nf'
 
-
-    puretargetPlotGenes         =[
-        "DRPLA_ATN1",
-        "SCA1_ATXN1",
-        "SCA10_ATXN10",
-        "SCA2_ATXN2",
-        "SCA3_ATXN3",
-        "SCA7_ATXN7",
-        "SCA8_ATXN8OS",
-        "SCA31_BEAN1",
-        "SCA6_CACNA1A",
-        "SCA37_DAB1",
-        "SCA27B_FGF14_KGVejle_minimal",
-        "SCA27B_FGF14_KGVejle_minimal_GTA",
-        "SCA36_NOP56",
-        "SCA12_PPP2R2B",
-        "SCA17_TBP",
-        "SCA4_ZFHX3",
-        "FXS_FMR1",
-        "FRAXE_AFF2",
-        "FTDALS1_C9orf72",
-        "FRDA_FXN",
-        "CANVAS_RFC1",
-        "NIID_NOTCH2NLC",
-        "DM1_DMPK",
-        "DM2_CNBP",
-        "HD_HTT",
-        "HDL2_JPH3",
-        "SBMA_AR",
-        "OPMD_PABPN1",
-        "OPDM5_ABCD3",
-        "OPDM2_GIPC1",
-        "OPDM1_LRP12",
-        "OPDM4_RILPL1",
-        "CCHS_PHOX2B",
-        "CJD_PRNP",
-        "FAME1_SAMD12",
-        "EPM1_CSTB",
-    ]
-
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
 
 
