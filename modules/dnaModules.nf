@@ -383,6 +383,7 @@ process sawFish2 {
     conda "${params.sawfish2}"
 
     publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/supportingFiles/"}, mode: 'copy', pattern: "*.{bedgraph,bw,json,json.gz}"
+    publishDir {"${params.outBase(meta)}/structuralVariants/${meta.id}.sawfishSV/"}, mode: 'copy', pattern: "${meta.id}.sawfishDiscover"
 
     input:
     tuple val(meta), val(data)
@@ -1478,7 +1479,12 @@ process build_symlinks {
 }
 
 
+
+
+
 ////////////// END TO DO END ///////////////////
+
+
 
 
 ///////////////////////////////////////////////////
