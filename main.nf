@@ -354,7 +354,6 @@ if (!params.aligned) {
         | set {ubam_input }
         
         ubam_input.samples
-        |view
         |set {finalUbamInput}
     }
 
