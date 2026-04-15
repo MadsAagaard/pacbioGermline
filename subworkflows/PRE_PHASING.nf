@@ -60,7 +60,7 @@ workflow PRE_PHASING {
 
     if (!params.skipSV) {
         sawFish2(aligned)
-        sawFish2.out.sawfish_vcf //meta, vcf, idx
+        sawFish2.out.sv_vcf //meta, vcf, idx
             | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
             | set {sawfish_vcf_ch}
     }
