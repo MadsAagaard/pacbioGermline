@@ -29,9 +29,10 @@ workflow POST_PHASING {
 
     take:
     phasedAll
-    PRE_PHASING_OUT   
-    hiPhase_OUT
-    
+    sawfish_supporting_reads
+    mosdepth
+    nanoStat
+
     main:
         pbCPGtools(phasedAll)
         methBat(pbCPGtools.out)
@@ -49,7 +50,7 @@ workflow POST_PHASING {
 
         hiPhase_OUT.hiphase_bam
         .join(svdb_SawFish.out.sawfishAF10)
-        .join(PRE_PHASING_OUT.sawfish_supporting_reads)
+        .join(sawfish_supporting_reads)
         | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
         tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
         |set {phasedSawfishAF10}   
@@ -58,8 +59,8 @@ workflow POST_PHASING {
 
         if (!params.skipQC) {
             Channel.empty()
-            .mix(PRE_PHASING_OUT.mosdepth)
-            .mix(PRE_PHASING_OUT.nanoStat)
+            .mix(mosdepth)
+            .mix(nanoStat)
             .mix(whatsHap_stats.out.multiqc)
             .map { meta, qcfile ->
                 tuple(params.multiqcKey(meta), meta, qcfile)

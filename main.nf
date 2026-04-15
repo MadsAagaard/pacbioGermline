@@ -461,7 +461,12 @@ workflow {
         }
     | set { phasedAll }  // use for val(data) instead of path(data) setup in modules 
 
-    POST_PHASING(phasedAll, PRE_PHASING.out, hiPhase.out)
+    POST_PHASING(
+                phasedAll,
+                PRE_PHASING.out.sawfish_supporting_reads,
+                PRE_PHASING.out.mosdepth,
+                PRE_PHASING.out.nanoStat
+                )
 
     def hpo_ch = params.hpo        
         ? channel.fromPath(params.hpo)
