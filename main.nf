@@ -414,6 +414,12 @@ if (!params.aligned) {
 
 */
 
+ include {
+        write_input_summary;
+        write_dropped_samples_summary;
+        symlinks_ubam_dropped;
+        write_analyzed_samples_summary;
+        } from "./modules/dnaModules.nf" 
 ///////////////// SUBWORKFLOWS ///////////////////////
 
 include { PREPROCESS }        from './subworkflows/PREPROCESS.nf'
