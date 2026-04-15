@@ -362,7 +362,9 @@ if (!params.aligned) {
 
 
 /////////////////// MODULES ///////////////////////
-include {pbmm2_align;
+
+/*
+ include {pbmm2_align;
         create_fofn;
         pbmm2_align_mergedData;
         extractHifi;
@@ -410,6 +412,15 @@ include {pbmm2_align;
         write_analyzed_samples_summary;
         } from "./modules/dnaModules.nf" 
 
+*/
+
+///////////////// SUBWORKFLOWS ///////////////////////
+
+include { PREPROCESS }        from '../subworkflows/PREPROCESS.nf'
+include { PRE_PHASING }       from '../subworkflows/PRE_PHASING.nf'
+include { POST_PHASING }      from '../subworkflows/POST_PHASING.nf'
+include { FAMILY_ANALYSIS }   from '../subworkflows/FAMILY_ANALYSIS.nf'
+
 
     puretargetPlotGenes         =[
         "DRPLA_ATN1",
@@ -450,152 +461,7 @@ include {pbmm2_align;
         "EPM1_CSTB",
     ]
 
-/*
-puretargetPlotGenes=[
-        "DRPLA_ATN1",
-        "SCA1_ATXN1",
-        "SCA10_ATXN10",
-        "SCA2_ATXN2",
-        "SCA3_ATXN3",
-        "SCA7_ATXN7",
-        "SCA8_ATXN8OS",
-        "SCA31_BEAN1",
-        "SCA6_CACNA1A",
-        "SCA37_DAB1",
-        "SCA27B_FGF14",
-        "SCA36_NOP56",
-        "SCA12_PPP2R2B",
-        "SCA17_TBP",
-        "SCA4_ZFHX3",
-        "FXS_FMR1",
-        "FRAXE_AFF2",
-        "FTDALS1_C9orf72",
-        "FRDA_FXN",
-        "CANVAS_RFC1",
-        "NIID_NOTCH2NLC",
-        "DM1_DMPK",
-        "DM2_CNBP",
-        "HD_HTT",
-        "HDL2_JPH3",
-        "SBMA_AR",
-        "OPMD_PABPN1",
-        "OPDM5_ABCD3",
-        "OPDM2_GIPC1",
-        "OPDM1_LRP12",
-        "OPDM4_RILPL1",
-        "CCHS_PHOX2B",
-        "CJD_PRNP",
-        "FAME1_SAMD12",
-        "EPM1_CSTB",]
-*/
-
-
-
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
-
-workflow PREPROCESS {
-
-    take:
-    finalUbamInput     
-   
-    main:
-
-    inputFiles_symlinks_ubam(finalUbamInput)
-    create_fofn(finalUbamInput)
-    pbmm2_align_mergedData(create_fofn.out)
-
-    emit:
-    alignedAll=pbmm2_align_mergedData.out.bamAll
-
-    
-}
-
-
-workflow VARIANTS {
-
-    take:
-    aligned    
-    main:
-    deepvariant(aligned)
-
-    emit:
-    dv_vcf=deepvariant.out.dv_vcf
-    dv_gvcf=deepvariant.out.dv_gvcf
-}
-
-workflow STRUCTURALVARIANTS {
-
-    take:
-    aligned
-
-    main:
-
-    sawFish2(aligned)
-
-    emit:
-    sawfish_vcf=sawFish2.out.sv_vcf
-    sawfish_discover_dir=sawFish2.out.sv_discover_dir
-    sawfish_discover_dir2=sawFish2.out.sv_discover_dir2
-    sawfish_supporting_reads=sawFish2.out.sv_supporting_reads
-}
-
-workflow STR {
-    take:
-    aligned
-
-    main:
-    if (params.genome=="hg38") {
-        trgt4_all(aligned)
-    }
-
-    trgt4_diseaseSTRs(aligned)
-    trgt4_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
-    |map {meta,bam,bai,vcf,tbi,genes -> 
-    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
-    |set {trgt4_plot_ch}
-
-    trgt4_diseaseSTRs_plots(trgt4_plot_ch)
-
-    trgt4_diseaseSTRs.out.trgt_full
-    |map {meta,bam,bai,vcf,tbi -> 
-    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
-    |set {trgt4_plot_ch_meth}
-
-    trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
-
-    trgt5_diseaseSTRs(aligned)
-    trgt5_diseaseSTRs.out.trgt_full.combine(puretargetPlotGenes)
-    |map {meta,bam,bai,vcf,tbi,genes -> 
-    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
-    |set {trgt5_plot_ch}
-
-    trgt5_diseaseSTRs_plots(trgt5_plot_ch)
-
-    trgt4_diseaseSTRs.out.trgt_full
-    |map {meta,bam,bai,vcf,tbi -> 
-    tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
-    |set {trgt5_plot_ch_meth}
-
-    trgt5_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
-
-    emit:
-    str4_vcf=trgt4_diseaseSTRs.out.str4_vcf
-}
-
-
-workflow QC {
-    take:
-    aligned
-
-    main:
-    mosdepthROI(aligned)
-    nanoStat(aligned)
-
-    emit:
-    mosdepth=mosdepthROI.out.multiqc
-    nanoStat=nanoStat.out.multiqc
-}
-
 
 
 workflow {
@@ -606,7 +472,7 @@ workflow {
         write_dropped_samples_summary(ubam_size_dropped_ch)
         symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
         PREPROCESS(finalUbamInput)
-
+    }
     PRE_PHASING(PREPROCESS.out.alignedFinal)
 
     hiPhase(PRE_PHASING.out.hiphaseInput)
