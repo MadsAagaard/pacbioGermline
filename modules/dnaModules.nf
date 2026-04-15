@@ -965,13 +965,12 @@ process kivvi_d4z4{
 
     publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_v1.0/"}, mode: 'copy'
 
-
     input:
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4")
-    
+     
     script:
 
     """
