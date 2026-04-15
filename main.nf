@@ -363,56 +363,6 @@ if (!params.aligned) {
 
 /////////////////// MODULES ///////////////////////
 
-/*
- include {pbmm2_align;
-        create_fofn;
-        pbmm2_align_mergedData;
-        extractHifi;
-        inputFiles_symlinks_ubam;
-        sawFish2;
-        svdb_SawFish;
-        sawFish2_jointCall_all;
-        svdb_sawFish2_jointCall_all;
-        sawFish2_jointCall_caseID;
-        svdb_sawFish2_jointCall_caseID;
-        deepvariant;
-        glNexus_jointCall;
-        trgt4_diseaseSTRs;
-        trgt4_diseaseSTRs_plots;
-        trgt4_diseaseSTRs_plots_meth;
-        trgt4_all;
-        trgt5_diseaseSTRs;
-        trgt5_diseaseSTRs_plots;
-        trgt5_diseaseSTRs_plots_meth;
-        kivvi_d4z4;
-        pbCPGtools;
-        paraphase;
-        paraphase35
-        starphase;
-        methBat;
-        multiQC;
-        multiQC_ALL;
-        mosdepthROI;
-        cramino;
-        nanoStat;
-        whatsHap_stats;
-        hiPhase;
-        build_symlinks;
-        check_tmpdir;
-        svTopo;
-        svTopo_filtered;
-        mitorsaw;
-        exo14_2508_exome;
-        exo14_2508_genome;
-        exo14_2508_SV;
-        kivvi05_d4z4;
-        write_input_summary;
-        write_dropped_samples_summary;
-        symlinks_ubam_dropped;
-        write_analyzed_samples_summary;
-        } from "./modules/dnaModules.nf" 
-
-*/
 
  include {
         write_input_summary;
@@ -602,6 +552,59 @@ workflow {
         exo14_2508_genome(genomiser_ch)
         exo14_2508_SV(exomiserSV_ch)
     }
+
+
+ include {pbmm2_align;
+        create_fofn;
+        pbmm2_align_mergedData;
+        extractHifi;
+        inputFiles_symlinks_ubam;
+        sawFish2;
+        svdb_SawFish;
+        sawFish2_jointCall_all;
+        svdb_sawFish2_jointCall_all;
+        sawFish2_jointCall_caseID;
+        svdb_sawFish2_jointCall_caseID;
+        deepvariant;
+        glNexus_jointCall;
+        trgt4_diseaseSTRs;
+        trgt4_diseaseSTRs_plots;
+        trgt4_diseaseSTRs_plots_meth;
+        trgt4_all;
+        trgt5_diseaseSTRs;
+        trgt5_diseaseSTRs_plots;
+        trgt5_diseaseSTRs_plots_meth;
+        kivvi_d4z4;
+        pbCPGtools;
+        paraphase;
+        paraphase35
+        starphase;
+        methBat;
+        multiQC;
+        multiQC_ALL;
+        mosdepthROI;
+        cramino;
+        nanoStat;
+        whatsHap_stats;
+        hiPhase;
+        build_symlinks;
+        check_tmpdir;
+        svTopo;
+        svTopo_filtered;
+        mitorsaw;
+        exo14_2508_exome;
+        exo14_2508_genome;
+        exo14_2508_SV;
+        kivvi05_d4z4;
+        write_input_summary;
+        write_dropped_samples_summary;
+        symlinks_ubam_dropped;
+        write_analyzed_samples_summary;
+        } from "./modules/dnaModules.nf" 
+
+
+
+
 
 */
 
