@@ -88,10 +88,7 @@ workflow PRE_PHASING {
             |set {trgt4_plot_ch_meth}
 
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
-
-
-
-
+/*
         trgt5_diseaseSTRs(aligned)
 
         trgt5_diseaseSTRs.out.trgt_full
@@ -109,6 +106,7 @@ workflow PRE_PHASING {
 
         trgt5_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
     }
+  */
     if (!params.skipQC) {
         mosdepthROI(aligned)
         nanoStat(aligned)

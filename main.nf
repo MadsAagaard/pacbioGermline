@@ -519,7 +519,7 @@ workflow {
 
         FAMILY_ANALYSIS(
                         glnexus_manifest_ch,
-                        sawfish_manifest_ch,
+                        sawfish_jointCall_manifest_ch,
                         hpo_ch,
                         ss_ch
                         )
