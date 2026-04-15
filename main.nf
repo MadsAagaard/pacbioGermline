@@ -596,6 +596,8 @@ workflow QC {
     nanoStat=nanoStat.out.multiqc
 }
 
+
+
 workflow {
     if (params.test ||params.summary) {
         finalUbamInput.view()
