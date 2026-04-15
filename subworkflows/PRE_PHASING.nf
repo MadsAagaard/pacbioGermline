@@ -75,7 +75,7 @@ workflow PRE_PHASING {
         | set {str_vcf_ch}
 
         trgt4_diseaseSTRs.out.trgt_full
-            .combine(puretargetPlotGenes)
+            .combine(params.puretargetPlotGenes)
             |map {meta,bam,bai,vcf,tbi,genes -> 
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
             |set {trgt4_plot_ch}
@@ -95,7 +95,7 @@ workflow PRE_PHASING {
         trgt5_diseaseSTRs(aligned)
 
         trgt5_diseaseSTRs.out.trgt_full
-            .combine(puretargetPlotGenes)
+            .combine(params.puretargetPlotGenes)
             |map {meta,bam,bai,vcf,tbi,genes -> 
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi,strID:genes])}
             |set {trgt5_plot_ch}
