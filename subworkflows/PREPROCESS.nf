@@ -22,7 +22,7 @@ workflow PREPROCESS {
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
         extractHifi(pbmm2_align_mergedData.out.bamAll)
         extractHifi.out.alignedHifi
-            .join(pbmm2_align_mergedData.out.alignedAll)
+            .join(pbmm2_align_mergedData.out.bamAll)
             | map {meta,bamHifi,baiHifi,bamAll,baiAll ->
             tuple(meta, [mainBamFile:bamHifi, mainBaiFile:baiHifi, bamAll:bamAll, baiAll:baiAll])}
             | set {alignedFinal_ch}
