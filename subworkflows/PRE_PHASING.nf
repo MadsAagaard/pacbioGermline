@@ -13,7 +13,7 @@ include {
         trgt5_diseaseSTRs_plots_meth;
         mosdepthROI;
         nanoStat;
-        } from "./modules/dnaModules.nf" 
+        } from "../modules/dnaModules.nf" 
 
 
 workflow PRE_PHASING {

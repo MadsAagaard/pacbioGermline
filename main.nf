@@ -416,10 +416,10 @@ if (!params.aligned) {
 
 ///////////////// SUBWORKFLOWS ///////////////////////
 
-include { PREPROCESS }        from '../subworkflows/PREPROCESS.nf'
-include { PRE_PHASING }       from '../subworkflows/PRE_PHASING.nf'
-include { POST_PHASING }      from '../subworkflows/POST_PHASING.nf'
-include { FAMILY_ANALYSIS }   from '../subworkflows/FAMILY_ANALYSIS.nf'
+include { PREPROCESS }        from './subworkflows/PREPROCESS.nf'
+include { PRE_PHASING }       from './subworkflows/PRE_PHASING.nf'
+include { POST_PHASING }      from './subworkflows/POST_PHASING.nf'
+include { FAMILY_ANALYSIS }   from './subworkflows/FAMILY_ANALYSIS.nf'
 
 
     puretargetPlotGenes         =[
