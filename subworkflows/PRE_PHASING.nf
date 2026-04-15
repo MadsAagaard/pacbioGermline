@@ -23,6 +23,13 @@ workflow PRE_PHASING {
 
     main:
 
+    dv_vcf_ch           = Channel.empty()
+    dv_gvcf_ch          = Channel.empty()
+    glnexus_manifest_ch = Channel.empty()
+    sawfish_vcf_ch      = Channel.empty()
+    str_vcf_ch          = Channel.empty()
+    hiphase_input_ch    = Channel.empty()
+
     if (!params.skipVariants) {
         deepvariant(aligned)
         deepvariant.out.dv_vcf
@@ -118,17 +125,17 @@ workflow PRE_PHASING {
 
 
     emit:
-    dv_vcf                   = params.skipVariants ? Channel.empty() : dv_vcf_ch
-    dv_gvcf                  = params.skipVariants ? Channel.empty() : dv_gvcf_ch
-    glnexus_manifest         = params.skipVariants ? Channel.empty() : glnexus_manifest_ch
-    sawfish_vcf              = params.skipSV       ? Channel.empty() : sawFish2.out.sv_vcf
-    sawfish_discover_dir     = params.skipSV       ? Channel.empty() : sawFish2.out.sv_discover_dir
-    sawfish_discover_dir2    = params.skipSV       ? Channel.empty() : sawFish2.out.sv_discover_dir2
-    sawfish_supporting_reads = params.skipSV       ? Channel.empty() : sawFish2.out.sv_supporting_reads
-    str4_vcf                 = params.skipSTR      ? Channel.empty() : trgt4_diseaseSTRs.out.str4_vcf
-    mosdepth                 = params.skipQC       ? Channel.empty() : mosdepthROI.out.multiqc
-    nanoStat                 = params.skipQC       ? Channel.empty() : nanoStat.out.multiqc
-    hiphaseInput             = (!params.skipVariants && !params.skipSV && !params.skipSTR) ? hiphase_input_ch : Channel.empty()
+    dv_vcf                   = dv_vcf_ch
+    dv_gvcf                  = dv_gvcf_ch
+    glnexus_manifest         = glnexus_manifest_ch
+    sawfish_vcf              = sawfish_vcf_ch
+    sawfish_discover_dir     = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir
+    sawfish_discover_dir2    = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir2
+    sawfish_supporting_reads = params.skipSV ? Channel.empty() : sawFish2.out.sv_supporting_reads
+    str4_vcf                 = params.skipSTR ? Channel.empty() : trgt4_diseaseSTRs.out.str4_vcf
+    mosdepth                 = params.skipQC  ? Channel.empty() : mosdepthROI.out.multiqc
+    nanoStat                 = params.skipQC  ? Channel.empty() : nanoStat.out.multiqc
+    hiphaseInput             = hiphase_input_ch
 }
 
 
