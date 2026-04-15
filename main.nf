@@ -419,6 +419,7 @@ if (!params.aligned) {
         write_dropped_samples_summary;
         symlinks_ubam_dropped;
         write_analyzed_samples_summary;
+        hiPhase;
         } from "./modules/dnaModules.nf" 
 ///////////////// SUBWORKFLOWS ///////////////////////
 
@@ -472,13 +473,13 @@ workflow {
 
 
     if (params.jointCall || params.jointSS) {
-        PRE_PHASEING.out.sawfish_discover_dir
+        PRE_PHASING.out.sawfish_discover_dir
         | map {" --sample "+it}
         |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
         |map {it.text.trim()}
         |set {sawfish_discover_bam_list_ch}
 
-        PRE_PHASEING.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
+        PRE_PHASING.out.sawfish_discover_dir2   // tuple(meta), path(dir), val(bam)
         | map { meta, dir, bam ->
             tuple(
             meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
@@ -501,7 +502,7 @@ workflow {
         }
         | set { sawfish_jointCall_manifest_ch }
 
-        PRE_PHASEING.out.dv_gvcf
+        PRE_PHASING.out.dv_gvcf
         .map { meta, gvcf, tbi ->
             // store one record per sample: (caseID, meta, gvcfPath)
             tuple(meta.caseID, tuple(meta, gvcf.toString()))
