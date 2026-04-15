@@ -47,13 +47,28 @@ workflow POST_PHASING {
         svTopo(phasedAll)
         svdb_SawFish(phasedAll)
 
-
+        /*
         hiPhase_OUT.hiphase_bam
         .join(svdb_SawFish.out.sawfishAF10)
         .join(sawfish_supporting_reads)
         | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
         tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
         |set {phasedSawfishAF10}   
+        */
+        phasedAll
+        .join(svdb_SawFish.out.sawfishAF10)
+        .join(sawfish_supporting_reads)
+        | map { meta, data, sv10_vcf, sv10_idx, sv_jsonReads ->
+            tuple(meta, [
+                bam:            data.bam,
+                bai:            data.bai,
+                sawfish10_vcf:  sv10_vcf,
+                sawfish10_idx:  sv10_idx,
+                sawfish_reads:  sv_jsonReads
+            ])
+        }
+        | set { phasedSawfishAF10 }
+
 
         svTopo_filtered(phasedSawfishAF10)
 
