@@ -423,11 +423,11 @@ if (!params.aligned) {
         } from "./modules/dnaModules.nf" 
 ///////////////// SUBWORKFLOWS ///////////////////////
 
-include { PREPROCESS }        from './subworkflows/PREPROCESS.nf'
-include { PRE_PHASING }       from './subworkflows/PRE_PHASING.nf'
-include { POST_PHASING }      from './subworkflows/POST_PHASING.nf'
-include { FAMILY_ANALYSIS }   from './subworkflows/FAMILY_ANALYSIS.nf'
-
+include { PREPROCESS }              from './subworkflows/PREPROCESS.nf'
+include { PRE_PHASING }             from './subworkflows/PRE_PHASING.nf'
+include { POST_PHASING }            from './subworkflows/POST_PHASING.nf'
+include { FAMILY_ANALYSIS }         from './subworkflows/FAMILY_ANALYSIS.nf'
+include { FAMILY_ANALYSIS_ENTRY }   from './subworkflows/FAMILY_ANALYSIS.nf'
 ////////////////// WORKFLOWS AND PROCESSES ///////////////////////
 
 
@@ -526,8 +526,6 @@ workflow {
 
     }
 }
-
-
 
 /*
 
