@@ -75,7 +75,4 @@ workflow POST_PHASING {
             .set { multiqc_inputs_ch }
             multiQC(multiqc_inputs_ch)
         }
-
-    emit:
-
 }
