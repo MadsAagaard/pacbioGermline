@@ -28,7 +28,7 @@ workflow PREPROCESS {
             | set {alignedFinal_ch}
     }
     if (params.allReads || params.hifiReads || params.failedReads) {
-        pbmm2_align_mergedData.out.alignedAll
+        pbmm2_align_mergedData.out.bamAll
             | map {meta,bamAll,baiAll ->
             tuple(meta,[mainBamFile:bamAll,mainBaiFile:baiAll])}
             | set {alignedFinal_ch}
