@@ -77,7 +77,7 @@ workflow FAMILY_ANALYSIS_ENTRY {
     ]
 
     params.outputDirTMP = params.familyDir
-
+    params.layoutMode   = 'jointAnalysis' 
 
     Channel.of( tuple(anchorMeta, file(params.gvcfManifest)) )
     | set { glnexus_manifest_ch }
