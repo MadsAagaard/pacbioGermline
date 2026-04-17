@@ -731,8 +731,10 @@ process trgt4_diseaseSTRs_plots{
 
 
     script:
+    def geneList = params.puretargetPlotGenes.join(' ')
 
     """
+    for gene in ${geneList}; do
     trgt plot \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
@@ -750,7 +752,7 @@ process trgt4_diseaseSTRs_plots{
     --repeat-id ${data.strID} \
     --plot-type waterfall \
     -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
-
+    done
     """
 }
 
