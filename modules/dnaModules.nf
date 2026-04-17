@@ -1051,7 +1051,7 @@ process paraphase {
 process paraphase35 {
 
     tag "$meta.id"
-    label "medium"
+    label "lowCPU"
     conda "${params.paraphase_35}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase35/"},mode: 'copy'
