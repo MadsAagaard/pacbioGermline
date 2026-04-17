@@ -81,7 +81,7 @@ workflow PRE_PHASING {
             |set {trgt4_plot_ch}
         */
         trgt4_diseaseSTRs.out.trgt_full
-            |map {meta,bam,bai,vcf,tbi,genes -> 
+            |map {meta,bam,bai,vcf,tbi -> 
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
             |set {trgt4_plot_ch}
 
@@ -92,7 +92,8 @@ workflow PRE_PHASING {
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
             |set {trgt4_plot_ch_meth}
 
-        trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
+        // trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
+        trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
         /*
         trgt5_diseaseSTRs(aligned)
 
