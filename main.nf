@@ -2,6 +2,7 @@
 nextflow.enable.dsl = 2
 import java.util.Locale
 date=new Date().format( 'yyMMdd' )
+date2=new Date().format( 'yyMMdd HH:mm:ss' )
 user="$USER"
 runID="${date}.${user}"
 
