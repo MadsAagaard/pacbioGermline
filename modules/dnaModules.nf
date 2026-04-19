@@ -1079,10 +1079,6 @@ process paraphase35 {
      """
 }
 
-
-
-
-
 process starphase {
 
     tag "$meta.id"
