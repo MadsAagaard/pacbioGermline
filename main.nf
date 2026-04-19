@@ -5,6 +5,28 @@ date=new Date().format( 'yyMMdd' )
 user="$USER"
 runID="${date}.${user}"
 
+log.info """\
+======================================================
+Clinical Genetics Vejle: PacBio LRS v3
+======================================================
+Genome        : $params.genome
+GenomeDir     : $refFilesDir
+Input Readset : $inputReadSet_allDefault
+read Subset   : $readSubset_hifiDefault
+RunID         : $runID
+Script start  : $date2
+Genome FASTA  : ${genome_fasta}
+Archive RAW   : ${dataArchive}
+OutputDirBase : ${outputDirBase}
+workDir       : ${workflow.workDir}
+layout        : $params.layoutMode
+min input GB  : $params.minGB
+"""
+
+
+
+
+
 //////////// DEFAULT INPUT ///////////////////////
 
 def inputError() {

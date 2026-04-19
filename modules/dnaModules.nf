@@ -7,6 +7,7 @@ date2=new Date().format( 'yyMMdd HH:mm:ss' )
 user="$USER"
 runID="${date}.${user}"
 
+/*
 log.info """\
 ======================================================
 Clinical Genetics Vejle: PacBio LRS v3
@@ -24,7 +25,7 @@ workDir       : ${workflow.workDir}
 layout        : $params.layoutMode
 min input GB  : $params.minGB
 """
-
+*/
 
 ////////////////////////////////////////////
 /////// ------- PREPROCESS + ALN ------- ///
