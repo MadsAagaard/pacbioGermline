@@ -740,22 +740,22 @@ process trgt4_diseaseSTRs_plots{
     --repeats ${tr_pathogenic_v2} \
     --vcf ${data.vcf} \
     --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
+    --repeat-id $gene \
     --squished \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.allele.pdf
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.$gene.allele.pdf
 
     trgt plot \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
     --vcf ${data.vcf} \
     --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
+    --repeat-id $gene \
     --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.$gene.waterfall.pdf
     done
     """
 }
-
+//--repeat-id ${data.strID} \
 process trgt4_diseaseSTRs_plots_meth{
     tag "$meta.id"
     label "medium"
