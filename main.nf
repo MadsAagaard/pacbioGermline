@@ -176,7 +176,7 @@ if (!params.aligned) {
         | set {samplesheet_full}
     }
 
-    if (params.samplesheet && params.jointSS) {
+    if (params.samplesheet && (params.jointSS || params.familySS) ) {
         def ssBase = params.samplesheet
                     .toString()
                     .tokenize('/')
