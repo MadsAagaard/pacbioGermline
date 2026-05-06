@@ -317,7 +317,7 @@ process hiPhase {
     script:
     def bamArgs = []
     def hiphaseBams = []
-    if (params.allReads || params.hifiReads || params.failedReads) {
+    if (params.allReads || params.hifiReads || params.failedReads && (!params.skipAllReadsCRAM)) {
         bamArgs += [
             "--bam ${data.mainBamFile}",
             "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
