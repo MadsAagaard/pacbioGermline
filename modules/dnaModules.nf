@@ -7,6 +7,7 @@ date2=new Date().format( 'yyMMdd HH:mm:ss' )
 user="$USER"
 runID="${date}.${user}"
 
+/*
 log.info """\
 ======================================================
 Clinical Genetics Vejle: PacBio LRS v3
@@ -24,7 +25,7 @@ workDir       : ${workflow.workDir}
 layout        : $params.layoutMode
 min input GB  : $params.minGB
 """
-
+*/
 
 ////////////////////////////////////////////
 /////// ------- PREPROCESS + ALN ------- ///
@@ -316,7 +317,7 @@ process hiPhase {
     script:
     def bamArgs = []
     def hiphaseBams = []
-    if (params.allReads || params.hifiReads || params.failedReads) {
+    if (params.allReads || params.hifiReads || params.failedReads && (!params.skipAllReadsCRAM)) {
         bamArgs += [
             "--bam ${data.mainBamFile}",
             "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
@@ -390,11 +391,11 @@ process sawFish2 {
     
     output:
     tuple val(meta),  path("*.sawfishSV.*") //path(data),
-    tuple val(meta), path("*.sawfishSV.vcf.gz"),path("*.sawfishSV.vcf.gz.tbi"),emit: sv_vcf
-    path("${meta.id}.sawfishDiscover"), emit: sv_discover_dir
-    tuple val(meta), path("${meta.id}.sawfishDiscover"), val("${data.mainBamFile}"), emit: sv_discover_dir2
-    tuple val(meta), path("*.sawfishSV.supporting_reads.json.gz"), emit: sv_supporting_reads
-    tuple val(meta), path("${meta.id}.sawfishSV/"), emit: sawfish_out_dir
+    tuple val(meta), path("*.sawfishSV.vcf.gz"),path("*.sawfishSV.vcf.gz.tbi")      , emit: sv_vcf
+    //path("${meta.id}.sawfishDiscover")                                              , emit: sv_discover_dir
+    tuple val(meta), path("${meta.id}.sawfishDiscover"), val("${data.mainBamFile}") , emit: sv_discover_dir2
+    tuple val(meta), path("*.sawfishSV.supporting_reads.json.gz")                   , emit: sv_supporting_reads
+    tuple val(meta), path("${meta.id}.sawfishSV/")                                  , emit: sawfish_out_dir
 
     script:
     def exclude=params.genome=="hg38" ? "--cnv-excluded-regions ${cnv_exclude_sawfish}" : ""
@@ -731,29 +732,31 @@ process trgt4_diseaseSTRs_plots{
 
 
     script:
+    def geneList = params.puretargetPlotGenes.join(' ')
 
     """
+    for gene in ${geneList}; do
     trgt plot \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
     --vcf ${data.vcf} \
     --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
+    --repeat-id \$gene \
     --squished \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.allele.pdf
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.allele.pdf
 
     trgt plot \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
     --vcf ${data.vcf} \
     --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
+    --repeat-id \$gene \
     --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
-
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.waterfall.pdf
+    done
     """
 }
-
+//--repeat-id ${data.strID} \
 process trgt4_diseaseSTRs_plots_meth{
     tag "$meta.id"
     label "medium"
@@ -965,13 +968,12 @@ process kivvi_d4z4{
 
     publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_v1.0/"}, mode: 'copy'
 
-
     input:
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4")
-    
+     
     script:
 
     """
@@ -1050,7 +1052,7 @@ process paraphase {
 process paraphase35 {
 
     tag "$meta.id"
-    label "medium"
+    label "lowCPU"
     conda "${params.paraphase_35}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase35/"},mode: 'copy'
@@ -1072,13 +1074,10 @@ process paraphase35 {
 
     python ${pbParaphaseAnnotationScript} \
     -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
      """
 }
-
-
-
-
 
 process starphase {
 
