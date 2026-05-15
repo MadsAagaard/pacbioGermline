@@ -1302,7 +1302,7 @@ process methBat{
     methbat report \
     --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
     --input-regions ${methylationICRegions} \
-    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.imprintingReport.tsv 
+    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.imprintingReport.tsv 
 
     """
 }
