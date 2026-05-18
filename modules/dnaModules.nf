@@ -1102,9 +1102,14 @@ process starphase {
     --reference ${genome_fasta} \
     --vcf ${data.dv_vcf} \
     --sv-vcf ${data.sawfish_vcf} \
-    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmcat.tsv \
+    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
     --output-calls ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.json
 
+    java -jar ${pharmcat_jar} \
+    -po ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
+    -vcf ${data.dv_vcf} \
+    -bf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmCAT \
+    -o .
     """
 }
 
