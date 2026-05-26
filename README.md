@@ -20,7 +20,7 @@ This pipeline is used for PacBio LRS germline WGS at Clinical Genetics, Vejle
 - Methylation profiles (pb-cpg-tools and methBat)
 - QC module (nanostat, mosdepth, cramino, whatsHap, multiQC)
 
-## Optional analysis steps
+## Optional analysis steps (e.g. for trios & related samples) and tools used
 - Joint genotyping of small variants (GLNexus)
 - Joint genotyping of structural variants (Sawfish)
 - HPO-based gene and variant prioritization (Exomiser)
