@@ -9,6 +9,8 @@ include {
         paraphase35
         starphase;
         methBat;
+        methBatNEW_profile_single;
+        methBatNEW_pileup;
         multiQC;
         multiQC_ALL;
         mosdepthROI;
@@ -36,6 +38,8 @@ workflow POST_PHASING {
     main:
         pbCPGtools(phasedAll)
         methBat(pbCPGtools.out)
+        methBatNEW_pileup(phasedAll)
+        methBatNEW_profile_single(methBatNEW_pileup.out.met5mC)
         cramino(phasedAll)
         mitorsaw(phasedAll)
         whatsHap_stats(phasedAll)

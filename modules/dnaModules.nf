@@ -1312,6 +1312,65 @@ process methBat{
     """
 }
 
+process methBatNEW_pileup{
+    tag "$meta.id"
+    label "intermediateCPU"
+    conda "${params.methbat_v1}"
+
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/6mA/"},   mode: 'copy',   pattern: "*.6mA.bed.*"
+
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("*.met.*"), path("*.5mC.bedgraph.*")
+    tuple val(meta), path("*.5mC.bed.gz"),  path("*.5mC.bed.gz.tbi"),   emit: met5mC
+    tuple val(meta), path("*.5hmC.bed.gz"), path("*.5hmC.bed.gz.tbi"),  emit: met5hmC
+    tuple val(meta), path("*.6mA.bed.gz"),  path("*.6mA.bed.gz.tbi"),   emit: met6mA
+   
+    script:
+    """
+    methbat pileup \
+    --threads ${task.cpus} \
+    --input-bam ${data.bam} \
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup
+
+    zgrep "Total" ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup.5mC.bed.gz | \
+    cut -f 1-3,7 | \
+    bgzip > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+
+    tabix -p bed ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+
+    """
+}
+
+process methBatNEW_profile_single {
+    tag "$meta.id"
+    label "low"
+    conda "${params.methbat_v1}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
+    publishDir "${lrsStorage}/methylationNEW/methBatProfiles/", mode: 'copy', pattern:"*.profile"
+    input:
+    tuple val(meta), path(data), path(tbi)
+    
+    output:
+    tuple val(meta), path("*.5mC.cpgIslands.profile.tsv")
+
+    script:
+    """
+    methbat profile \
+    --input-regions ${methylationCpG_regions} \
+    --input-pileup ${data} \
+    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.cpgIslands.profile.tsv
+    """
+}
+
+
 
 ///////////////////////////////////////////////////
 /////// ------- QUALITY CONTROL ------- ///////////
