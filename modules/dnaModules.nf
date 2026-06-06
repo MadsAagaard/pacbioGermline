@@ -1048,7 +1048,7 @@ process paraphase {
 
      """
 }
-
+/*
 process paraphase35 {
 
     tag "$meta.id"
@@ -1078,6 +1078,39 @@ process paraphase35 {
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
      """
 }
+*/
+
+process paraphase4 {
+
+    tag "$meta.id"
+    label "lowCPU"
+    conda "${params.paraphase40}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase4/"},mode: 'copy'
+
+
+    input:
+    tuple val(meta), val(data)
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+
+    script:
+    """
+    paraphase \
+    -b ${data.bam} \
+    --reference ${genome_fasta} \
+    -t ${task.cpus} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+
+    python ${pbParaphaseAnnotationScript} \
+    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+     """
+}
+
+
 
 process starphase {
 
@@ -1317,7 +1350,6 @@ process methBatNEW_pileup{
     label "intermediateCPU"
     conda "${params.methbat_v1}"
 
-
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
@@ -1369,8 +1401,6 @@ process methBatNEW_profile_single {
     --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.cpgIslands.profile.tsv
     """
 }
-
-
 
 ///////////////////////////////////////////////////
 /////// ------- QUALITY CONTROL ------- ///////////
@@ -1493,6 +1523,7 @@ process multiQC {
     -n ${reportName}
     """
 }
+
 //${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/
 //    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
 
@@ -1553,6 +1584,7 @@ process build_symlinks {
 ///////////////////////////////////////////////////
 ////// ------- DE NOVO ASSEMBLY ------- ///////////
 ///////////////////////////////////////////////////
+
 
 process hifiasm {
     errorStrategy 'ignore'
