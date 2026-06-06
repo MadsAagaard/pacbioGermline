@@ -1388,7 +1388,7 @@ process methBatNEW_profile_single {
     conda "${params.methbat_v1}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
-    publishDir "${lrsStorage}/methylationNEW/methBatProfiles/", mode: 'copy', pattern:"*.profile"
+    publishDir "${lrsStorage}/methylationNEW/methBatProfiles/", mode: 'copy', pattern:"*.profile.tsv"
     input:
     tuple val(meta), path(data), path(tbi)
     
