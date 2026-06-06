@@ -1048,7 +1048,7 @@ process paraphase {
 
      """
 }
-/*
+
 process paraphase35 {
 
     tag "$meta.id"
@@ -1079,7 +1079,7 @@ process paraphase35 {
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
      """
 }
-*/
+
 
 process paraphase4 {
 
