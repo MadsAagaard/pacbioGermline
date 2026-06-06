@@ -1104,7 +1104,7 @@ process paraphase4 {
     -t ${task.cpus} \
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
 
-    python ${pbParaphaseAnnotationScript} \
+    python ${pbParaphaseAnnotationScript4} \
     -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
     -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
     -c ${pbParaphaseConfig} \
