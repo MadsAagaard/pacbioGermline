@@ -45,7 +45,7 @@ workflow POST_PHASING {
         mitorsaw(phasedAll)
         whatsHap_stats(phasedAll)
         paraphase(phasedAll)
-        paraphase35(phasedAll)
+        //paraphase35(phasedAll)
         paraphase4(phasedAll)
         kivvi_d4z4(phasedAll)
         kivvi05_d4z4(phasedAll)
