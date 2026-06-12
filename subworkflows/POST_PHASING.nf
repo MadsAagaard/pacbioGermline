@@ -48,7 +48,7 @@ workflow POST_PHASING {
         //paraphase35(phasedAll)
         paraphase4(phasedAll)
         kivvi_d4z4(phasedAll)
-        kivvi05_d4z4(phasedAll)
+        //kivvi05_d4z4(phasedAll)
         starphase(phasedAll)
         svTopo(phasedAll)
         svdb_SawFish(phasedAll)

@@ -842,8 +842,8 @@ process trgt5_diseaseSTRs{
     label "low"
     conda "${params.trgt5}"
     
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/diseaseSTRs"}, mode: 'copy', pattern: "*.sorted.vcf*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/diseaseSTRs"}, mode: 'copy', pattern: "*.sorted.vcf*"
 
     //publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
@@ -888,7 +888,7 @@ process trgt5_diseaseSTRs_plots{
     label "low"
     conda "${params.trgt5}"
     
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
 
     input:
     tuple val(meta), val(data)
@@ -926,7 +926,7 @@ process trgt5_diseaseSTRs_plots_meth{
     label "medium"
     conda "${params.trgt5}"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
     input:
     tuple val(meta), val(data)
     
@@ -966,7 +966,7 @@ process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_v1.0/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_contraction/"}, mode: 'copy'
 
     input:
     tuple val(meta), val(data)
@@ -1020,9 +1020,6 @@ process paraphase {
     conda "${params.paraphaseMinimap2}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
-
-
-
 
     input:
     tuple val(meta), val(data)
