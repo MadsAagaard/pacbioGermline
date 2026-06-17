@@ -241,14 +241,14 @@ if (!params.aligned) {
     if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
+        |view     
         |map {id,bam -> 
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
                 //meta=[id:samplename,genderFile:gender,testlistFile:testlist]
                 meta=[id:samplename]
-                tuple(meta,bam)
-                |view        
+                tuple(meta,bam)   
             }
         |groupTuple(sort:true)
         | map { meta, bams ->
@@ -270,6 +270,7 @@ if (!params.aligned) {
 
         ubam_input.samples
             | map { meta, bam -> tuple(meta.id,meta,bam) }
+            |view     
         |set {ubam_input_samples}    
 
         if (!params.singleOnly && !params.intrefOnly) {
