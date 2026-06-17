@@ -143,7 +143,6 @@ if (!params.aligned) {
                     ssBase      :ssBase]
             meta
             }
-        |view
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
@@ -269,7 +268,6 @@ if (!params.aligned) {
 
         ubam_input.samples
             | map { meta, bam -> tuple(meta.id,meta,bam) }
-            |view     
         |set {ubam_input_samples}    
 
         if (!params.singleOnly && !params.intrefOnly) {
