@@ -241,7 +241,6 @@ if (!params.aligned) {
     if (params.samplesheet) {
         Channel.fromPath(inputBam, followLinks: true)
         |map { tuple(it.baseName,it) }
-        |view     
         |map {id,bam -> 
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
