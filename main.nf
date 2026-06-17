@@ -143,7 +143,7 @@ if (!params.aligned) {
                     ssBase      :ssBase]
             meta
             }
-
+        |view
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
