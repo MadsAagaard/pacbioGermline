@@ -247,7 +247,8 @@ if (!params.aligned) {
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
                 //meta=[id:samplename,genderFile:gender,testlistFile:testlist]
                 meta=[id:samplename]
-                tuple(meta,bam)        
+                tuple(meta,bam)
+                |view        
             }
         |groupTuple(sort:true)
         | map { meta, bams ->
