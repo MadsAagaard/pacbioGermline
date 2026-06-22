@@ -25,9 +25,6 @@ min input GB  : $params.minGB
 """
 
 
-
-
-
 //////////// DEFAULT INPUT ///////////////////////
 
 def inputError() {
