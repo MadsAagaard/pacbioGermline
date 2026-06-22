@@ -92,7 +92,7 @@ process write_analyzed_samples_summary {
 process create_fofn {
     label "low"
     
-    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn'
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn',overwrite: true
 
     cpus 4
     input:
