@@ -631,7 +631,7 @@ workflow {
 */
 
 
-
+// Virker ikke lige pt.:
 workflow.onComplete {
 
     if( !params.createSymlinks ) {
