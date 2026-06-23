@@ -95,6 +95,8 @@ workflow PRE_PHASING {
         // trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
 
+
+
         trgt5_diseaseSTRs(aligned)
 
         trgt5_diseaseSTRs.out.trgt_full

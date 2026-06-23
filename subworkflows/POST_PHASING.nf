@@ -37,14 +37,14 @@ workflow POST_PHASING {
     nanoStat
 
     main:
-        pbCPGtools(phasedAll)
-        methBat(pbCPGtools.out)
+       // pbCPGtools(phasedAll)
+       // methBat(pbCPGtools.out)
         methBatNEW_pileup(phasedAll)
         methBatNEW_profile_single(methBatNEW_pileup.out.met5mC)
         cramino(phasedAll)
         mitorsaw(phasedAll)
         whatsHap_stats(phasedAll)
-        paraphase(phasedAll)
+        //paraphase(phasedAll)
         //paraphase35(phasedAll)
         paraphase4(phasedAll)
         kivvi_d4z4(phasedAll)

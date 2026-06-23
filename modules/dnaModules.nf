@@ -281,7 +281,7 @@ process glNexus_jointCall {
 ///////////////////////////////////////////////////
 
 
-process hiPhase {
+process hiPhaseTwoAln {
     
     tag "$meta.id"
     label "intermediate"
@@ -347,7 +347,7 @@ process hiPhase {
     """
     samtools view -@ ${task.cpus} -T ${genome_fasta} --write-index -C -O cram,version=3.1,level=6 -o ${cram} ${bam}
     """.stripIndent().trim()
-}.join("\n\n")
+    }.join("\n\n")
 
 
     """
@@ -375,6 +375,62 @@ process hiPhase {
 
     """
 }
+
+
+process hiPhase {
+    
+    tag "$meta.id"
+    label "intermediate"
+    conda "${params.hiphase}"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
+
+    publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
+
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
+
+    publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
+
+    input:
+    tuple val(meta), val(data), path(vcf), path(sv), path(str)
+    
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
+   
+     
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+   
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+
+    script:
+    """
+    hiphase \
+    --bam ${data.mainBamFile} \
+    --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam \
+    --vcf ${vcf[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    --vcf ${sv[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
+    --vcf ${str[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --reference ${genome_fasta} \
+    --threads ${task.cpus} \
+    --io-threads ${task.cpus}
+
+    bcftools index -t -f ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
+
+    ${gatk_exec} SelectVariants \
+    -R ${genome_fasta} \
+    -V  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    -L ${ROI} \
+    -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
+    """
+}
+
+
 
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
@@ -1353,8 +1409,8 @@ process methBatNEW_pileup{
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/6mA/"},   mode: 'copy',   pattern: "*.6mA.bed.*"
+  //  publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
+   // publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/6mA/"},   mode: 'copy',   pattern: "*.6mA.bed.*"
 
     input:
     tuple val(meta), val(data)

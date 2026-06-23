@@ -8,7 +8,7 @@ runID="${date}.${user}"
 
 log.info """\
 ======================================================
-Clinical Genetics Vejle: PacBio LRS v3
+Clinical Genetics Vejle: PacBio LRS v4
 ======================================================
 Genome        : $params.genome
 GenomeDir     : $refFilesDir
@@ -24,6 +24,19 @@ layout        : $params.layoutMode
 min input GB  : $params.minGB
 """
 
+
+/* ----- Changes:
+
+    - deprecate obsolete versions of programs:
+    - TRGT4, paraphase3, pb-cpgtools, kivvi05
+
+    - Current versions:
+        TRGT5, paraphase4, methBat profile, kivvi v1
+
+    - Remove allReads bam/cram output
+
+
+*/
 
 //////////// DEFAULT INPUT ///////////////////////
 
