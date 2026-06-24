@@ -498,7 +498,7 @@ process svdb_SawFish {
 
     publishDir "${lrsStorage}/structuralVariants/sawfish/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
-    publishDir {"${params.outBase(meta)}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
+    publishDir {"${params.outBase(meta)}/structuralVariants/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
     input:
     tuple val(meta), val(data)
@@ -814,6 +814,9 @@ process trgt4_diseaseSTRs_plots{
     done
     """
 }
+
+
+
 //--repeat-id ${data.strID} \
 process trgt4_diseaseSTRs_plots_meth{
     tag "$meta.id"
@@ -957,6 +960,33 @@ process trgt5_diseaseSTRs_plots{
 
     script:
 
+    def geneList = params.puretargetPlotGenes.join(' ')
+
+    """
+    for gene in ${geneList}; do
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id \$gene \
+    --squished \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.allele.pdf
+
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id \$gene \
+    --plot-type waterfall \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.waterfall.pdf
+    done
+    """
+}
+
+
+/*
     """
     trgt plot \
     --genome ${genome_fasta} \
@@ -975,9 +1005,8 @@ process trgt5_diseaseSTRs_plots{
     --repeat-id ${data.strID} \
     --plot-type waterfall \
     -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
+*/
 
-    """
-}
 
 process trgt5_diseaseSTRs_plots_meth{
     tag "$meta.id"
@@ -1409,6 +1438,9 @@ process methBatNEW_pileup{
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
+
+    publishDir "${lrsStorage}/methylationNEW/5mC_pileup/",   mode: 'copy',   pattern: "*.5mC.bed.*"
+
   //  publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
    // publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/6mA/"},   mode: 'copy',   pattern: "*.6mA.bed.*"
 
@@ -1443,7 +1475,7 @@ process methBatNEW_profile_single {
     conda "${params.methbat_v1}"
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
-    publishDir "${lrsStorage}/methylationNEW/methBatProfiles/", mode: 'copy', pattern:"*.profile.tsv"
+    publishDir "${lrsStorage}/methylationNEW/5mC_CGI_profiles/", mode: 'copy', pattern:"*.profile.tsv"
     input:
     tuple val(meta), path(data), path(tbi)
     
