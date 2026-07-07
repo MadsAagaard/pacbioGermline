@@ -1178,6 +1178,33 @@ process paraphase4 {
     tuple val(meta), val(data)
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+
+    script:
+    """
+    paraphase \
+    -b ${data.bam} \
+    --reference ${genome_fasta} \
+    -t ${task.cpus} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+
+     """
+}
+
+
+/*
+process paraphase4 {
+
+    tag "$meta.id"
+    label "lowCPU"
+    conda "${params.paraphase40}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase4/"},mode: 'copy'
+
+
+    input:
+    tuple val(meta), val(data)
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
     tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
 
     script:
@@ -1195,7 +1222,7 @@ process paraphase4 {
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
      """
 }
-
+*/
 
 
 process starphase {
