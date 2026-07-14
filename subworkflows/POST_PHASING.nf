@@ -37,8 +37,8 @@ workflow POST_PHASING {
     nanoStat
 
     main:
-       // pbCPGtools(phasedAll)
-       // methBat(pbCPGtools.out)
+        pbCPGtools(phasedAll)
+        methBat(pbCPGtools.out)
         methBatNEW_pileup(phasedAll)
         methBatNEW_profile_single(methBatNEW_pileup.out.met5mC)
         cramino(phasedAll)

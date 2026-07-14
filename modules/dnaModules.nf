@@ -1463,8 +1463,8 @@ process methBatNEW_pileup{
     label "intermediateCPU"
     conda "${params.methbat_v1}"
 
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
 
     publishDir "${lrsStorage}/methylationNEW/5mC_pileup/",   mode: 'copy',   pattern: "*.5mC.bed.*"
 
@@ -1501,20 +1501,29 @@ process methBatNEW_profile_single {
     label "low"
     conda "${params.methbat_v1}"
 
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
     publishDir "${lrsStorage}/methylationNEW/5mC_CGI_profiles/", mode: 'copy', pattern:"*.profile.tsv"
     input:
     tuple val(meta), path(data), path(tbi)
     
     output:
     tuple val(meta), path("*.5mC.cpgIslands.profile.tsv")
-
+    tuple val(meta), path("*.5mC.segments.*")
     script:
     """
     methbat profile \
     --input-regions ${methylationCpG_regions} \
     --input-pileup ${data} \
     --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.cpgIslands.profile.tsv
+    
+    methbat segment \
+    --input-pileup ${data} \
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.segments
+
+    methbat report \
+    --input-pileup ${data} \
+    --input-regions ${methylationICRegions} \
+    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.imprintingReport.tsv 
     """
 }
 
