@@ -1501,7 +1501,8 @@ process methBatNEW_profile_single {
     label "low"
     conda "${params.methbat_v1}"
 
-    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
+    //publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.met.5mC.*"
     publishDir "${lrsStorage}/methylationNEW/5mC_CGI_profiles/", mode: 'copy', pattern:"*.profile.tsv"
     input:
     tuple val(meta), path(data), path(tbi)
