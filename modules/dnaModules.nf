@@ -1509,7 +1509,7 @@ process methBatNEW_profile_single {
     
     output:
     tuple val(meta), path("*.5mC.cpgIslands.profile.tsv")
-    tuple val(meta), path("*.5mC.segments.*")
+    tuple val(meta), path("*.met.5mC.*")
     script:
     """
     methbat profile \
