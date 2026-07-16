@@ -1,7 +1,8 @@
 # KG Vejle Germline PacBio LRS pipeline
 
 ## General info:
-This pipeline is used for PacBio LRS germline WGS at Clinical Genetics, Vejle
+PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle
+
 
 
 ## Default analysis steps and tools used
