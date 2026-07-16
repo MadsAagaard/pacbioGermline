@@ -8,7 +8,7 @@ runID="${date}.${user}"
 
 log.info """\
 ======================================================
-Clinical Genetics Vejle: PacBio LRS v3
+Clinical Genetics Vejle: PacBio LRS v4
 ======================================================
 Genome        : $params.genome
 GenomeDir     : $refFilesDir
@@ -25,8 +25,18 @@ min input GB  : $params.minGB
 """
 
 
+/* ----- Changes:
+
+    - deprecate obsolete versions of programs:
+    - TRGT4, paraphase3, pb-cpgtools, kivvi05
+
+    - Current versions:
+        TRGT5, paraphase4, methBat profile, kivvi v1
+
+    - Remove allReads bam/cram output
 
 
+*/
 
 //////////// DEFAULT INPUT ///////////////////////
 
@@ -103,19 +113,19 @@ if (!params.aligned) {
             inputBam="${params.input}/**/*.fail_reads.*.bam"
         }
         if (!params.hifiReads && !params.failedReads) {
-            inputBam="${params.dataArchive}/**/*.bam"
+            inputBam="${params.input}/**/*.bam"
         }
     }
     
     if (!params.input) {
         if (params.hifiReads){
-            inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
+            inputBam="${params.dataArchive}/**/hifi_reads/*.hifi_reads.*.bam"
         }
         if (params.failedReads){
-            inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
+            inputBam="${params.dataArchive}/**/failed_reads/*.fail_reads.*.bam"
         }
         if (!params.hifiReads && !params.failedReads) {
-            inputBam="${params.dataArchive}/**/*.bam"
+            inputBam="${params.dataArchive}/**/*_reads/*.bam"
         }
     }
 
@@ -143,7 +153,6 @@ if (!params.aligned) {
                     ssBase      :ssBase]
             meta
             }
-
         | set {samplesheet_full}
         samplesheet_full
         |branch {row ->
@@ -247,7 +256,7 @@ if (!params.aligned) {
                 (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
                 //meta=[id:samplename,genderFile:gender,testlistFile:testlist]
                 meta=[id:samplename]
-                tuple(meta,bam)        
+                tuple(meta,bam)   
             }
         |groupTuple(sort:true)
         | map { meta, bams ->
@@ -632,7 +641,7 @@ workflow {
 */
 
 
-
+// Virker ikke lige pt.:
 workflow.onComplete {
 
     if( !params.createSymlinks ) {

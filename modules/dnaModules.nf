@@ -92,7 +92,7 @@ process write_analyzed_samples_summary {
 process create_fofn {
     label "low"
     
-    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn'
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn',overwrite: true
 
     cpus 4
     input:
@@ -108,7 +108,8 @@ process create_fofn {
 
 process inputFiles_symlinks_ubam{
     label "low"
-    publishDir {"${params.outBase(meta)}/documents/inputSymlinks/"}, mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir {"${params.outBase(meta)}/documents/inputSymlinks/"}, mode: 'symlink', pattern: '*.{bam,pbi}',overwrite: true
+
     
     input:
     tuple val(meta), path(data)   
@@ -124,7 +125,8 @@ process inputFiles_symlinks_ubam{
 process symlinks_ubam_dropped {
     label "low"
     
-    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}'
+    publishDir "${outputDirBase}/runInfo/${date}_${ssBase}/dropped_samples_ubam_symlinks/", mode: 'symlink', pattern: '*.{bam,pbi}',overwrite: true
+
 
     input:
     tuple val(meta), path(data)   
@@ -279,7 +281,7 @@ process glNexus_jointCall {
 ///////////////////////////////////////////////////
 
 
-process hiPhase {
+process hiPhaseTwoAln {
     
     tag "$meta.id"
     label "intermediate"
@@ -345,7 +347,7 @@ process hiPhase {
     """
     samtools view -@ ${task.cpus} -T ${genome_fasta} --write-index -C -O cram,version=3.1,level=6 -o ${cram} ${bam}
     """.stripIndent().trim()
-}.join("\n\n")
+    }.join("\n\n")
 
 
     """
@@ -373,6 +375,62 @@ process hiPhase {
 
     """
 }
+
+
+process hiPhase {
+    
+    tag "$meta.id"
+    label "intermediate"
+    conda "${params.hiphase}"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
+
+    publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
+
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
+
+    publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
+
+    input:
+    tuple val(meta), val(data), path(vcf), path(sv), path(str)
+    
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
+   
+     
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+   
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+
+    script:
+    """
+    hiphase \
+    --bam ${data.mainBamFile} \
+    --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam \
+    --vcf ${vcf[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    --vcf ${sv[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
+    --vcf ${str[0]} \
+    --output-vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --reference ${genome_fasta} \
+    --threads ${task.cpus} \
+    --io-threads ${task.cpus}
+
+    bcftools index -t -f ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
+
+    ${gatk_exec} SelectVariants \
+    -R ${genome_fasta} \
+    -V  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    -L ${ROI} \
+    -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
+    """
+}
+
+
 
 ///////////////////////////////////////////////////
 ////// -------CNV AND STRUCTURAL VARIANTS ------- /
@@ -440,7 +498,7 @@ process svdb_SawFish {
 
     publishDir "${lrsStorage}/structuralVariants/sawfish/", mode: 'copy',pattern: "*.sawfishSV.hiphase.svdb.vcf*"
 
-    publishDir {"${params.outBase(meta)}/structuralVariants/vcfs/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
+    publishDir {"${params.outBase(meta)}/structuralVariants/"}, mode: 'copy', pattern: "*.sawfishSV.hiphase.svdb.*"
 
     input:
     tuple val(meta), val(data)
@@ -756,6 +814,9 @@ process trgt4_diseaseSTRs_plots{
     done
     """
 }
+
+
+
 //--repeat-id ${data.strID} \
 process trgt4_diseaseSTRs_plots_meth{
     tag "$meta.id"
@@ -842,8 +903,8 @@ process trgt5_diseaseSTRs{
     label "low"
     conda "${params.trgt5}"
     
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/diseaseSTRs"}, mode: 'copy', pattern: "*.sorted.vcf*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/diseaseSTRs"}, mode: 'copy', pattern: "*.sorted.vcf*"
 
     //publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
@@ -888,7 +949,7 @@ process trgt5_diseaseSTRs_plots{
     label "low"
     conda "${params.trgt5}"
     
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT5/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/Plots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
 
     input:
     tuple val(meta), val(data)
@@ -899,6 +960,33 @@ process trgt5_diseaseSTRs_plots{
 
     script:
 
+    def geneList = params.puretargetPlotGenes.join(' ')
+
+    """
+    for gene in ${geneList}; do
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id \$gene \
+    --squished \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.allele.pdf
+
+    trgt plot \
+    --genome ${genome_fasta} \
+    --repeats ${tr_pathogenic_v2} \
+    --vcf ${data.vcf} \
+    --spanning-reads ${data.bam} \
+    --repeat-id \$gene \
+    --plot-type waterfall \
+    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.waterfall.pdf
+    done
+    """
+}
+
+
+/*
     """
     trgt plot \
     --genome ${genome_fasta} \
@@ -917,16 +1005,15 @@ process trgt5_diseaseSTRs_plots{
     --repeat-id ${data.strID} \
     --plot-type waterfall \
     -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
+*/
 
-    """
-}
 
 process trgt5_diseaseSTRs_plots_meth{
     tag "$meta.id"
     label "medium"
     conda "${params.trgt5}"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
     input:
     tuple val(meta), val(data)
     
@@ -966,7 +1053,7 @@ process kivvi_d4z4{
     tag "$meta.id"
     label "medium"
 
-    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_v1.0/"}, mode: 'copy'
+    publishDir {"${params.outBase(meta)}/repeatExpansions/Kivvi_D4Z4_contraction/"}, mode: 'copy'
 
     input:
     tuple val(meta), val(data)
@@ -1021,9 +1108,6 @@ process paraphase {
 
     publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
 
-
-
-
     input:
     tuple val(meta), val(data)
     output:
@@ -1075,9 +1159,71 @@ process paraphase35 {
     python ${pbParaphaseAnnotationScript} \
     -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
     -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
+    -c ${pbParaphaseConfig} \
     -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
      """
 }
+
+
+process paraphase4 {
+
+    tag "$meta.id"
+    label "lowCPU"
+    conda "${params.paraphase40}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase4/"},mode: 'copy'
+
+
+    input:
+    tuple val(meta), val(data)
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+
+    script:
+    """
+    paraphase \
+    -b ${data.bam} \
+    --reference ${genome_fasta} \
+    -t ${task.cpus} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+
+     """
+}
+
+
+/*
+process paraphase4 {
+
+    tag "$meta.id"
+    label "lowCPU"
+    conda "${params.paraphase40}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase4/"},mode: 'copy'
+
+
+    input:
+    tuple val(meta), val(data)
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+
+    script:
+    """
+    paraphase \
+    -b ${data.bam} \
+    --reference ${genome_fasta} \
+    -t ${task.cpus} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+
+    python ${pbParaphaseAnnotationScript4} \
+    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
+    -c ${pbParaphaseConfig} \
+    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+     """
+}
+*/
+
 
 process starphase {
 
@@ -1102,9 +1248,14 @@ process starphase {
     --reference ${genome_fasta} \
     --vcf ${data.dv_vcf} \
     --sv-vcf ${data.sawfish_vcf} \
-    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmcat.tsv \
+    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
     --output-calls ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.json
 
+    java -jar ${pharmcat_jar} \
+    -po ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
+    -vcf ${data.dv_vcf} \
+    -bf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmCAT \
+    -o .
     """
 }
 
@@ -1302,11 +1453,81 @@ process methBat{
     methbat report \
     --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
     --input-regions ${methylationICRegions} \
-    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.imprintingReport.tsv 
+    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.imprintingReport.tsv 
 
     """
 }
 
+process methBatNEW_pileup{
+    tag "$meta.id"
+    label "intermediateCPU"
+    conda "${params.methbat_v1}"
+
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_pileup/"},   mode: 'copy',   pattern: "*.5mC.bed.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_bedgraphs/"},   mode: 'copy',   pattern: "*.5mC.bedgraph.*"
+
+    publishDir "${lrsStorage}/methylationNEW/5mC_pileup/",   mode: 'copy',   pattern: "*.5mC.bed.*"
+
+  //  publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/5hmC/"},  mode: 'copy',   pattern: "*.5hmC.bed.*"
+   // publishDir {"${params.outBase(meta)}/specialAnalysis/methylation/6mA/"},   mode: 'copy',   pattern: "*.6mA.bed.*"
+
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("*.met.*"), path("*.5mC.bedgraph.*")
+    tuple val(meta), path("*.5mC.bed.gz"),  path("*.5mC.bed.gz.tbi"),   emit: met5mC
+    tuple val(meta), path("*.5hmC.bed.gz"), path("*.5hmC.bed.gz.tbi"),  emit: met5hmC
+    tuple val(meta), path("*.6mA.bed.gz"),  path("*.6mA.bed.gz.tbi"),   emit: met6mA
+   
+    script:
+    """
+    methbat pileup \
+    --threads ${task.cpus} \
+    --input-bam ${data.bam} \
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup
+
+    zgrep "Total" ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup.5mC.bed.gz | \
+    cut -f 1-3,7 | \
+    bgzip > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+
+    tabix -p bed ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+
+    """
+}
+
+process methBatNEW_profile_single {
+    tag "$meta.id"
+    label "low"
+    conda "${params.methbat_v1}"
+
+    //publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.5mC.cpgIslands.profile.tsv"
+    //publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/5mC_profile/"},   mode: 'copy',   pattern: "*.met.5mC.*"
+    publishDir {"${params.outBase(meta)}/specialAnalysis/methylationNEW/"},   mode: 'copy',   pattern: "*.met.5mC.*"
+    publishDir "${lrsStorage}/methylationNEW/5mC_CGI_profiles/", mode: 'copy', pattern:"*.profile.tsv"
+    input:
+    tuple val(meta), path(data), path(tbi)
+    
+    output:
+    tuple val(meta), path("*.5mC.cpgIslands.profile.tsv")
+    tuple val(meta), path("*.met.5mC.*")
+    script:
+    """
+    methbat profile \
+    --input-regions ${methylationCpG_regions} \
+    --input-pileup ${data} \
+    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.cpgIslands.profile.tsv
+    
+    methbat segment \
+    --input-pileup ${data} \
+    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.segments
+
+    methbat report \
+    --input-pileup ${data} \
+    --input-regions ${methylationICRegions} \
+    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.imprintingReport.tsv 
+    """
+}
 
 ///////////////////////////////////////////////////
 /////// ------- QUALITY CONTROL ------- ///////////
@@ -1429,6 +1650,7 @@ process multiQC {
     -n ${reportName}
     """
 }
+
 //${outputDirBase}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/
 //    -f -q ${launchDir}/${outputDir}/${meta.caseID}/${meta.outKey}/${meta.rekv}_${meta.id}_${meta.groupKey}_${readSet}/QC/ \
 
@@ -1489,6 +1711,7 @@ process build_symlinks {
 ///////////////////////////////////////////////////
 ////// ------- DE NOVO ASSEMBLY ------- ///////////
 ///////////////////////////////////////////////////
+
 
 process hifiasm {
     errorStrategy 'ignore'

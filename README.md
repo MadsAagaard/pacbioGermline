@@ -9,6 +9,7 @@ PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle
 - Alignment (pbmm2)
 - Small variants (DeepVariant)
 - Structural variants (Sawfish)
+- Complex structural variant visualization (SVTopo)
 - Inhouse allele frequency annotation of structural variants (SVDB)
 - Repeat expansions (TRGT)
 - Repeat contraction (Kivvi)
@@ -18,6 +19,11 @@ PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle
 - Mitochondrial variants (mitorsaw)
 - Methylation profiles (pb-cpg-tools and methBat)
 - QC module (nanostat, mosdepth, cramino, whatsHap, multiQC)
+
+## Optional analysis steps (e.g. for trios & related samples) and tools used
+- Joint genotyping of small variants (GLNexus)
+- Joint genotyping of structural variants (Sawfish)
+- HPO-based gene and variant prioritization (Exomiser)
 
 ## Additional user-defined output
 - Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf) and structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).

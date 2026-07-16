@@ -6,9 +6,12 @@ include {
         kivvi05_d4z4;
         pbCPGtools;
         paraphase;
-        paraphase35
+        paraphase35;
+        paraphase4;
         starphase;
         methBat;
+        methBatNEW_profile_single;
+        methBatNEW_pileup;
         multiQC;
         multiQC_ALL;
         mosdepthROI;
@@ -36,25 +39,29 @@ workflow POST_PHASING {
     main:
         pbCPGtools(phasedAll)
         methBat(pbCPGtools.out)
+        methBatNEW_pileup(phasedAll)
+        methBatNEW_profile_single(methBatNEW_pileup.out.met5mC)
         cramino(phasedAll)
         mitorsaw(phasedAll)
         whatsHap_stats(phasedAll)
-        paraphase(phasedAll)
-        paraphase35(phasedAll)
+        //paraphase(phasedAll)
+        //paraphase35(phasedAll)
+        paraphase4(phasedAll)
         kivvi_d4z4(phasedAll)
-        kivvi05_d4z4(phasedAll)
+        //kivvi05_d4z4(phasedAll)
         starphase(phasedAll)
         svTopo(phasedAll)
         svdb_SawFish(phasedAll)
 
         /*
-        hiPhase_OUT.hiphase_bam
-        .join(svdb_SawFish.out.sawfishAF10)
-        .join(sawfish_supporting_reads)
-        | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
-        tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
-        |set {phasedSawfishAF10}   
+            hiPhase_OUT.hiphase_bam
+            .join(svdb_SawFish.out.sawfishAF10)
+            .join(sawfish_supporting_reads)
+            | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
+            tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
+            |set {phasedSawfishAF10}   
         */
+
         phasedAll
         .join(svdb_SawFish.out.sawfishAF10)
         .join(sawfish_supporting_reads)
