@@ -163,10 +163,8 @@ if (!params.aligned) {
         }
         |set {samplesheetBranch}
     }
-                //def outKey      = (intRef == 'noInfo')  ? "singleSampleAnalysis" : "multiSampleAnalysis"
-
-                    //outKey      :outKey,
-    // intermediate naming scheme:
+ 
+   /*
     if (params.samplesheet && params.customSS) {
 
         def ssBase = params.samplesheet
@@ -184,8 +182,8 @@ if (!params.aligned) {
         }
         | set {samplesheet_full}
     }
-
-    if (params.samplesheet && (params.jointSS || params.familySS) ) {
+*/
+    if (params.samplesheet && (params.jointSS || params.familySS|| params.customSS) ) {
         def ssBase = params.samplesheet
                     .toString()
                     .tokenize('/')
@@ -209,7 +207,6 @@ if (!params.aligned) {
         proband  : proband,
         intRef   : intRef,
         ssBase   : ssBase,
-        outKey   : 'multiSampleAnalysis',
         groupKey : intRef
         ]
 
