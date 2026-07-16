@@ -119,13 +119,13 @@ if (!params.aligned) {
     
     if (!params.input) {
         if (params.hifiReads){
-            inputBam="${params.dataArchive}/**/*.hifi_reads.*.bam"
+            inputBam="${params.dataArchive}/**/hifi_reads/*.hifi_reads.*.bam"
         }
         if (params.failedReads){
-            inputBam="${params.dataArchive}/**/*.fail_reads.*.bam"
+            inputBam="${params.dataArchive}/**/failed_reads/*.fail_reads.*.bam"
         }
         if (!params.hifiReads && !params.failedReads) {
-            inputBam="${params.dataArchive}/**/*.bam"
+            inputBam="${params.dataArchive}/**/*_reads/*.bam"
         }
     }
 
