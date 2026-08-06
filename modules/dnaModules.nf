@@ -92,17 +92,21 @@ process write_analyzed_samples_summary {
 process create_fofn {
     label "low"
     
-    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy',pattern: '*.fofn',overwrite: true
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy', pattern: '${meta.id}.fofn', overwrite: true
 
     cpus 4
     input:
     tuple val(meta), path(data) //ubam
 
     output:
-    tuple val(meta), path("${meta.id}.fofn")
+    tuple val(meta), path("${meta.id}.fofn"),emit:allReads
+    tuple val(meta), path("${meta.id}.hifi_reads.fofn"),emit:hifiReads
+    tuple val(meta), path("${meta.id}.fail_reads.fofn"),emit:failReads
     script:
     """
     `realpath ${data} > ${meta.id}.fofn`
+    grep 'fail_reads' ${meta.id}.fofn > ${meta.id}.fail_reads.fofn || true
+    grep 'hifi_reads' ${meta.id}.fofn > ${meta.id}.hifi_reads.fofn || true
     """
 } 
 
@@ -163,6 +167,41 @@ process pbmm2_align {
     ${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.bam
     """
 }
+
+
+
+process pbmm2_align_failedOnly {
+    label "intermediate"
+    tag "$meta.id"
+    conda "${params.pbmm2}"
+
+    publishDir {"${params.outBase(meta)}/alignments/failedReads/"}, mode: 'copy', pattern: "*.ba*"
+
+
+    input:
+    tuple val(meta), path(fofn)
+    
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.failedReads.pbmm2.bam"), path("${meta.id}.${genome_version}.failedReads.pbmm2*bai"),  emit: bamFail
+
+
+    script:
+    """
+    pbmm2 align \
+    --preset HIFI \
+    --sort \
+    --num-threads ${task.cpus} \
+    --bam-index BAI \
+    --sample ${meta.id} \
+    ${genome_mmi} \
+    ${fofn} \
+    ${meta.id}.${genome_version}.failedReads.pbmm2.bam
+    """
+}
+
+
+
+
 
 process pbmm2_align_mergedData {
     label "veryHigh"
