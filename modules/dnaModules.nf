@@ -922,7 +922,7 @@ process trgt5_all_adotto {
     """
     trgt genotype \
     --genome ${genome_fasta} \
-    --repeats ${params.adotto_repeat_catalog} \
+    --repeats ${adotto_repeat_catalog} \
     $readsInput \
     $karyotype \
     --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto
