@@ -7,8 +7,7 @@ include {
         trgt4_diseaseSTRs;
         trgt4_diseaseSTRs_plots;
         trgt4_diseaseSTRs_plots_meth;
-        trgt4_all;
-        trgt5_all;
+        trgt5_all_adotto;
         trgt5_diseaseSTRs;
         trgt5_diseaseSTRs_plots;
         trgt5_diseaseSTRs_plots_meth;
@@ -40,7 +39,7 @@ workflow PRE_PHASING {
         deepvariant.out.dv_gvcf
             | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
             | set {dv_gvcf_ch}
-        
+      /*  
         if (params.jointCall || params.jointSS) {
             deepvariant.out.dv_gvcf
             | map { meta, gvcf, tbi ->
@@ -48,15 +47,17 @@ workflow PRE_PHASING {
                 tuple(meta.caseID, tuple(meta, gvcf.toString()))
             }
             .groupTuple()
-            | map { caseID, records ->
+            .map { caseID, records ->
                 def anchorMeta = records[0][0]
                 def content = records.collect { it[1] }.join('\n') + '\n'
                 def mf = file("${caseID}.manifest")
                 mf.text = content
                 tuple(anchorMeta, mf)
             }
-            | set { glnexus_manifest_ch }
+            .set { glnexus_manifest_ch }
+     */
         }
+    
     }
 
     if (!params.skipSV) {
@@ -68,7 +69,6 @@ workflow PRE_PHASING {
 
     if (!params.skipSTR) {
 
-        //trgt4_all(aligned)
         trgt4_diseaseSTRs(aligned)
 
         trgt4_diseaseSTRs.out.str4_vcf
@@ -94,7 +94,7 @@ workflow PRE_PHASING {
         // trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
 
-        trgt5_all(aligned)
+        trgt5_all_adotto(aligned)
 
         trgt5_diseaseSTRs(aligned)
 
