@@ -5,6 +5,7 @@ include {pbmm2_align;
         create_fofn;
         inputFiles_symlinks_ubam;
         pbmm2_align_mergedData;
+        pbmm2_align_failedOnly;
         extractHifi;
         } from "../modules/dnaModules.nf" 
 
@@ -17,8 +18,10 @@ workflow PREPROCESS {
 
     inputFiles_symlinks_ubam(finalUbamInput)
     create_fofn(finalUbamInput)
-    pbmm2_align_mergedData(create_fofn.out)
 
+    pbmm2_align_mergedData(create_fofn.out.allReads)
+    pbmm2_align_failedOnly(create_fofn.out.failReads)
+    
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
         extractHifi(pbmm2_align_mergedData.out.bamAll)
         extractHifi.out.alignedHifi

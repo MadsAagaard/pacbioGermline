@@ -8,6 +8,7 @@ include {
         trgt4_diseaseSTRs_plots;
         trgt4_diseaseSTRs_plots_meth;
         trgt4_all;
+        trgt5_all;
         trgt5_diseaseSTRs;
         trgt5_diseaseSTRs_plots;
         trgt5_diseaseSTRs_plots_meth;
@@ -93,7 +94,7 @@ workflow PRE_PHASING {
         // trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
 
-
+        trgt5_all(aligned)
 
         trgt5_diseaseSTRs(aligned)
 
