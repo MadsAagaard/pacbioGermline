@@ -92,7 +92,7 @@ process write_analyzed_samples_summary {
 process create_fofn {
     label "low"
     
-    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy', pattern: '${meta.id}.fofn', overwrite: true
+    publishDir {"${params.outBase(meta)}/documents/"}, mode: 'copy', pattern: "${meta.id}.fofn", overwrite: true
 
     cpus 4
     input:
@@ -896,64 +896,24 @@ process trgt4_diseaseSTRs_plots_meth{
     """
 }
 
-
-process trgt4_all {
-
-    tag "$meta.id"
-    label "high"
-    conda "${params.trgt4}"
-  
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
-    
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
-
-    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/all/", mode: 'copy', pattern:"*.sorted.vcf.*"
-
-    input:
-    tuple val(meta), val(data)
-    
-    output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam.bai"),emit: str_spanning_bam
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz.tbi"),emit: str4All_vcf
-    
-    script:
-    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
-    def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
-
-    """
-    trgt genotype \
-    --genome ${genome_fasta} \
-    --repeats ${tr_all} \
-    $readsInput \
-    $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR
-
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.vcf.gz
-
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.allSTR.sorted.bam
-    """
-}
-
-process trgt5_all {
+process trgt5_all_adotto {
 
     tag "$meta.id"
     label "high"
     conda "${params.trgt5}"
   
-    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.ba*"
     
-    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/allSTRs/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
 
-    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/", mode: 'copy', pattern:"*.sorted.vcf.*"
+    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/", mode: 'copy', pattern:"*.sorted.vcf.*"
 
     input:
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.bam.bai"),emit: str_spanning_bam
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.vcf.gz.tbi"),emit: str4All_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
@@ -962,16 +922,16 @@ process trgt5_all {
     """
     trgt genotype \
     --genome ${genome_fasta} \
-    --repeats ${tr_all} \
+    --repeats ${adotto_repeat_catalog} \
     $readsInput \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR
+    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.allSTR.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.spanning.bam
+    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam
     """
 }
 
