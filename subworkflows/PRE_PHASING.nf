@@ -55,9 +55,9 @@ workflow PRE_PHASING {
                 tuple(anchorMeta, mf)
             }
             .set { glnexus_manifest_ch }
-     */
+
         }
-    
+         */
     }
 
     if (!params.skipSV) {
