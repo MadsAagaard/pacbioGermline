@@ -421,7 +421,7 @@ process hiPhase {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
-    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/"}, mode: 'copy', pattern: "*.hiphase.ba*"
 
     publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
@@ -935,6 +935,44 @@ process trgt5_all_adotto {
     """
 }
 
+process trgt5_all_adotto {
+
+    tag "$meta.id"
+    label "high"
+    conda "${params.trgt5}"
+  
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.ba*"
+    
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
+
+    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/", mode: 'copy', pattern:"*.sorted.vcf.*"
+
+    input:
+    tuple val(meta), val(data)
+    
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
+    
+    script:
+    def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
+    def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
+
+    """
+    trgt genotype \
+    --genome ${genome_fasta} \
+    --repeats ${adotto_repeat_catalog} \
+    $readsInput \
+    $karyotype \
+    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto
+
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz
+
+    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.spanning.bam
+    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam
+    """
+}
 
 
 
