@@ -36,9 +36,6 @@ workflow PRE_PHASING {
             | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
             | set {dv_vcf_ch}
     
-        deepvariant.out.dv_gvcf
-            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-            | set {dv_gvcf_ch}
       /*  
         if (params.jointCall || params.jointSS) {
             deepvariant.out.dv_gvcf
@@ -131,7 +128,7 @@ workflow PRE_PHASING {
 
     emit:
     dv_vcf                   = dv_vcf_ch
-    dv_gvcf                  = dv_gvcf_ch
+    dv_gvcf                  = deepvariant.out.dv_gvcf
     glnexus_manifest         = glnexus_manifest_ch
     sawfish_vcf              = sawfish_vcf_ch
     //sawfish_discover_dir     = params.skipSV ? Channel.empty() : sawFish2.out.sv_discover_dir
