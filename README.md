@@ -4,7 +4,6 @@
 PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle
 
 
-
 ## Default analysis steps and tools used
 
 - Alignment (pbmm2)
