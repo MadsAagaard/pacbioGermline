@@ -935,7 +935,7 @@ process trgt5_all_adotto {
     """
 }
 
-process trgt5_all_adotto {
+process trgt5_all_TRexplorer {
 
     tag "$meta.id"
     label "high"
