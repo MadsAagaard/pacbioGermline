@@ -3,7 +3,6 @@ nextflow.enable.dsl = 2
 
 include { 
         kivvi_d4z4;
-        kivvi05_d4z4;
         pbCPGtools;
         paraphase;
         paraphase35;
@@ -44,11 +43,10 @@ workflow POST_PHASING {
         cramino(phasedAll)
         mitorsaw(phasedAll)
         whatsHap_stats(phasedAll)
-        //paraphase(phasedAll)
+        paraphase(phasedAll)
         //paraphase35(phasedAll)
         paraphase4(phasedAll)
         kivvi_d4z4(phasedAll)
-        //kivvi05_d4z4(phasedAll)
         starphase(phasedAll)
         svTopo(phasedAll)
         svdb_SawFish(phasedAll)

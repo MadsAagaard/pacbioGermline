@@ -19,7 +19,7 @@ include {
 workflow PRE_PHASING {
 
     take:
-    aligned
+    aligned     // val(meta),val(data) -> [hifiBam,hifiBai,failBam,failBai]
 
     main:
 
@@ -80,15 +80,6 @@ workflow PRE_PHASING {
 
         trgt4_diseaseSTRs_plots(trgt4_plot_ch)
 
-
-
-
-        trgt4_diseaseSTRs.out.trgt_full
-            |map {meta,bam,bai,vcf,tbi -> 
-            tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
-            |set {trgt4_plot_ch_meth}
-
-        // trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch_meth)
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
 
         trgt5_all_adotto(aligned)

@@ -142,7 +142,7 @@ process symlinks_ubam_dropped {
     """
     """
 }
-
+/*
 process pbmm2_align {
     label "veryHigh"
     tag "$meta.id"
@@ -167,7 +167,7 @@ process pbmm2_align {
     ${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.bam
     """
 }
-
+*/
 
 
 process pbmm2_align_failedOnly {
@@ -182,7 +182,7 @@ process pbmm2_align_failedOnly {
     tuple val(meta), path(fofn)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.failedReads.pbmm2.bam"), path("${meta.id}.${genome_version}.failedReads.pbmm2*bai"),  emit: bamFail
+    tuple val(meta), path("${meta.id}.${genome_version}.failedReads.pbmm2.bam"), path("${meta.id}.${genome_version}.failedReads.pbmm2*bai"),  emit: bam
 
 
     script:
@@ -203,7 +203,7 @@ process pbmm2_align_failedOnly {
 
 
 
-process pbmm2_align_mergedData {
+process pbmm2_align_hifi {
     label "veryHigh"
     tag "$meta.id"
     conda "${params.pbmm2}"
@@ -212,7 +212,7 @@ process pbmm2_align_mergedData {
     tuple val(meta), path(fofn)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged*bai"),  emit: bamAll
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.pbmm2.merged.bam"), path("${meta.id}.${genome_version}.HifiReads.pbmm2.merged*bai"),  emit: bam
 
 
     script:
@@ -225,7 +225,7 @@ process pbmm2_align_mergedData {
     --sample ${meta.id} \
     ${genome_mmi} \
     ${fofn} \
-    ${meta.id}.${genome_version}.${inputReadSet_allDefault}.pbmm2.merged.bam
+    ${meta.id}.${genome_version}.HifiReads.pbmm2.merged.bam
     """
 }
 
@@ -268,17 +268,17 @@ process deepvariant{
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz.tbi"), emit: dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.deepVariant.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.deepVariant.vcf.gz.tbi"), emit: dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.deepVariant.g.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.deepVariant.g.vcf.gz.tbi"), emit: dv_gvcf    
 
     """
     singularity run -B ${s_bind} ${simgpath}/deepvariant190.sif /opt/deepvariant/bin/run_deepvariant \
     --model_type=PACBIO \
     --ref=${genome_fasta} \
-    --reads=${data.mainBamFile} \
-    --output_vcf=${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.vcf.gz \
-    --output_gvcf=${meta.id}.${genome_version}.${readSubset_hifiDefault}.deepVariant.g.vcf.gz \
+    --reads=${data.hifiBam} \
+    --output_vcf=${meta.id}.${genome_version}.HifiReads.deepVariant.vcf.gz \
+    --output_gvcf=${meta.id}.${genome_version}.HifiReads.deepVariant.g.vcf.gz \
     --num_shards=${task.cpus}
     """    
 }
@@ -294,9 +294,9 @@ process glNexus_jointCall {
     tuple val(meta), path(manifest)
 
     output:
-    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz"), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
+    tuple val(meta), path("${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.vcf.gz"), path("${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.vcf.gz.tbi"), emit: glnexus_vcf
     tuple val(meta), path("${manifest}")
-    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
+    tuple val(meta), path("${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.WES_ROI.vcf.gz"), path("${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.WES_ROI.vcf.gz.tbi"),emit:glnexus_wes_roi_vcf
     
     script:
     """
@@ -305,11 +305,11 @@ process glNexus_jointCall {
     --threads ${task.cpus} \
     --list ${manifest} > ${meta.caseID}.glnexus.bcf
 
-    bcftools view -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz ${meta.caseID}.glnexus.bcf
-    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz
+    bcftools view -Oz -o ${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.vcf.gz ${meta.caseID}.glnexus.bcf
+    bcftools index -t ${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.vcf.gz
 
-    bcftools view -R ${ROI} ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
-    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools view -R ${ROI} ${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.WES_ROI.vcf.gz
+    bcftools index -t ${meta.caseID}.${genome_version}.HifiReads.deepVariant.jointCall.WES_ROI.vcf.gz
 
     """
 }
@@ -325,9 +325,7 @@ process hiPhaseTwoAln {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
-    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.${readSubset_hifiDefault}.hiphase.ba*"
-
-    publishDir {"${params.outBase(meta)}/alignments/allReads/"}, mode: 'copy', pattern: "*.${inputReadSet_allDefault}.hiphase.cra*"
+    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.HifiReads.hiphase.ba*"
 
     publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
@@ -339,78 +337,45 @@ process hiPhaseTwoAln {
     tuple val(meta), val(data), path(vcf), path(sv), path(str)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam"), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam.bai"),  emit: hiphase_bam                 
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.cram.crai"), emit: hiphase_cram       
     
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam.bai")//,  emit: hiphase_allReads_bam  
-
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.cram.crai")//,  emit: hiphase_allReads_cram  
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.bam"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.bam.bai")//,  emit: hiphase_AllReadsNew_bam  
 
 
     script:
-    def bamArgs = []
-    def hiphaseBams = []
-    if (params.allReads || params.hifiReads || params.failedReads && (!params.skipAllReadsCRAM)) {
-        bamArgs += [
-            "--bam ${data.mainBamFile}",
-            "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
-        ]
-        hiphaseBams += [
-            "${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"
-        ]
-    }
-    else {
-        bamArgs += [
-            "--bam ${data.mainBamFile}",
-            "--output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam",
-            "--bam ${data.bamAll}",
-            "--output-bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
-        ]
-        hiphaseBams += [
-            "${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam",
-            "${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.bam"
-        ]
-    }
-    def bamArgsStr = bamArgs.join(' ')
-
-    def cramCmds = hiphaseBams.collect { bam ->
-    def cram = bam.replaceFirst(/\.bam$/, '.cram')
-    """
-    samtools view -@ ${task.cpus} -T ${genome_fasta} --write-index -C -O cram,version=3.1,level=6 -o ${cram} ${bam}
-    """.stripIndent().trim()
-    }.join("\n\n")
-
-
     """
     hiphase \
-    $bamArgsStr \
+    --bam ${data.hifiBam} \
+    --output-bam ${meta.id}.${genome_version}.HifiReads.hiphase.bam \
+    --bam ${data.failBam} \
+    --output-bam ${meta.id}.${genome_version}.failedReads.hiphase.bam \
+
     --vcf ${vcf[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz \
     --vcf ${sv[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz \
     --vcf ${str[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    bcftools index -t -f ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
+    bcftools index -t -f ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
-    -V  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    -V  ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz \
     -L ${ROI} \
-    -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
+    -O  ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz
 
-    ${cramCmds}
 
     """
 }
@@ -433,39 +398,39 @@ process hiPhase {
     tuple val(meta), val(data), path(vcf), path(sv), path(str)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam.bai"),  emit: hiphase_bam                 
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam"), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam.bai"),  emit: hiphase_bam                 
    
      
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
 
     script:
     """
     hiphase \
-    --bam ${data.mainBamFile} \
-    --output-bam ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.bam \
+    --bam ${data.hifiBam} \
+    --output-bam ${meta.id}.${genome_version}.HifiReads.hiphase.bam \
     --vcf ${vcf[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz \
     --vcf ${sv[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.sawfish.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz \
     --vcf ${str[0]} \
-    --output-vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --output-vcf ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    bcftools index -t -f ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz
+    bcftools index -t -f ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz
 
     ${gatk_exec} SelectVariants \
     -R ${genome_fasta} \
-    -V  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.vcf.gz \
+    -V  ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz \
     -L ${ROI} \
-    -O  ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.deepvariant.WES_ROI.vcf.gz
+    -O  ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz
     """
 }
 
@@ -490,7 +455,7 @@ process sawFish2 {
     tuple val(meta),  path("*.sawfishSV.*") //path(data),
     tuple val(meta), path("*.sawfishSV.vcf.gz"),path("*.sawfishSV.vcf.gz.tbi")      , emit: sv_vcf
     //path("${meta.id}.sawfishDiscover")                                              , emit: sv_discover_dir
-    tuple val(meta), path("${meta.id}.sawfishDiscover"), val("${data.mainBamFile}") , emit: sv_discover_dir2
+    tuple val(meta), path("${meta.id}.sawfishDiscover"), val("${data.hifiBam}") , emit: sv_discover_dir2
     tuple val(meta), path("*.sawfishSV.supporting_reads.json.gz")                   , emit: sv_supporting_reads
     tuple val(meta), path("${meta.id}.sawfishSV/")                                  , emit: sawfish_out_dir
 
@@ -502,7 +467,7 @@ process sawFish2 {
     sawfish discover \
     --threads ${task.cpus} \
     --ref ${genome_fasta} \
-    --bam ${data.mainBamFile} \
+    --bam ${data.hifiBam} \
     $exclude \
     $sex \
     --output-dir ${meta.id}.sawfishDiscover 
@@ -513,19 +478,19 @@ process sawFish2 {
     --sample ${meta.id}.sawfishDiscover \
     --output-dir ${meta.id}.sawfishSV 
     
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.vcf.gz
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz ${meta.id}.${genome_version}.HifiReads.sawfishSV.vcf.gz
 
-    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.vcf.gz.tbi
+    mv ${meta.id}.sawfishSV/genotyped.sv.vcf.gz.tbi ${meta.id}.${genome_version}.HifiReads.sawfishSV.vcf.gz.tbi
 
-    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.supporting_reads.json.gz
+    mv ${meta.id}.sawfishSV/supporting_reads.json.gz ${meta.id}.${genome_version}.HifiReads.sawfishSV.supporting_reads.json.gz
 
-    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.gc_bias_corrected_depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/gc_bias_corrected_depth.bw ${meta.id}.${genome_version}.HifiReads.sawfishSV.gc_bias_corrected_depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.depth.bw
+    mv ${meta.id}.sawfishSV/samples/*/depth.bw ${meta.id}.${genome_version}.HifiReads.sawfishSV.depth.bw
 
-    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.copynum.bedgraph
+    mv ${meta.id}.sawfishSV/samples/*/copynum.bedgraph ${meta.id}.${genome_version}.HifiReads.sawfishSV.copynum.bedgraph
 
-    mv ${meta.id}.sawfishSV/samples/*/copynum.summary.json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.copynum.summary.json
+    mv ${meta.id}.sawfishSV/samples/*/copynum.summary.json ${meta.id}.${genome_version}.HifiReads.sawfishSV.copynum.summary.json
     """
 }
 
@@ -544,20 +509,20 @@ process svdb_SawFish {
     
     output:
     tuple val(meta), path("*.sawfishSV.hiphase.svdb.*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),path("${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
     script:
     """
     svdb --query \
     --query_vcf ${data.sawfish_vcf} \
-    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf
+    --sqdb ${sawfish_sqdb} > ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.vcf
     
-    bgzip ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf
+    bgzip ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.vcf
     
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.vcf.gz -Oz -o ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
-    bcftools index -t ${meta.id}.${genome_version}.${readSubset_hifiDefault}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.HifiReads.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz
 
     """
 }
@@ -580,9 +545,9 @@ process sawFish2_jointCall_all{
     ${x} \
     --output-dir ${params.rundir}.sawfishSV_jointCall 
     
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.vcf.gz
 
-    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${params.rundir}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -603,12 +568,12 @@ process svdb_sawFish2_jointCall_all {
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf
+    bgzip ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${params.rundir}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${params.rundir}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -632,9 +597,9 @@ process sawFish2_jointCall_caseID{
     --sample-csv ${manifest} \
     --output-dir ${meta.caseID}.sawfishSV_jointCall 
     
-    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz
+    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.vcf.gz
 
-    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.vcf.gz.tbi
+    mv ${meta.caseID}.sawfishSV_jointCall/genotyped.sv.vcf.gz.tbi ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.vcf.gz.tbi
     """
 }
 
@@ -649,17 +614,17 @@ process svdb_sawFish2_jointCall_caseID {
     
     output:
     path("*_jointCall.svdb.*")
-    tuple val(meta), path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
+    tuple val(meta), path("${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz"),path("${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfish_caseID_AF10
     script:
     """
     svdb --query \
     --query_vcf ${vcf} \
-    --sqdb ${sawfish_sqdb} > ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bgzip ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf
-    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz
+    --sqdb ${sawfish_sqdb} > ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf
+    bgzip ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf
+    bcftools index -t ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf.gz
 
-    bcftools view -e 'INFO/FRQ>0.1' ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
-    bcftools index -t ${meta.caseID}.${genome_version}.${readSubset_hifiDefault}.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools view -e 'INFO/FRQ>0.1' ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.vcf.gz -Oz -o ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
+    bcftools index -t ${meta.caseID}.${genome_version}.HifiReads.sawfishSV_jointCall.svdb.AF_below10pct.vcf.gz
     """
 }
 
@@ -761,8 +726,8 @@ process mitorsaw {
     mitorsaw haplotype \
     --reference ${genome_fasta} \
     --bam ${data.bam} \
-    --output-vcf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.mitorsaw.vcf.gz \
-    --output-hap-stats ${meta.id}.${genome_version}.${readSubset_hifiDefault}.mitorsaw.hapstats.json 
+    --output-vcf ${meta.id}.${genome_version}.HifiReads.mitorsaw.vcf.gz \
+    --output-hap-stats ${meta.id}.${genome_version}.HifiReads.mitorsaw.hapstats.json 
 
     """
 }
@@ -781,36 +746,29 @@ process trgt4_diseaseSTRs{
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: str4_vcf
     
     tuple val(meta),path ("*.sorted.*")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
     
-    def bamArgs 
-    if (params.allReads || params.hifiReads|| params.failedReads) {
-        bamArgs="--reads ${data.mainBamFile}"
-    }
-    else  {
-        bamArgs="--reads ${data.bamAll}"
-    }
-
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
-    $bamArgs \
+    --reads ${data.hifiBam} \
+    --fail-reads ${data.failBam} \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive
+    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt4.STRchive.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.spanning.bam
+    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam
     """
 }
 
@@ -840,7 +798,7 @@ process trgt4_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id \$gene \
     --squished \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.allele.pdf
+    -o ${meta.id}.${genome_version}.AllReadsNew.\$gene.allele.pdf
 
     trgt plot \
     --genome ${genome_fasta} \
@@ -849,7 +807,7 @@ process trgt4_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id \$gene \
     --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.waterfall.pdf
+    -o ${meta.id}.${genome_version}.AllReadsNew.\$gene.waterfall.pdf
     done
     """
 }
@@ -906,37 +864,39 @@ process trgt5_all_adotto {
     
     publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
 
-    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/", mode: 'copy', pattern:"*.sorted.vcf.*"
+    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto_vcf/", mode: 'copy', pattern:"*.sorted.vcf.*"
+
+    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto_LPS/", mode: 'copy', pattern:"*.adotto.LPS.txt"
 
     input:
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.LPS.txt"), emit: adotto_LPS
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.LPS.txt"), emit: adotto_LPS
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
-    def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
 
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${adotto_repeat_catalog} \
-    $readsInput \
+    --reads ${data.hifiBam} \
+    --fail-reads ${data.failBam} \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto
+    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.spanning.bam
+    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam
 
     ${params.trgt_lps} \
-    --vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz \
-    --threads ${task.cpus} > ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.LPS.txt    
+    --vcf ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz \
+    --threads ${task.cpus} > ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.LPS.txt    
     """
 }
 
@@ -956,26 +916,26 @@ process trgt5_all_TRexplorer {
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
-    def readsInput= params.hifiReads ? "--reads ${data.mainBamFile}" : params.allReads ? "--reads ${data.mainBamFile}" : "--reads ${data.bamAll}"     
 
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${adotto_repeat_catalog} \
-    $readsInput \
+    --reads ${data.hifiBam} \
+    --fail-reads ${data.failBam} \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto
+    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.spanning.bam
+    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam
     """
 }
 
@@ -999,32 +959,25 @@ process trgt5_diseaseSTRs{
     
     tuple val(meta),path ("*.sorted.*")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.vcf.gz.tbi"),emit: trgt_full
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
-    
-    def bamArgs 
-    if (params.allReads || params.hifiReads|| params.failedReads) {
-        bamArgs="--reads ${data.mainBamFile}"
-    }
-    else  {
-        bamArgs="--reads ${data.bamAll}"
-    }
 
     """
     trgt genotype \
     --genome ${genome_fasta} \
     --repeats ${tr_pathogenic_v2} \
-    $bamArgs \
+    --reads ${data.hifiBam} \
+    --fail-reads ${data.failBam} \
     $karyotype \
-    --output-prefix ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive
+    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive
 
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.vcf.gz 
-    bcftools index -t ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.vcf.gz
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.vcf.gz 
+    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.vcf.gz
 
-    samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.spanning.bam
-    samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.STRchive.sorted.bam
+    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.spanning.bam
+    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt5.STRchive.sorted.bam
     """
 }
 
@@ -1055,7 +1008,7 @@ process trgt5_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id \$gene \
     --squished \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.allele.pdf
+    -o ${meta.id}.${genome_version}.AllReadsNew.\$gene.allele.pdf
 
     trgt plot \
     --genome ${genome_fasta} \
@@ -1064,33 +1017,10 @@ process trgt5_diseaseSTRs_plots{
     --spanning-reads ${data.bam} \
     --repeat-id \$gene \
     --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.\$gene.waterfall.pdf
+    -o ${meta.id}.${genome_version}.AllReadsNew.\$gene.waterfall.pdf
     done
     """
 }
-
-
-/*
-    """
-    trgt plot \
-    --genome ${genome_fasta} \
-    --repeats ${tr_pathogenic_v2} \
-    --vcf ${data.vcf} \
-    --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
-    --squished \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.allele.pdf
-
-    trgt plot \
-    --genome ${genome_fasta} \
-    --repeats ${tr_pathogenic_v2} \
-    --vcf ${data.vcf} \
-    --spanning-reads ${data.bam} \
-    --repeat-id ${data.strID} \
-    --plot-type waterfall \
-    -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.${data.strID}.waterfall.pdf
-*/
-
 
 process trgt5_diseaseSTRs_plots_meth{
     tag "$meta.id"
@@ -1143,46 +1073,19 @@ process kivvi_d4z4{
     tuple val(meta), val(data)
    //  tuple val(meta), path(data)   
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.kivviD4Z4")
      
     script:
 
     """
     ${params.kivvi_dir}/kivvi \
     -r ${genome_fasta} \
-    --bam ${data.bam} \
-    -p ${meta.id}.${genome_version}.${readSubset_hifiDefault} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivviD4Z4 \
+    --bam ${data.hifiBam} \
+    -p ${meta.id}.${genome_version}.HifiReads \
+    -o ${meta.id}.${genome_version}.HifiReads.kivviD4Z4 \
     d4z4
     """
 }
-
-process kivvi05_d4z4{
-    tag "$meta.id"
-    label "medium"
-
-    publishDir {"${params.outBase(meta)}/repeatExpansions/kivvi_D4Z4_v0.5/"}, mode: 'copy'
-
-
-    input:
-    tuple val(meta), val(data)
-   //  tuple val(meta), path(data)   
-    output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivvi_D4Z4_05")
-    
-    script:
-    """
-    ${params.kivvi_dir2}/kivvi \
-    -r ${genome_fasta} \
-    --bam ${data.bam} \
-    -p ${meta.id}.${genome_version}.${readSubset_hifiDefault} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.kivvi_D4Z4_05 \
-    d4z4
-    """
-}
-
-
-
 
 process paraphase {
 
@@ -1190,12 +1093,12 @@ process paraphase {
     label "medium"
     conda "${params.paraphaseMinimap2}"
 
-    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase/"},mode: 'copy'
+    publishDir {"${params.outBase(meta)}/specialAnalysis/paraphase3/"},mode: 'copy'
 
     input:
     tuple val(meta), val(data)
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/*")
 
     script:
     """
@@ -1203,16 +1106,16 @@ process paraphase {
     -b ${data.bam} \
     --reference ${genome_fasta} \
     -t ${task.cpus} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase
 
     python ${localPythonScripts}/flatten_paraphaseSMN.py \
-    --json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
-    --out ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.${genome_version}.${readSubset_hifiDefault}.paraphase.flattened.tsv
+    --json ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.paraphase.json \
+    --out ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.${genome_version}.HifiReads.paraphase.flattened.tsv
 
     python ${localPythonScripts}/flatten_paraphaseSMN.py \
-    --json ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    --json ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.paraphase.json \
     --loci SMN1,PMS2,IKBKG \
-    --out ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.${genome_version}.${readSubset_hifiDefault}.paraphase.flattened.SMN_PMS2_IKBKG.tsv
+    --out ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.${genome_version}.HifiReads.paraphase.flattened.SMN_PMS2_IKBKG.tsv
 
      """
 }
@@ -1229,8 +1132,8 @@ process paraphase35 {
     input:
     tuple val(meta), val(data)
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphaseAnnotate/*")
 
     script:
     """
@@ -1238,13 +1141,13 @@ process paraphase35 {
     -b ${data.bam} \
     --reference ${genome_fasta} \
     -t ${task.cpus} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase
 
     python ${pbParaphaseAnnotationScript} \
-    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -i ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.paraphase.json \
     -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
     -c ${pbParaphaseConfig} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphaseAnnotate
      """
 }
 
@@ -1261,7 +1164,7 @@ process paraphase4 {
     input:
     tuple val(meta), val(data)
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/*")
 
     script:
     """
@@ -1269,7 +1172,7 @@ process paraphase4 {
     -b ${data.bam} \
     --reference ${genome_fasta} \
     -t ${task.cpus} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase
 
      """
 }
@@ -1288,8 +1191,8 @@ process paraphase4 {
     input:
     tuple val(meta), val(data)
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/*")
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.paraphaseAnnotate/*")
 
     script:
     """
@@ -1297,13 +1200,13 @@ process paraphase4 {
     -b ${data.bam} \
     --reference ${genome_fasta} \
     -t ${task.cpus} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase
 
     python ${pbParaphaseAnnotationScript4} \
-    -i ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphase/${meta.id}.paraphase.json \
+    -i ${meta.id}.${genome_version}.HifiReads.hiphase.paraphase/${meta.id}.paraphase.json \
     -r rccx,smn1,pms2,strc,cfc1,ikbkg,ncf1,neb,f8,hba,TNXB,OTOA \
     -c ${pbParaphaseConfig} \
-    -o ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.paraphaseAnnotate
+    -o ${meta.id}.${genome_version}.HifiReads.hiphase.paraphaseAnnotate
      """
 }
 */
@@ -1322,7 +1225,7 @@ process starphase {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.starphase.*")
     
     script:
     """
@@ -1332,13 +1235,13 @@ process starphase {
     --reference ${genome_fasta} \
     --vcf ${data.dv_vcf} \
     --sv-vcf ${data.sawfish_vcf} \
-    --pharmcat-tsv ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
-    --output-calls ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.json
+    --pharmcat-tsv ${meta.id}.${genome_version}.HifiReads.starphase.diplotypes_for_pharmCAT.tsv \
+    --output-calls ${meta.id}.${genome_version}.HifiReads.starphase.json
 
     java -jar ${pharmcat_jar} \
-    -po ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.diplotypes_for_pharmCAT.tsv \
+    -po ${meta.id}.${genome_version}.HifiReads.starphase.diplotypes_for_pharmCAT.tsv \
     -vcf ${data.dv_vcf} \
-    -bf ${meta.id}.${genome_version}.${readSubset_hifiDefault}.starphase.pharmCAT \
+    -bf ${meta.id}.${genome_version}.HifiReads.starphase.pharmCAT \
     -o .
     """
 }
@@ -1492,13 +1395,13 @@ process pbCPGtools {
     tuple val(meta), val(data)
     
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation*")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.methylation*")
     
     script:
     """
     aligned_bam_to_cpg_scores \
     --bam ${data.bam} \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation
+    --output-prefix ${meta.id}.${genome_version}.HifiReads.hiphase.methylation
     """
 }
 
@@ -1521,23 +1424,23 @@ process methBat{
     script:
     """
     methbat segment \
-    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.segments
+    --input-prefix ${meta.id}.${genome_version}.HifiReads.hiphase.methylation \
+    --output-prefix ${meta.id}.${genome_version}.HifiReads.met.segments
 
     methbat profile \
-    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
+    --input-prefix ${meta.id}.${genome_version}.HifiReads.hiphase.methylation \
     --input-regions ${methylationBackground} \
-    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.profile
+    --output-region-profile ${meta.id}.${genome_version}.HifiReads.met.profile
 
     methbat profile \
-    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
+    --input-prefix ${meta.id}.${genome_version}.HifiReads.hiphase.methylation \
     --input-regions ${methylationBackgroundLocal} \
-    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.profileLOCAL
+    --output-region-profile ${meta.id}.${genome_version}.HifiReads.met.profileLOCAL
 
     methbat report \
-    --input-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.hiphase.methylation \
+    --input-prefix ${meta.id}.${genome_version}.HifiReads.hiphase.methylation \
     --input-regions ${methylationICRegions} \
-    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.imprintingReport.tsv 
+    --output-report ${meta.id}.${genome_version}.HifiReads.met.imprintingReport.tsv 
 
     """
 }
@@ -1569,13 +1472,13 @@ process methBatNEW_pileup{
     methbat pileup \
     --threads ${task.cpus} \
     --input-bam ${data.bam} \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup
+    --output-prefix ${meta.id}.${genome_version}.HifiReads.met.pileup
 
-    zgrep "Total" ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.pileup.5mC.bed.gz | \
+    zgrep "Total" ${meta.id}.${genome_version}.HifiReads.met.pileup.5mC.bed.gz | \
     cut -f 1-3,7 | \
-    bgzip > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+    bgzip > ${meta.id}.${genome_version}.HifiReads.5mC.bedgraph.gz
 
-    tabix -p bed ${meta.id}.${genome_version}.${readSubset_hifiDefault}.5mC.bedgraph.gz
+    tabix -p bed ${meta.id}.${genome_version}.HifiReads.5mC.bedgraph.gz
 
     """
 }
@@ -1600,16 +1503,16 @@ process methBatNEW_profile_single {
     methbat profile \
     --input-regions ${methylationCpG_regions} \
     --input-pileup ${data} \
-    --output-region-profile ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.cpgIslands.profile.tsv
+    --output-region-profile ${meta.id}.${genome_version}.HifiReads.met.5mC.cpgIslands.profile.tsv
     
     methbat segment \
     --input-pileup ${data} \
-    --output-prefix ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.segments
+    --output-prefix ${meta.id}.${genome_version}.HifiReads.met.5mC.segments
 
     methbat report \
     --input-pileup ${data} \
     --input-regions ${methylationICRegions} \
-    --output-report ${meta.id}.${genome_version}.${readSubset_hifiDefault}.met.5mC.imprintingReport.tsv 
+    --output-report ${meta.id}.${genome_version}.HifiReads.met.5mC.imprintingReport.tsv 
     """
 }
 
@@ -1637,7 +1540,7 @@ process mosdepthROI {
     -t ${task.cpus} \
     $callable \
     ${meta.id}.${genome_version}_roi \
-    ${data.mainBamFile}
+    ${data.hifiBam}
 
     """
 }
@@ -1674,7 +1577,7 @@ process cramino {
     tuple val(meta), val(data)  // meta: [npn,datatype,sampletype,id], data: [cram,crai]
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.craminoQC.txt")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.craminoQC.txt")
 
     script:
     """
@@ -1682,7 +1585,7 @@ process cramino {
     -t ${task.cpus} \
     --karyotype \
     --phased \
-    ${data.bam} > ${meta.id}.${genome_version}.${readSubset_hifiDefault}.craminoQC.txt
+    ${data.bam} > ${meta.id}.${genome_version}.HifiReads.craminoQC.txt
     """
 }
 
@@ -1697,14 +1600,14 @@ process nanoStat {
     tuple val(meta), val(data) 
 
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt"),emit: multiqc
-    path("${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt")
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.nanostat.txt"),emit: multiqc
+    path("${meta.id}.${genome_version}.HifiReads.nanostat.txt")
     script:
     """
     NanoStat \
     -t ${task.cpus} \
-    -n ${meta.id}.${genome_version}.${readSubset_hifiDefault}.nanostat.txt \
-    --bam ${data.mainBamFile}
+    -n ${meta.id}.${genome_version}.HifiReads.nanostat.txt \
+    --bam ${data.hifiBam}
     """
 }
 

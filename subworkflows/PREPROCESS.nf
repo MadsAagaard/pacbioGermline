@@ -1,13 +1,14 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-include {pbmm2_align;
-        create_fofn;
+include {create_fofn;
         inputFiles_symlinks_ubam;
-        pbmm2_align_mergedData;
+        pbmm2_align_hifi;
         pbmm2_align_failedOnly;
         extractHifi;
         } from "../modules/dnaModules.nf" 
+
+
 
 workflow PREPROCESS {
 
@@ -19,7 +20,40 @@ workflow PREPROCESS {
     inputFiles_symlinks_ubam(finalUbamInput)
     create_fofn(finalUbamInput)
 
-    pbmm2_align_mergedData(create_fofn.out.allReads)
+    pbmm2_align_hifi(create_fofn.out.hifiReads)
+    pbmm2_align_failedOnly(create_fofn.out.failReads)
+    
+    pbmm2_align_hifi.out.bam //val(meta), path(bam),path(bai)
+    .join(pbmm2_align_hifi.out.bam)
+    | map {meta,hifiBam,hifiBai,failBam,failBai -> 
+        tuple(meta, [
+                hifiBam:hifiBam,
+                hifiBai:hifiBai
+                failBam:failBam,
+                failBai:failBai                    
+            ])
+    }
+    |set {alignedFinal_ch}
+
+    emit:
+    alignedFinal=alignedFinal_ch
+
+}
+
+
+
+/*
+workflow PREPROCESS {
+
+    take:
+    finalUbamInput     
+   
+    main:
+
+    inputFiles_symlinks_ubam(finalUbamInput)
+    create_fofn(finalUbamInput)
+
+    pbmm2_align_hifi(create_fofn.out.hifiReads)
     pbmm2_align_failedOnly(create_fofn.out.failReads)
     
     if (!params.failedReads && !params.allReads && !params.hifiReads) {
@@ -41,3 +75,4 @@ workflow PREPROCESS {
     alignedFinal=alignedFinal_ch
 
 }
+*/
