@@ -914,6 +914,7 @@ process trgt5_all_adotto {
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
     tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.LPS.txt"), emit: adotto_LPS
     
     script:
     def karyotype=(meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M")  ? "--karyotype XY" : "--karyotype XX"
@@ -932,6 +933,10 @@ process trgt5_all_adotto {
 
     samtools sort -o ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.spanning.bam
     samtools index ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.bam
+
+    ${params.trgt_lps} \
+    --vcf ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.sorted.vcf.gz \
+    --threads ${task.cpus} > ${meta.id}.${genome_version}.${inputReadSet_allDefault}.trgt5.adotto.LPS.txt    
     """
 }
 
@@ -1092,7 +1097,7 @@ process trgt5_diseaseSTRs_plots_meth{
     label "medium"
     conda "${params.trgt5}"
 
-    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/METHplots/"}, mode: 'copy', pattern: "*.{pdf,png,svg}"
     input:
     tuple val(meta), val(data)
     
