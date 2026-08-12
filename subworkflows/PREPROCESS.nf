@@ -24,8 +24,8 @@ workflow PREPROCESS {
     pbmm2_align_failedOnly(create_fofn.out.failReads)
     
     pbmm2_align_hifi.out.bam //val(meta), path(bam),path(bai)
-    .join(pbmm2_align_hifi.out.bam)
-    | map {meta,hifiBam,hifiBai,failBam,failBai -> 
+    .join(pbmm2_align_failedOnly.out.bam)
+    .map {meta,hifiBam,hifiBai,failBam,failBai -> 
         tuple(meta, [
                 hifiBam:hifiBam,
                 hifiBai:hifiBai
@@ -33,7 +33,7 @@ workflow PREPROCESS {
                 failBai:failBai                    
             ])
     }
-    |set {alignedFinal_ch}
+    .set {alignedFinal_ch}
 
     emit:
     alignedFinal=alignedFinal_ch

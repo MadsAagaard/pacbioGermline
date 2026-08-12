@@ -32,36 +32,21 @@ workflow PRE_PHASING {
 
     if (!params.skipVariants) {
         deepvariant(aligned)
-        deepvariant.out.dv_vcf
-            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-            | set {dv_vcf_ch}
+
+        deepvariant.out.vcf
+//            .map { meta, vcf, idx -> tuple(meta, [dvVcf: vcf, dvTbi: idx]) }
+            .map { meta, vcf, idx -> tuple(meta, [dvVcf: vcf]) }
+
+            .set { dv_vcf_ch }
     
-      /*  
-        if (params.jointCall || params.jointSS) {
-            deepvariant.out.dv_gvcf
-            | map { meta, gvcf, tbi ->
-                // store one record per sample: (caseID, meta, gvcfPath)
-                tuple(meta.caseID, tuple(meta, gvcf.toString()))
-            }
-            .groupTuple()
-            .map { caseID, records ->
-                def anchorMeta = records[0][0]
-                def content = records.collect { it[1] }.join('\n') + '\n'
-                def mf = file("${caseID}.manifest")
-                mf.text = content
-                tuple(anchorMeta, mf)
-            }
-            .set { glnexus_manifest_ch }
-
-        }
-         */
-    }
-
     if (!params.skipSV) {
         sawFish2(aligned)
-        sawFish2.out.sv_vcf //meta, vcf, idx
-            | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-            | set {sawfish_vcf_ch}
+        
+        sawFish2.out.sv_vcf
+            //.map { meta, vcf, idx -> tuple(meta, [sawfishVcf: vcf, sawfishTbi: idx]) }
+            .map { meta, vcf, idx -> tuple(meta, [sawfishVcf: vcf]) }            
+            .set { sawfish_vcf_ch }
+
     }
 
     if (!params.skipSTR) {
@@ -69,9 +54,9 @@ workflow PRE_PHASING {
         trgt4_diseaseSTRs(aligned)
 
         trgt4_diseaseSTRs.out.str4_vcf
-        | map {meta,vcf,idx -> tuple(meta,[vcf,idx])}
-        | set {str_vcf_ch}
-
+            //.map { meta, vcf, idx -> tuple(meta, [str4Vcf: vcf, str4Tbi: idx]) }
+            .map { meta, vcf, idx -> tuple(meta, [str4Vcf: vcf]) }
+            .set { str_vcf_ch }
 
         trgt4_diseaseSTRs.out.trgt_full
             |map {meta,bam,bai,vcf,tbi -> 
@@ -83,20 +68,24 @@ workflow PRE_PHASING {
         trgt4_diseaseSTRs_plots_meth(trgt4_plot_ch)
 
         trgt5_all_adotto(aligned)
+        trgt5_all_adotto.out.adotto_vcf
+            //.map { meta, vcf, idx -> tuple(meta, [str5AdottoVcf: vcf, str5AdottoIdx: idx]) }
+            .map { meta, vcf, idx -> tuple(meta, [str5AdottoVcf: vcf]) }
+            .set { str5_adotto_vcf_ch }
 
         trgt5_diseaseSTRs(aligned)
 
         trgt5_diseaseSTRs.out.trgt_full
-            |map {meta,bam,bai,vcf,tbi -> 
+            .map {meta,bam,bai,vcf,tbi -> 
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
-            |set {trgt5_plot_ch}
+            .set {trgt5_plot_ch}
 
         trgt5_diseaseSTRs_plots(trgt5_plot_ch)
 
         trgt5_diseaseSTRs.out.trgt_full
-            |map {meta,bam,bai,vcf,tbi -> 
+            .map {meta,bam,bai,vcf,tbi -> 
             tuple(meta,[bam:bam,bai:bai,vcf:vcf,tbi:tbi])}
-            |set {trgt5_plot_ch_meth}
+            .set {trgt5_plot_ch_meth}
 
         trgt5_diseaseSTRs_plots_meth(trgt5_plot_ch_meth)
         
@@ -113,6 +102,10 @@ workflow PRE_PHASING {
         .join(dv_vcf_ch)
         .join(sawfish_vcf_ch)
         .join(str_vcf_ch)
+        .join(str5_adotto_vcf_ch)
+        .map{ meta, aln, dv, sv, str4, str5 -> 
+            tuple(meta, aln + dv + sf + str4 +str5) //bamHifi,baiHifi, bamFail, baiFail, dv,sv,str4,str5
+        }
         | set { hiphase_input_ch }
     }
 

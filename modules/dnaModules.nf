@@ -325,7 +325,9 @@ process hiPhaseTwoAln {
     tag "$meta.id"
     label "intermediate"
     conda "${params.hiphase}"
-    publishDir {"${params.outBase(meta)}/alignments/HifiReads/"}, mode: 'copy', pattern: "*.HifiReads.hiphase.ba*"
+    publishDir {"${params.outBase(meta)}/alignments/"}, mode: 'copy', pattern: "*.HifiReads.hiphase.ba*"
+
+    publishDir {"${params.outBase(meta)}/alignments/failReads"}, mode: 'copy', pattern: "*.failedReads.hiphase.ba*"
 
     publishDir {"${params.outBase(meta)}/SNV_and_INDELs/"}, mode: 'copy', pattern: "*.hiphase.deepvariant.*"
 
@@ -333,22 +335,36 @@ process hiPhaseTwoAln {
 
     publishDir "${lrsStorage}/deepVariant/vcfs/", mode: 'copy', pattern:"*.hiphase.deepvariant.vcf.*"
 
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, mode: 'copy', pattern: "*.hiphase.trgt4.*"
+
+    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.hiphase.trgt5.adotto.sorted.*"
+
+    publishDir {"${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/"}, mode: 'copy', pattern: "*.hiphase.trgt5.adotto.sorted.*"
+
+    
     input:
-    tuple val(meta), val(data), path(vcf), path(sv), path(str)
+    tuple val(meta), val(data)
     
+    /*
+    Val(data):
+    hifiBam,hifiBai,failBam,failBai,dvVcf,sawfishVcf, str4Vcf, str5AdottoVcf
+    
+    */
+
     output:
-    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam"), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam.bai"),  emit: hiphase_bam                 
-   
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam"), path("${meta.id}.${genome_version}.HifiReads.hiphase.bam.bai"),  emit: hifi_bam                 
+
+    tuple val(meta), path("${meta.id}.${genome_version}.failedReads.hiphase.bam"), path("${meta.id}.${genome_version}.failedReads.hiphase.bam.bai"),  emit: fail_bam         
     
-    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz.tbi"), emit: hiphase_dv_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz.tbi"), emit: dv_vcf
 
     tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.WES_ROI.vcf.gz.tbi")
 
-    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz.tbi"), emit: hiphase_sawfish_vcf
+    tuple val(meta), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz"), path("${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz.tbi"), emit: sawfish_vcf
    
-    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: hiphase_trgt_vcf
-    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.bam"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.bam.bai")//,  emit: hiphase_AllReadsNew_bam  
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: trgt4_disease_vcf
 
+    tuple val(meta), path(" ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt5.adotto.sorted.vcf.gz"), path(" ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt5.adotto.sorted.vcf.gz.tbi"), emit: trgt5_adotto_vcf
 
     script:
     """
@@ -357,13 +373,14 @@ process hiPhaseTwoAln {
     --output-bam ${meta.id}.${genome_version}.HifiReads.hiphase.bam \
     --bam ${data.failBam} \
     --output-bam ${meta.id}.${genome_version}.failedReads.hiphase.bam \
-
-    --vcf ${vcf[0]} \
+    --vcf ${data.dvVcf} \
     --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.deepvariant.vcf.gz \
-    --vcf ${sv[0]} \
+    --vcf ${data.sawfishVcf} \
     --output-vcf ${meta.id}.${genome_version}.HifiReads.hiphase.sawfish.vcf.gz \
-    --vcf ${str[0]} \
+    --vcf ${data.str4Vcf} \
     --output-vcf ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt4.STRchive.sorted.vcf.gz \
+    --vcf ${data.str5AdottoVcf} \
+    --output-vcf ${meta.id}.${genome_version}.AllReadsNew.hiphase.trgt5.adotto.sorted.vcf.gz \
     --reference ${genome_fasta} \
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
@@ -861,10 +878,7 @@ process trgt5_all_adotto {
     conda "${params.trgt5}"
   
     publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.ba*"
-    
-    publishDir {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, mode: 'copy', pattern: "*.sorted.vcf.*"
-
-    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto_vcf/", mode: 'copy', pattern:"*.sorted.vcf.*"
+    publishDir "${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/", mode: 'copy', pattern:"*.adotto.LPS.txt"
 
     publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto_LPS/", mode: 'copy', pattern:"*.adotto.LPS.txt"
 
@@ -873,7 +887,9 @@ process trgt5_all_adotto {
     
     output:
     tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.bam.bai"),emit: adotto_bam
+    
     tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.sorted.vcf.gz.tbi"),emit: adotto_vcf
+    
     tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt5.adotto.LPS.txt"), emit: adotto_LPS
     
     script:

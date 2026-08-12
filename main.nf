@@ -68,8 +68,8 @@ if (params.aligned) {
     inputBam="${params.input}/*.bam"
     inputBai="${params.input}/*.bai"
 
-    Channel.fromPath(inputBam, followLinks: true)
-    |map { tuple(it.baseName,it) }
+    channel.fromPath(inputBam, followLinks: true)
+    |map { f -> tuple(f.baseName, f) }
     |map {id,bam -> 
             (samplename,genomeversion)      =id.tokenize(".")
             meta=[id:samplename,genomeversion:genomeversion,type:"aligned"]
@@ -77,8 +77,8 @@ if (params.aligned) {
         }
     |set {bamInput}
 
-    Channel.fromPath(inputBai, followLinks: true)
-    |map { tuple(it.baseName,it) }
+    channel.fromPath(inputBai, followLinks: true)
+    |map { f -> tuple(f.baseName, f) }
     |map {id,bai -> 
             (samplename,genomeversion)      =id.tokenize(".")
             meta=[id:samplename,genomeversion:genomeversion,type:"aligned"]
@@ -190,8 +190,7 @@ if (!params.aligned) {
                     .last()
                     .replaceFirst(/\.txt$/, '')
 
-    Channel
-    .fromPath(params.samplesheet)
+    channel.fromPath(params.samplesheet)
     .splitCsv(sep: '\t')
     .map { row ->
         def (rekv, npn, material, testlist, gender, proband, intRef) = row
@@ -245,8 +244,8 @@ if (!params.aligned) {
 
 
     if (params.samplesheet) {
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
+        channel.fromPath(inputBam, followLinks: true)
+        |map { f -> tuple(f.baseName, f) }
         |map {id,bam -> 
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
                 (instrument,date,time)                      =pacbioID.tokenize("_")     
@@ -353,8 +352,8 @@ if (!params.aligned) {
     }
 
     if (!params.samplesheet) {
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
+        channel.fromPath(inputBam, followLinks: true)
+        |map { f -> tuple(f.baseName, f) }
 
         |map {id,bam -> 
                 (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
@@ -421,11 +420,13 @@ workflow {
     }
     PRE_PHASING(PREPROCESS.out.alignedFinal)
 
-    hiPhase(PRE_PHASING.out.hiphaseInput)
+   // hiPhase(PRE_PHASING.out.hiphaseInput)
+    hiPhaseTwoAln(PRE_PHASING.out.hiphaseInput)
+    
+    hiPhaseTwoAln.out.hifi_bam
 
-    hiPhase.out.hiphase_bam
-        .join(hiPhase.out.hiphase_dv_vcf)
-        .join(hiPhase.out.hiphase_sawfish_vcf)
+        .join(hiPhase.out.dv_vcf)
+        .join(hiPhase.out.sawfish_vcf)
         .join(PRE_PHASING.out.sawfish_supporting_reads)
         | map { meta, bam, bai, dv_vcf, dv_idx, sv_vcf, sv_idx, sv_jsonReads ->
             tuple(meta, [
@@ -449,11 +450,11 @@ workflow {
 
     def hpo_ch = params.hpo        
         ? channel.fromPath(params.hpo)
-        : Channel.empty()
+        : channel.empty()
 
     def ss_ch  = params.samplesheet 
         ? channel.fromPath(params.samplesheet) 
-        : Channel.empty()
+        : channel.empty()
 
 
     if (params.jointCall || params.jointSS) {
@@ -505,138 +506,6 @@ workflow {
 
     }
 }
-
-/*
-
-        PRE_PHASING.out.sawfish_discover_dir
-        | map {" --sample "+it}
-        |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
-        |map {it.text.trim()}
-        |set {sawfish_discover_bam_list_ch}
-
-
-    if (params.test ||params.summary) {
-        finalUbamInput.view()
-        samplesheet_full.view()
-        write_input_summary(ubam_size_summary_ch)
-        write_analyzed_samples_summary(ubam_size_keep_ch)
-        write_dropped_samples_summary(ubam_size_dropped_ch)
-        symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
-    }
-
-
-
-        if (!params.skipQC) {
-
-            Channel.empty()
-            .mix(QC.out.mosdepth)
-            .mix(QC.out.nanoStat)
-            .mix(whatsHap_stats.out.multiqc)
-            .map { meta, qcfile ->
-                tuple(params.multiqcKey(meta), meta, qcfile)
-            }
-            .groupTuple(by: 0)
-            .map { key, metas, qcfiles ->
-
-                // pick one representative meta for publishDir + naming
-                def meta0 = metas.find { it.relation == 'index' } ?: metas[0]
-
-                tuple(meta0, qcfiles)
-            }
-            .set { multiqc_inputs_ch }
-            multiQC(multiqc_inputs_ch)
-        }
-
-
-
-        hiPhase.out.hiphase_bam
-        .join(svdb_SawFish.out.sawfishAF10)
-        .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
-        | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
-        tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
-        |set {phasedSawfishAF10}   
-
-        svTopo_filtered(phasedSawfishAF10)
-
-
-
-    if (params.hpo && params.samplesheet && (params.jointCall || params.jointSS)) {
-    
-    glNexus_jointCall.out.glnexus_vcf
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {genomiser_ch}
-    
-    glNexus_jointCall.out.glnexus_wes_roi_vcf
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {exomiser_ch}
-    
-    svdb_sawFish2_jointCall_caseID.out.sawfish_caseID_AF10
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {exomiserSV_ch}
-        //above structure: caseID, vcf, idx, hpoFile,samplesheet
-        exo14_2508_exome(exomiser_ch)
-        exo14_2508_genome(genomiser_ch)
-        exo14_2508_SV(exomiserSV_ch)
-    }
-
-
- include {pbmm2_align;
-        create_fofn;
-        pbmm2_align_mergedData;
-        extractHifi;
-        inputFiles_symlinks_ubam;
-        sawFish2;
-        svdb_SawFish;
-        sawFish2_jointCall_all;
-        svdb_sawFish2_jointCall_all;
-        sawFish2_jointCall_caseID;
-        svdb_sawFish2_jointCall_caseID;
-        deepvariant;
-        glNexus_jointCall;
-        trgt4_diseaseSTRs;
-        trgt4_diseaseSTRs_plots;
-        trgt4_diseaseSTRs_plots_meth;
-        trgt4_all;
-        trgt5_diseaseSTRs;
-        trgt5_diseaseSTRs_plots;
-        trgt5_diseaseSTRs_plots_meth;
-        kivvi_d4z4;
-        pbCPGtools;
-        paraphase;
-        paraphase35
-        starphase;
-        methBat;
-        multiQC;
-        multiQC_ALL;
-        mosdepthROI;
-        cramino;
-        nanoStat;
-        whatsHap_stats;
-        hiPhase;
-        build_symlinks;
-        check_tmpdir;
-        svTopo;
-        svTopo_filtered;
-        mitorsaw;
-        exo14_2508_exome;
-        exo14_2508_genome;
-        exo14_2508_SV;
-        kivvi05_d4z4;
-        write_input_summary;
-        write_dropped_samples_summary;
-        symlinks_ubam_dropped;
-        write_analyzed_samples_summary;
-        } from "./modules/dnaModules.nf" 
-
-
-
-
-
-*/
-
 
 // Virker ikke lige pt.:
 workflow.onComplete {
