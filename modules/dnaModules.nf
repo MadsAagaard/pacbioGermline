@@ -387,7 +387,7 @@ process hiPhaseTwoAln {
         pattern: "*.hiphase.trgt4.*")
     
     publishDir (
-        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, 
+        path: {"${params.outBase(meta)}/repeatExpansions/TRGT5_all/adotto/"}, 
         mode: 'copy', 
         pattern: "*.hiphase.trgt5.adotto.sorted.*")
 
@@ -396,11 +396,12 @@ process hiPhaseTwoAln {
         mode: 'copy', 
         pattern: "*.hiphase.deepvariant.vcf.*")
 
+/*
     publishDir (
-        path: {"${params.lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/"},  
+        path: {"${params.lrsStorage}/repeatExpansions/TRGT5_genomeWide/adotto/"},  
         mode: 'copy', 
         pattern: "*.hiphase.trgt5.adotto.sorted.*")
-
+*/
     input:
     tuple val(meta), val(data)
     // data keys: hifiBam, hifiBai, failBam, failBai, dvVcf, sawfishVcf, str4Vcf, str5AdottoVcf
@@ -458,7 +459,6 @@ process hiPhaseTwoAln {
     --threads ${task.cpus} \
     --io-threads ${task.cpus}
 
-    # Defensive: -f makes these no-ops if HiPhase already wrote the indexes.
     bcftools index -t -f ${prefix}.${params.tagHifi}.hiphase.deepvariant.vcf.gz
     bcftools index -t -f ${prefix}.${params.tagHifi}.hiphase.sawfish.vcf.gz
     bcftools index -t -f ${prefix}.${params.strTag}.hiphase.trgt4.STRchive.sorted.vcf.gz
@@ -818,7 +818,7 @@ process trgt4_diseaseSTRs {
         pattern: "*.sorted.ba*")
     
     publishDir (
-        path: "${params.lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/",
+        path: "${params.lrsStorage}/repeatExpansions/TRGT/diseaseSTRs/",
         mode: 'copy',
         pattern: "*.sorted.vcf.*")
 
@@ -956,13 +956,8 @@ process trgt4_diseaseSTRs_plots_meth {
 
 process trgt5_all_adotto {
     tag "$meta.id"
-    label "high"
+    label "intermediate"
     conda "${params.condaEnvs.trgt51}"
-
-    publishDir (
-        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
-        mode: 'copy',
-        pattern: "*.sorted.ba*")
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/"},
@@ -970,9 +965,17 @@ process trgt5_all_adotto {
         pattern: "*.adotto.LPS.txt")
 
     publishDir (
-        path: "${params.lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto_LPS/",
+        path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/adotto_LPS/",
         mode: 'copy',
         pattern: "*.adotto.LPS.txt")
+
+    publishDir (
+        path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/adotto/",
+        mode: 'copy',
+        pattern: "*.trgt5.adotto.sorted.vcf.*")
+
+
+
 
     input:
     tuple val(meta), val(data)
@@ -999,13 +1002,11 @@ process trgt5_all_adotto {
     $failReads \
     $karyotype \
     --threads ${task.cpus} \
+    --disable-bam-output \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
     bcftools index -t ${prefix}.sorted.vcf.gz
-
-    samtools sort -o ${prefix}.sorted.bam ${prefix}.spanning.bam
-    samtools index ${prefix}.sorted.bam
 
     ${params.trgtLps} \
     --vcf ${prefix}.sorted.vcf.gz \
@@ -1015,16 +1016,12 @@ process trgt5_all_adotto {
 
 process trgt5_all_TRexplorer {
     tag "$meta.id"
-    label "high"
+    label "intermediate"
     conda "${params.condaEnvs.trgt51}"
 
     // FIX: this process was named TRexplorer but used the adotto catalog and
     // wrote adotto filenames, so it silently duplicated trgt5_all_adotto and
     // would have overwritten its output in lrsStorage.
-    publishDir ( 
-        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
-        mode: 'copy',
-        pattern: "*.sorted.ba*")
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
@@ -1032,12 +1029,12 @@ process trgt5_all_TRexplorer {
         pattern: "*.sorted.vcf.*")
 
     publishDir (
-        path: "${params.lrsStorage}/STRs/repeatExpansions/TRGT5/all/trexplorer/",
+        path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/trexplorer/",
         mode: 'copy',
         pattern: "*.sorted.vcf.*")
 
     publishDir (
-        path: "${params.lrsStorage}/STRs/repeatExpansions/TRGT5/all/trexplorer_LPS/",
+        path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/trexplorer_LPS/",
         mode: 'copy',
         pattern: "*.LPS.txt")
 
@@ -1045,12 +1042,11 @@ process trgt5_all_TRexplorer {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta),
-          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.sorted.bam"),
-          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.sorted.bam.bai"),   emit: trexplorer_bam
+    
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.sorted.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.sorted.vcf.gz.tbi"), emit: trexplorer_vcf
+    
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.LPS.txt"),           emit: trexplorer_LPS
 
@@ -1066,13 +1062,11 @@ process trgt5_all_TRexplorer {
     $failReads \
     $karyotype \
     --threads ${task.cpus} \
+    --disable-bam-output \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
     bcftools index -t ${prefix}.sorted.vcf.gz
-
-    samtools sort -o ${prefix}.sorted.bam ${prefix}.spanning.bam
-    samtools index ${prefix}.sorted.bam
 
     ${params.trgtLps} \
     --vcf ${prefix}.sorted.vcf.gz \
