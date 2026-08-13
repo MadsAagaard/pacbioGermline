@@ -38,12 +38,10 @@ nextflow.enable.dsl = 2
 
 process write_input_summary {
     label "low"
-    publishDir 
-        path: {"${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}/"}, 
+    publishDir path: {"${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}/"}, 
         mode: 'copy', 
         pattern: "*.txt"
-    publishDir 
-        path: {"${params.lrsDocuments}/summaryData/allSamples/"}, 
+    publishDir path: {"${params.lrsDocuments}/summaryData/allSamples/"}, 
         mode: 'copy', 
         pattern: "*.txt"
 
