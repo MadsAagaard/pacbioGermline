@@ -858,7 +858,7 @@ process trgt4_diseaseSTRs {
     --repeats ${params.trDiseaseCatalog} \
     --reads ${merged} \
     $karyotype \
-    --min-read-quality -1.0 \
+    --min-read-quality 0 \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
