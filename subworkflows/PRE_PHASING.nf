@@ -12,6 +12,7 @@ include {
         trgt4_diseaseSTRs_plots;
         trgt4_diseaseSTRs_plots_meth;
         trgt5_all_adotto;
+        trgt5_all_TRexplorer;
         trgt5_diseaseSTRs;
         trgt5_diseaseSTRs_plots;
         trgt5_diseaseSTRs_plots_meth;
@@ -92,6 +93,9 @@ workflow PRE_PHASING {
         trgt5_all_adotto.out.adotto_vcf
             .map { meta, vcf, idx -> tuple(meta, [str5AdottoVcf: vcf]) }
             .set { str5_adotto_vcf_ch }
+
+        // --- TRGT v5, genome-wide TRexplorer catalog -----------------------------
+        trgt5_all_TRexplorer(aligned)
 
         // --- TRGT v5, disease loci -------------------------------------------
         trgt5_diseaseSTRs(aligned)

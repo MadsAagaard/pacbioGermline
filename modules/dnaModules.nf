@@ -232,11 +232,12 @@ process pbmm2_align_failedOnly {
     tag "$meta.id"
     conda "${params.condaEnvs.pbmm2}"
 
+/*
     publishDir (
         path: {"${params.outBase(meta)}/alignments/failedReads/"}, 
         mode: 'copy',
         pattern: "*.ba*")
-
+*/
     input:
     tuple val(meta), path(fofn)
 
@@ -998,6 +999,7 @@ process trgt5_all_adotto {
     --reads ${data.hifiBam} \
     $failReads \
     $karyotype \
+    --threads ${task.cpus} \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
@@ -1021,9 +1023,9 @@ process trgt5_all_TRexplorer {
     // wrote adotto filenames, so it silently duplicated trgt5_all_adotto and
     // would have overwritten its output in lrsStorage.
     publishDir ( 
-    path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
-    mode: 'copy',
-    pattern: "*.sorted.ba*")
+        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
+        mode: 'copy',
+        pattern: "*.sorted.ba*")
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
@@ -1064,6 +1066,7 @@ process trgt5_all_TRexplorer {
     --reads ${data.hifiBam} \
     $failReads \
     $karyotype \
+    --threads ${task.cpus} \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
