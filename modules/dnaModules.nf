@@ -807,6 +807,65 @@ process mitorsaw {
 }
 
 process trgt4_diseaseSTRs {
+
+    tag "$meta.id"
+    label "medium"                       // was "low" — merge needs threads + wall time
+    conda "${params.trgt4}"
+
+    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
+    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
+
+    input:
+    tuple val(meta), val(data)
+
+    output:
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: str4_vcf
+    tuple val(meta), path("*.sorted.*")
+    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: trgt_full
+
+    script:
+    def karyotype = (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
+    def merged    = "${meta.id}.${genome_version}.AllReads.pbmm2.merged.bam"
+
+    """
+    # ---- merge HiFi + failed reads into a single allReads BAM (TRGT4 has no --fail-reads)
+    samtools merge \\
+    --threads ${task.cpus} \\
+    -c -p \\
+    -o ${merged} \\
+    ${data.hifiBam} ${data.failBam}
+
+    samtools index -@ ${task.cpus} ${merged}
+
+    # sanity: exactly one sample in the merged header, otherwise TRGT will pick the wrong SM
+    nSM=\$(samtools view -H ${merged} | grep -c '^@RG' || true)
+    nSMuniq=\$(samtools view -H ${merged} | grep '^@RG' | tr '\\t' '\\n' | grep '^SM:' | sort -u | wc -l)
+    if [ "\$nSMuniq" -ne 1 ]; then
+        echo "ERROR: merged BAM contains \$nSMuniq distinct SM values (\$nSM read groups)" >&2
+        exit 1
+    fi
+
+    trgt genotype \\
+    --genome ${genome_fasta} \\
+    --repeats ${tr_pathogenic_v2} \\
+    --reads ${merged} \\
+    $karyotype \\
+    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive
+
+    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.vcf.gz
+    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz
+
+    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.spanning.bam
+    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam
+
+    rm -f ${merged} ${merged}.bai
+    """
+}
+
+
+
+
+process trgt4_diseaseSTRs {
     tag "$meta.id"
     label "low"
     conda "${params.condaEnvs.trgt4}"
@@ -839,16 +898,25 @@ process trgt4_diseaseSTRs {
 
     script:
     def karyotype = params.karyotype(meta)
-    def failReads = data.failBam ? "--fail-reads ${data.failBam}" : ""
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt4.STRchive"
+    def merged    = "${meta.id}.${genome_version}.AllReads.pbmm2.merged.bam"
 
     """
+    # ---- merge HiFi + failed reads into a single allReads BAM (TRGT4 has no --fail-reads)
+    samtools merge \
+    --threads ${task.cpus} \
+    -c -p \
+    -o ${merged} \
+    ${data.hifiBam} ${data.failBam}
+
+    samtools index -@ ${task.cpus} ${merged}
+
     trgt genotype \
     --genome ${params.genomeFasta} \
     --repeats ${params.trDiseaseCatalog} \
-    --reads ${data.hifiBam} \
-    $failReads \
+    --reads ${merged} \
     $karyotype \
+    --min-read-quality -1.0 \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
@@ -947,7 +1015,7 @@ process trgt4_diseaseSTRs_plots_meth {
 process trgt5_all_adotto {
     tag "$meta.id"
     label "high"
-    conda "${params.condaEnvs.trgt5}"
+    conda "${params.condaEnvs.trgt51}"
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
@@ -1005,7 +1073,7 @@ process trgt5_all_adotto {
 process trgt5_all_TRexplorer {
     tag "$meta.id"
     label "high"
-    conda "${params.condaEnvs.trgt5}"
+    conda "${params.condaEnvs.trgt51}"
 
     // FIX: this process was named TRexplorer but used the adotto catalog and
     // wrote adotto filenames, so it silently duplicated trgt5_all_adotto and
@@ -1071,7 +1139,7 @@ process trgt5_all_TRexplorer {
 process trgt5_diseaseSTRs {
     tag "$meta.id"
     label "low"
-    conda "${params.condaEnvs.trgt5}"
+    conda "${params.condaEnvs.trgt51}"
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/bam"},
@@ -1118,7 +1186,7 @@ process trgt5_diseaseSTRs {
 process trgt5_diseaseSTRs_plots {
     tag "$meta.id"
     label "low"
-    conda "${params.condaEnvs.trgt5}"
+    conda "${params.condaEnvs.trgt51}"
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/Plots/"},
@@ -1160,7 +1228,7 @@ process trgt5_diseaseSTRs_plots {
 process trgt5_diseaseSTRs_plots_meth {
     tag "$meta.id"
     label "medium"
-    conda "${params.condaEnvs.trgt5}"
+    conda "${params.condaEnvs.trgt51}"
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5/METHplots/"}, 
