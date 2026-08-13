@@ -1,19 +1,20 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-include { 
+/*
+ * POST_PHASING — everything that runs on the phased HiFi alignment.
+ */
+
+include {
         kivvi_d4z4;
         pbCPGtools;
         paraphase;
-        paraphase35;
         paraphase4;
         starphase;
         methBat;
         methBatNEW_profile_single;
         methBatNEW_pileup;
         multiQC;
-        multiQC_ALL;
-        mosdepthROI;
         cramino;
         nanoStat;
         whatsHap_stats;
@@ -21,79 +22,64 @@ include {
         svTopo_filtered;
         mitorsaw;
         svdb_SawFish;
-        sawFish2_jointCall_all;
-        svdb_sawFish2_jointCall_all;
-        sawFish2_jointCall_caseID;
-        svdb_sawFish2_jointCall_caseID;
-        } from "../modules/dnaModules.nf" 
+        } from "../modules/dnaModules.nf"
+
 
 workflow POST_PHASING {
 
     take:
-    phasedAll
+    phasedAll                 // tuple(meta, [bam, bai, failBam, failBai, dv_vcf, dv_idx, sawfish_vcf, sawfish_idx, sawfish_reads])
     sawfish_supporting_reads
     mosdepth
     nanoStat
 
     main:
-        pbCPGtools(phasedAll)
-        methBat(pbCPGtools.out)
-        methBatNEW_pileup(phasedAll)
-        methBatNEW_profile_single(methBatNEW_pileup.out.met5mC)
-        cramino(phasedAll)
-        mitorsaw(phasedAll)
-        whatsHap_stats(phasedAll)
-        paraphase(phasedAll)
-        //paraphase35(phasedAll)
-        paraphase4(phasedAll)
-        kivvi_d4z4(phasedAll)
-        starphase(phasedAll)
-        svTopo(phasedAll)
-        svdb_SawFish(phasedAll)
 
-        /*
-            hiPhase_OUT.hiphase_bam
-            .join(svdb_SawFish.out.sawfishAF10)
-            .join(sawfish_supporting_reads)
-            | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
-            tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
-            |set {phasedSawfishAF10}   
-        */
+    pbCPGtools(phasedAll)
+    methBat(pbCPGtools.out)
 
-        phasedAll
+    methBatNEW_pileup(phasedAll)
+    methBatNEW_profile_single(methBatNEW_pileup.out.mC5)
+
+    cramino(phasedAll)
+    mitorsaw(phasedAll)
+    whatsHap_stats(phasedAll)
+    paraphase(phasedAll)
+    paraphase4(phasedAll)
+    kivvi_d4z4(phasedAll)
+    starphase(phasedAll)
+    svTopo(phasedAll)
+    svdb_SawFish(phasedAll)
+
+    phasedAll
         .join(svdb_SawFish.out.sawfishAF10)
         .join(sawfish_supporting_reads)
-        | map { meta, data, sv10_vcf, sv10_idx, sv_jsonReads ->
+        .map { meta, data, sv10_vcf, sv10_idx, sv_jsonReads ->
             tuple(meta, [
-                bam:            data.bam,
-                bai:            data.bai,
-                sawfish10_vcf:  sv10_vcf,
-                sawfish10_idx:  sv10_idx,
-                sawfish_reads:  sv_jsonReads
+                bam           : data.bam,
+                bai           : data.bai,
+                sawfish10_vcf : sv10_vcf,
+                sawfish10_idx : sv10_idx,
+                sawfish_reads : sv_jsonReads
             ])
         }
-        | set { phasedSawfishAF10 }
+        .set { phasedSawfishAF10 }
 
+    svTopo_filtered(phasedSawfishAF10)
 
-        svTopo_filtered(phasedSawfishAF10)
-
-        if (!params.skipQC) {
-            Channel.empty()
+    if (!params.skipQC) {
+        Channel.empty()
             .mix(mosdepth)
             .mix(nanoStat)
             .mix(whatsHap_stats.out.multiqc)
-            .map { meta, qcfile ->
-                tuple(params.multiqcKey(meta), meta, qcfile)
-            }
+            .map { meta, qcfile -> tuple(params.multiqcKey(meta), meta, qcfile) }
             .groupTuple(by: 0)
             .map { key, metas, qcfiles ->
-
-                // pick one representative meta for publishDir + naming
                 def meta0 = metas.find { it.relation == 'index' } ?: metas[0]
-
                 tuple(meta0, qcfiles)
             }
             .set { multiqc_inputs_ch }
-            multiQC(multiqc_inputs_ch)
-        }
+
+        multiQC(multiqc_inputs_ch)
+    }
 }

@@ -1,178 +1,203 @@
 # KG Vejle Germline PacBio LRS pipeline
 
-## General info:
-PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle
+## General info
 
+PacBio LRS germline WGS pipeline used at Clinical Genetics, Vejle.
+
+## Read handling
+
+HiFi reads and fail reads are aligned **separately**:
+
+```
+uBAM ─ create_fofn ─┬─ pbmm2_align_hifi       ──► HiFi BAM ──► all analyses
+                    └─ pbmm2_align_failedOnly ──► fail BAM ──► TRGT only
+```
+
+TRGT receives the fail reads through `--fail-reads`; every other tool uses the
+HiFi alignment. HiPhase phases both and publishes both:
+
+- `alignments/<sample>.<genome>.HifiReads.hiphase.bam`
+- `alignments/failedReads/<sample>.<genome>.failedReads.hiphase.bam`
+
+There is no merged all-reads alignment and no `extracthifi` step.
 
 ## Default analysis steps and tools used
 
 - Alignment (pbmm2)
 - Small variants (DeepVariant)
 - Structural variants (Sawfish)
-- Complex structural variant visualization (SVTopo)
-- Inhouse allele frequency annotation of structural variants (SVDB)
-- Repeat expansions (TRGT)
+- Complex SV visualisation (SVTopo)
+- In-house allele frequency annotation of SVs (SVDB)
+- Repeat expansions (TRGT v4 + v5; disease loci and genome-wide adotto catalog)
 - Repeat contraction (Kivvi)
-- Phasing (hiPhase)
+- Phasing (HiPhase)
 - Pseudogenes (Paraphase)
-- Pharmacogenomics (Starphase)
-- Mitochondrial variants (mitorsaw)
-- Methylation profiles (pb-cpg-tools and methBat)
-- QC module (nanostat, mosdepth, cramino, whatsHap, multiQC)
+- Pharmacogenomics (Starphase + PharmCAT)
+- Mitochondrial variants (Mitorsaw)
+- Methylation profiles (pb-CpG-tools and MethBat)
+- QC (NanoStat, mosdepth, cramino, WhatsHap, MultiQC)
 
-## Optional analysis steps (e.g. for trios & related samples) and tools used
+## Optional analysis steps (trios and related samples)
+
 - Joint genotyping of small variants (GLNexus)
 - Joint genotyping of structural variants (Sawfish)
-- HPO-based gene and variant prioritization (Exomiser)
+- HPO-based gene and variant prioritisation (Exomiser / Genomiser)
 
-## Additional user-defined output
-- Exomiser will be included based on smallvariants (jointGenotyped DeepVariant vcf) and structural variants (jointGenotyped sawfish vcf), if the user provides a file with hpo terms (e.g. for rare disease trio analysis).
-- JointGenotyping is disabled by default for single genome analyses, but can be added with --jointCall or when analyzing family or other multisample analyses using --jointSS (see parameter section)
-- Joint genotyping uses GLNexus for small variants and Sawfish for structural variants
-- Tools and modules can be disabled using e.g. --skipQC, --skipVariants, --skipSV, --skipSTR (see parameter section)
+---
 
 # Usage
 
-The tools used and output generated depends on how the pipeline is run. See below for instructions.
-The script requires a samplesheet as input:
+## Default samplesheet format (LabWare metadata output)
 
-## Default samplesheet format (based on LabWare metadata output)
-The default samplesheet is derived from the labWare metadata output generated per run.
-The samplesheet is structured as single column, 1 sample per row. Each entry consists of 7 fields separated by underscore ("_"):
+Single column, one sample per row, 7 underscore-separated fields:
+
 1. rekvisition
 2. NPN / sampleID
 3. Bio. material
 4. Analysis testlist
 5. Gender (M=male, K=female)
 6. Proband (T=true, F=false)
-7. Internal reference (if absent, i.e. single sample: "noInfo")
+7. Internal reference (absent / single sample: `noInfo`)
 
-Example:
+```
 0000012345_123456789012_11_SL-LWG-CNV_K_F_noInfo
+```
+
+**Gender must be M or K.** Anything else aborts the run at samplesheet parse
+time rather than silently genotyping the sample as XX. Sawfish `--expected-cn`
+and TRGT `--karyotype` depend on it.
+
+## Custom samplesheet, unrelated samples
+
+At least 3 tab-separated columns, in this order:
+
+```
+CASE_GROUP    NPN             GENDER
+WGS_CNV       123456789012    female
+WGS_CNV       234567890123    male
+Pseudogene    345678901234    male
+```
+
+`CASE_GROUP` is the NPN for unrelated samples, or a group ID for samples that
+should be analysed together. With `--jointSS`, output is grouped by this column.
+
+## Custom samplesheet, trios / families
+
+Two additional columns:
+
+```
+CASEID    NPN             GENDER    RELATION    AFFECTED_STATUS
+trioID    113648565123    female    mater       normal
+trioID    345678965123    female    index       affected
+trioID    123456789123    male      pater       normal
+```
+
+`GENDER` must be `male`/`female`, `RELATION` one of `mater`/`index`/`pater`, and
+`AFFECTED_STATUS` one of `normal`/`affected`/`unknown`. With `--hpo`, a pedigree
+is generated and Exomiser runs for the family.
+
+---
+
+## Options and parameters
+
+```
+--help                  Show this help menu
+
+--samplesheet   [path]: Path to samplesheet. Required (unless --input is used
+                        without a samplesheet, or --familySS for family re-runs)
+
+--input         [path]: Folder to use as input.
+                            Default: search the KG Vejle archive across all runs
+
+--jointSS       [bool]: Joint genotyping, output grouped per case
+                            (use for trio and family analysis)
+
+--customSS      [bool]: Custom samplesheet format (tab separated)
+
+--jointCall     [bool]: Joint genotyping based on the first samplesheet column
+
+--hpo           [path]: File with HPO terms (trios / family analyses)
 
 
-## Custom samplesheet format, unrelated samples
-A custom samplesheet can be envoked with the --customSS parameter (see parameter section)
+### Read set selection
+Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
 
-A custom samplesheet consists of at least 3 tab separated columns, in this particular order:
-
-    CASE_GROUP NPN GENDER
-
-Where CASE_GROUP can be either the NPN for unrelated samples, or e.g. contain a groupID for samples that should be analyzed together, e.g. "WCS_CNV", "TRIO_NAME" "PROJECT_A" etc.
-
-Example: Unrelated samples, but collect sampleoutput per group based on values in CASE_GROUP
-
-    WGS_CNV      123456789012    female
-    WGS_CNV      234567890123    male
-    Pseudogene   345678901234    male
-    Pseudogene   456789012345    female
-    ManualKey    567890123456    male
-    ManualKey    678901234567    female
-
-When using the above samplesheet with the --jointSS option, the output will be separated into WGS_CNV, Pseudogene and ManualKey.
-
-## Custom samplesheet format, trios
-A custom samplesheet for family analysis /trios etc., requires the same 3 columns described above, and an additional 2 columns describing the relation and affection status, e.g.
-:
-    CASEID  NPN  GENDER  RELATION  AFFECTED_STATUS
-
-Example:
-
-    trioID	113648565123	female	mater	normal
-    trioID	345678965123	female	index	affected
-    trioID	123456789123	male	pater	normal
-
-For trios, if --hpo is used, the script will generate a pedigree file (.ped) and run exomiser for the trio, using the information in the samplesheet. Make sure to have each field set correctly!
-
-Note: GENDER should be either male/female, RELATION should be either mater/index/pater and AFFECTED_STATUS should be one of normal/affected/unknown
-
-## Options and parameters:
-    --help                  Show this help menu with available options
-    
-    --samplesheet   [path]: Path to samplesheet to use. Required
-    
-    --jointSS       [bool]: Use jointGenotyping, and group output for all samples (use for trio and family analysis)
-                                Default: Not set
-    
-    --customSS         [bool]: Use custom samplesheet format (tab separated, 3 mandatory columns)
-                                Default: Not set
-
-    --input         [path]: Path to data to use as input. 
-                                Default: Not set. Instead, Search KG Vejle archive for input unmapped bams (search across all previous PacBio runs)
-    
-    --allReads      [bool]: Use allreads, i.e. HiFi reads and failed reads as input.
-                                Default: Uses a combination of AllReads (for STR analysis) and HiFi reads for everything else
-    
-    --hifiReads     [bool]: Use HiFi reads only, for all analysis.
-                                Default: Uses a combination of AllReads (for STR analysis) and HiFi reads for everything else
-
-    --singleOnly    [bool]: Only analyze single genomes in samplesheet (i.e. "noInfo" in int ref)
-                                Default: Not set - analyze all samples in samplesheet
-
-    --intrefOnly    [bool]: Only analyze samples with internal reference in samplesheet (i.e. NOT "noInfo" in int ref)
-                                Default: Not set - analyze all samples in samplesheet
-
-    --skipQC        [bool]: Do not run QC module
-                                Default: Not set
-
-    --skipVariants  [bool]: Do not call small variants (i.e. skip DeepVariant)
-                                Default: Not set
-
-    --skipSV        [bool]: Do not call structural variants (i.e. skip Sawfish)
-                                Default: Not set
-
-    --skipSTR       [bool]: Do not call repeat expansions (i.e. skip TRGT and Kivvi)
-                                Default: Not set
-
-    --jointCall     [bool]: Perform joint genotyping of samples based on value in first column of samplesheet
-                                Default: Not set
-
-    --hpo           [path]: Path to file with hpo terms (only relevant for trios / family analyses)
-                                Default: Not set
-
-    --minGB         [int]:  Minimum size (in gigabytes) of all input unmapped bam files pr. sample.
-                                Default: 36 GB for allreads (HiFi + failed), 30GB for HiFi reads
-
-    ### Slurm Execution parameters:
-    -profile slurm:         Run pipeline using KGVejle SLURM cluster
-                                Default: Run pipeline on local server (where script is started)
-    --slurmA        [bool]: Use secondary fast tmp storage (nfs_fast_a)
-                                Default: Use primary fast tmp storage location at KGVejle                                        
+--hifiReads     [bool]: HiFi only. No fail alignment; TRGT runs without
+                        --fail-reads.
+--failedReads   [bool]: Fail reads only (debug / QC use).
+--allReads      [bool]: DEPRECATED. Ignored with a warning — the default is now
+                        what this used to mean.
 
 
+### Sample filtering
+--singleOnly    [bool]: Only samples with "noInfo" internal reference
+--intrefOnly    [bool]: Only samples WITH an internal reference
 
-NOTE:
-If any of the parameters --skipVariants, --skipSV or --skipSTR is set, phasing of the data is disabled. 
-In the current version of the script, HiPhase requires the output of DeepVariant, Sawfish and TRGT to phase the data properly. This may be changed in future versions to allow e.g. phasing based solely on DeepVariant.
+--minHifiGB     [int]:  Minimum combined HiFi uBAM size per sample, in GB.
+                            Default: 30
+--minFailGB     [int]:  Minimum combined fail uBAM size per sample, in GB.
+                            Default: 4
+--minGB         [int]:  Legacy alias; overrides --minHifiGB if given.
 
-## Script executor - local or SLURM
-The script can be run on a single compute node (local), or using KG Vejles SLURM cluster
-The script is run locally by default, but can use the SLURM cluster by adding "-profile slurm" to the commandline. Note that the "-profile" is a built in function of Nextflow, i.e. it is set using a single "-" (-profile instead of --profile)
+
+### Skips
+--skipQC        [bool]: Skip the QC module
+--skipVariants  [bool]: Skip DeepVariant
+--skipSV        [bool]: Skip Sawfish
+--skipSTR       [bool]: Skip TRGT and Kivvi
+
+
+### Safety / error handling
+--errorMode     [str]:  'strict' (default) — retry transient failures, then
+                            finish the run and fail loudly.
+                        'cohort' — retry, then ignore, so one bad sample cannot
+                            abort a large retrospective build. Failures are
+                            recorded in runInfo/<date>_<ss>/FAILED_TASKS.txt.
+
+
+### SLURM execution
+-profile slurm:         Run on the KG Vejle SLURM cluster
+                            Default: run locally on the launching node
+--slurmA        [bool]: Use nfs_fast_a for the work directory instead of
+                            nfs_fast_b
+```
+
+**Note:** if any of `--skipVariants`, `--skipSV` or `--skipSTR` is set, phasing
+is disabled — HiPhase needs DeepVariant, Sawfish and TRGT output. A warning is
+logged when this happens.
+
+---
 
 ## Usage examples
 
-#### Default: Analyze all samples in default samplesheet. Use all unmapped bam files available (across multiple SMRTcells) for each sample. Run all default analysis steps:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt
+Analyse all samples in the default samplesheet, all default steps:
 
-#### Default: Same as above, but use SLURM to execute the script:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm
+```
+nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt
+```
 
-#### Same as above, but skip QC and Structural variantcalling:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt  -profile slurm --skipQC --skipSV
+Same, on SLURM:
 
-#### Default: Trio analysis, run exomiser using hpo.txt:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm --hpo /path/to/hpo.txt --jointSS
+```
+nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm
+```
 
-#### Analyze all samples in custom samplesheet. Run joint genotyping for DeepVariant and Sawfish, use SLURM to execute the script:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --jointCall --profile slurm
+Skip QC and SV calling:
 
-#### Analyze samples in default samplesheet. Use only unmapped bam files available in subfolders under /input/ for each sample. Run all default analysis steps:
-    nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt --input /path/to/selected/rawData/
+```
+nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm --skipQC --skipSV
+```
 
+Trio analysis with Exomiser:
+
+```
+nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm --hpo /path/to/hpo.txt --jointSS
+```
+
+---
 
 # Output
 
-Based on the options shown above, and the samplesheet used, output is either stored per sample (individual tools as subfolders for each sample), or grouped by tools and analysis (e.g. all DeepVariant data for all samples stored in a single outputfolder).
-See KG Vejle infonet for further details.
-
-
+Depending on the options and samplesheet used, output is stored per sample
+(tools as subfolders per sample) or grouped by case. See KG Vejle infonet for
+details.
