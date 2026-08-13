@@ -310,12 +310,12 @@ process glNexus_jointCall {
     publishDir (
         path: {"${params.outBase(meta)}/jointCalls/"}, 
         mode: 'copy', 
-        pattern: "*.jointCall.*"
+        pattern: "*.jointCall.*")
     
     publishDir (
         path: {"${params.outBase(meta)}/documents/"},   
         mode: 'copy', 
-        pattern: "*.manifest"
+        pattern: "*.manifest")
 
     input:
     tuple val(meta), path(manifest)
@@ -364,42 +364,42 @@ process hiPhaseTwoAln {
     publishDir (
         path: {"${params.outBase(meta)}/alignments/"},                  
         mode: 'copy', 
-        pattern: "*.${params.tagHifi}.hiphase.ba*"
+        pattern: "*.${params.tagHifi}.hiphase.ba*")
 
     publishDir (
         path: {"${params.outBase(meta)}/alignments/failedReads/"},      
         mode: 'copy', 
-        pattern: "*.${params.tagFail}.hiphase.ba*"
+        pattern: "*.${params.tagFail}.hiphase.ba*")
 
     publishDir (
         path: {"${params.outBase(meta)}/SNV_and_INDELs/"},              
         mode: 'copy', 
-        pattern: "*.hiphase.deepvariant.*"
+        pattern: "*.hiphase.deepvariant.*")
 
     publishDir (
         path: {"${params.outBase(meta)}/structuralVariants/"},          
         mode: 'copy', 
-        pattern: "*.hiphase.sawfish.*"
+        pattern: "*.hiphase.sawfish.*")
 
     publishDir (
         path: {"${params.outBase(meta)}/repeatExpansions/TRGT/diseaseSTRs/"}, 
         mode: 'copy', 
-        pattern: "*.hiphase.trgt4.*"
+        pattern: "*.hiphase.trgt4.*")
     
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"}, 
         mode: 'copy', 
-        pattern: "*.hiphase.trgt5.adotto.sorted.*"
+        pattern: "*.hiphase.trgt5.adotto.sorted.*")
 
     publishDir (
         path: {"${params.lrsStorage}/deepVariant/vcfs/"},                        
         mode: 'copy', 
-        pattern: "*.hiphase.deepvariant.vcf.*"
+        pattern: "*.hiphase.deepvariant.vcf.*")
 
     publishDir (
         path: {"${params.lrsStorage}/STRs/repeatExpansions/TRGT5/all/adotto/"},  
         mode: 'copy', 
-        pattern: "*.hiphase.trgt5.adotto.sorted.*"
+        pattern: "*.hiphase.trgt5.adotto.sorted.*")
 
     input:
     tuple val(meta), val(data)
