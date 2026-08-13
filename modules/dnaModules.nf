@@ -806,64 +806,6 @@ process mitorsaw {
     """
 }
 
-process trgt4_diseaseSTRs {
-
-    tag "$meta.id"
-    label "medium"                       // was "low" — merge needs threads + wall time
-    conda "${params.trgt4}"
-
-    publishDir {"${params.outBase(meta)}/repeatExpansions/TRGT/bam"}, mode: 'copy', pattern: "*.sorted.ba*"
-    publishDir "${lrsStorage}/STRs/repeatExpansions/TRGT/diseaseSTRs/", mode: 'copy', pattern:"*.sorted.vcf.*"
-
-    input:
-    tuple val(meta), val(data)
-
-    output:
-    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: str4_vcf
-    tuple val(meta), path("*.sorted.*")
-    tuple val(meta), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam.bai"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz"), path("${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: trgt_full
-
-    script:
-    def karyotype = (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "--karyotype XY" : "--karyotype XX"
-    def merged    = "${meta.id}.${genome_version}.AllReads.pbmm2.merged.bam"
-
-    """
-    # ---- merge HiFi + failed reads into a single allReads BAM (TRGT4 has no --fail-reads)
-    samtools merge \\
-    --threads ${task.cpus} \\
-    -c -p \\
-    -o ${merged} \\
-    ${data.hifiBam} ${data.failBam}
-
-    samtools index -@ ${task.cpus} ${merged}
-
-    # sanity: exactly one sample in the merged header, otherwise TRGT will pick the wrong SM
-    nSM=\$(samtools view -H ${merged} | grep -c '^@RG' || true)
-    nSMuniq=\$(samtools view -H ${merged} | grep '^@RG' | tr '\\t' '\\n' | grep '^SM:' | sort -u | wc -l)
-    if [ "\$nSMuniq" -ne 1 ]; then
-        echo "ERROR: merged BAM contains \$nSMuniq distinct SM values (\$nSM read groups)" >&2
-        exit 1
-    fi
-
-    trgt genotype \\
-    --genome ${genome_fasta} \\
-    --repeats ${tr_pathogenic_v2} \\
-    --reads ${merged} \\
-    $karyotype \\
-    --output-prefix ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive
-
-    bcftools sort -Ov -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.vcf.gz
-    bcftools index -t ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.vcf.gz
-
-    samtools sort -o ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.spanning.bam
-    samtools index ${meta.id}.${genome_version}.AllReadsNew.trgt4.STRchive.sorted.bam
-
-    rm -f ${merged} ${merged}.bai
-    """
-}
-
-
-
 
 process trgt4_diseaseSTRs {
     tag "$meta.id"
