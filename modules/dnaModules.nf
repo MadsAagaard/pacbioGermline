@@ -337,7 +337,6 @@ process glNexus_jointCall {
     """
     glnexus_cli \
     --config DeepVariant \
-    --dir ${gldb} \
     --threads ${task.cpus} \
     --list ${manifest} > ${meta.caseID}.glnexus.bcf
 
