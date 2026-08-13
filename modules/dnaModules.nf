@@ -841,7 +841,7 @@ process trgt4_diseaseSTRs {
     script:
     def karyotype = params.karyotype(meta)
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt4.STRchive"
-    def merged    = "${meta.id}.${genome_version}.AllReads.pbmm2.merged.bam"
+    def merged    = "${meta.id}.${params.genomeVersion}.AllReads.pbmm2.merged.bam"
 
     """
     # ---- merge HiFi + failed reads into a single allReads BAM (TRGT4 has no --fail-reads)
