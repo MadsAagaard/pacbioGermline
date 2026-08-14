@@ -960,7 +960,7 @@ process trgt5_all_adotto {
     conda "${params.condaEnvs.trgt51}"
 
     publishDir (
-        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/"},
+        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
         mode: 'copy',
         pattern: "*.adotto.LPS.txt")
 
@@ -981,9 +981,6 @@ process trgt5_all_adotto {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta),
-          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.bam"),
-          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.bam.bai"),   emit: adotto_bam
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.vcf.gz.tbi"), emit: adotto_vcf
