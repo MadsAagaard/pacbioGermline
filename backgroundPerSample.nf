@@ -38,6 +38,11 @@ nextflow.enable.dsl = 2
  * READ MODE IS FIXED at HiFi+fail, so every file in the pool carries the same
  * strTag ('AllReadsNew'). --hifiReads / --failedReads are refused: see GUARDS.
  *
+ * SAMPLES ARE MATCHED TO uBAMs BY NPN ONLY. The uBAM name blob is
+ * underscore-joined and testlist may itself contain underscores, so every field
+ * after material can shift position. NPN is field 0 and cannot. Sex comes from
+ * the samplesheet, which is the ground truth.
+ *
  * SPANNING BAMs: not produced. Both TRGT processes run --disable-bam-output, so
  * there is nothing to publish and no sort/index cost. Requires that the *_bam
  * output declarations have been removed from dnaModules.nf, or every task fails
@@ -70,7 +75,7 @@ if (params.help) {
     exit 0
 }
 
-include { sexFromGender; parseMetaLine; parseUbamName } from './modules/lrsFunctions.nf'
+include { parseMetaLine; parseUbamNpn }                from './modules/lrsFunctions.nf'
 include { PREPROCESS }                                 from './subworkflows/PREPROCESS.nf'
 include { trgt5_all_adotto; trgt5_all_TRexplorer }     from './modules/dnaModules.nf'
 
@@ -180,42 +185,24 @@ def ubamRoot = params.input ?: params.dataArchive
 def ubamGlob = params.input ? "${ubamRoot}/**/*.bam" : "${ubamRoot}/**/*_reads/*.bam"
 
 channel.fromPath(ubamGlob, followLinks: true)
-    .map { bam -> tuple(parseUbamName(bam), bam) }
-    .filter { parsed, bam -> parsed != null }
-    .map { parsed, bam -> tuple(parsed.id, parsed.genderFile, bam) }
+    .map { bam -> tuple(parseUbamNpn(bam), bam) }
+    .filter { npn, bam -> npn != null }
     .groupTuple()
     .join(sheet_ch, failOnDuplicate: true)   // inner join: archive samples not in the sheet drop out here
-    .map { id, genderFiles, bams, meta ->
+    .map { id, bams, meta ->
 
-        // GENDER CROSS-CHECK. The Revio encodes gender in field 4 of the uBAM
-        // name, same M/K vocabulary as LabWare — two independent records of the
-        // same fact. A disagreement means the sample is mis-tracked, and a
-        // mis-sexed sample poisons the pool invisibly: --karyotype changes the
-        // chrX calls and the VCF does not say which karyotype produced them.
+        // NO GENDER CROSS-CHECK AGAINST THE FILENAME.
+        // The uBAM name blob is underscore-joined and testlist is not always
+        // underscore-free (e.g. 113720750803_78_NGC_NEUROGENETIK_M), so the
+        // gender field is not at a fixed index — reading it produces a wrong
+        // value on exactly the samples the check was meant to protect, and
+        // aborts the batch. Only the NPN, at field 0, is positionally safe.
         //
-        // ONLY npn AND gender. Not testlist/intRef/rekv — those describe a
-        // referral, not a sample, and change legitimately for the same NPN.
-        def seen = genderFiles.findAll { g -> g?.toString()?.trim() }.collect { g -> g.toString().trim() }.unique()
+        // The samplesheet is the ground truth for sex. sexFromGender validates
+        // it there, at parse time, and fails closed on anything unrecognised.
 
-        if (!seen) {
-            log.warn "${id}: no gender in uBAM filenames — cannot verify sheet gender '${meta.gender}'."
-        }
-        else if (seen.size() > 1) {
-            throw new IllegalStateException("${id}: uBAMs disagree on gender (${seen.join(', ')}) — reads from more than one individual may be merged under this NPN.")
-        }
-        else {
-            def fileSex = null
-            try { fileSex = sexFromGender(seen[0], id) }
-            catch (IllegalArgumentException e) { log.warn "${id}: uBAM gender '${seen[0]}' unrecognised — cannot verify sheet gender '${meta.gender}'." }
-
-            if (fileSex && fileSex != meta.sex) {
-                throw new IllegalStateException("${id}: GENDER MISMATCH. Sheet says '${meta.gender}' (${meta.sex}), uBAMs say '${seen[0]}' (${fileSex}). Either the sheet row is wrong or the data is assigned to the wrong NPN.")
-            }
-        }
-
-        // Sorted explicitly, not via groupTuple(sort:true): with two collected
-        // lists, relying on the operator to keep them aligned is not worth the
-        // risk. Order matters for FOFN stability and so for -resume hashing.
+        // Sorted explicitly: order matters for FOFN stability and so for
+        // -resume hashing.
         def sorted = bams.sort { a, b -> a.name <=> b.name }
         def gb     = (sorted.sum { b -> b.size() } as long) / (1024.0 * 1024 * 1024)
 

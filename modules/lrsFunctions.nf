@@ -6,36 +6,38 @@ nextflow.enable.dsl = 2
  * lrsFunctions.nf — shared helper functions
  * =============================================================================
  *
- * Plain functions, included by name:
+ * Included by name:
  *
- *     include { sexFromGender; parseUbamName } from './modules/lrsFunctions.nf'
+ *     include { sexFromGender; parseMetaLine; parseUbamNpn } from './modules/lrsFunctions.nf'
  *
- * Only two things live here, and both earn it by being used in more than one
- * place. Anything used by a single script stays in that script — a shared file
- * that collects one-off helpers is harder to reason about than the duplication
- * it replaces.
+ * -------------------------------------------------------------------------
+ * UNDERSCORES IN testlist BREAK POSITIONAL PARSING
+ * -------------------------------------------------------------------------
+ * The uBAM name blob and the LabWare metadata line are both underscore-joined,
+ * and testlist is not guaranteed to be underscore-free. Older Revio output
+ * contains e.g.
  *
- * WHAT BELONGS HERE
- *   - pure functions parsing or validating input from outside the pipeline
- *   - logic that MUST behave identically everywhere (sex validation above all)
+ *     113720750803_78_NGC_NEUROGENETIK_M   ->  [0]=npn [1]=78 [2]=NGC
+ *                                              [3]=NEUROGENETIK [4]=M
+ *     113738820048_78_NGC-ARVELIG-KRFT_K   ->  [0]=npn [1]=78 [2]=testlist [3]=K
  *
- * WHAT DOES NOT
- *   - anything creating or operating on a Channel
- *   - publishDir / output-path logic (that is params.outBase, in the config)
- *   - process definitions
+ * Every index after material shifts. Counting from the left past index 2 is
+ * therefore unsafe, and that is what these functions are built around:
+ *
+ *   parseUbamNpn  returns ONLY field 0 (npn), which cannot shift.
+ *   parseMetaLine anchors on the gender/proband pair instead of counting.
  *
  * A NOTE ON CONCURRENCY
- * These are called from inside map/each closures. They are pure: no state is
- * held between calls and nothing outside is mutated. Do not add a script-level
- * variable to this file — closures running on the dataflow thread pool would
- * write to it concurrently, which is the bug that clobbered date2 in the old
- * main.nf.
+ * These are called from inside map closures. They are pure: no state is held
+ * between calls, nothing outside is mutated. Do not add a script-level variable
+ * to this file — closures on the dataflow thread pool would write to it
+ * concurrently.
  *
  * A NOTE ON STRINGS
- * Everything returned goes through .toString(). Values arriving from splitCsv
- * and GStrings are not always java.lang.String, and a GString has a different
- * hashCode than the equal String — so a GString used as a map key silently
- * fails lookup later. Plain Strings only.
+ * Everything returned goes through .toString(). Values from splitCsv and
+ * GStrings are not always java.lang.String, and a GString has a different
+ * hashCode than the equal String, so one used as a map key silently fails
+ * lookup later.
  * =============================================================================
  */
 
@@ -43,14 +45,10 @@ nextflow.enable.dsl = 2
 /**
  * Normalise a raw gender field to 'male' or 'female'.
  *
- * Fail-closed by design: anything unrecognised throws, and there is no default.
- * A missing or malformed gender is a data-entry error, not a state the pipeline
- * should have a policy for — TRGT --karyotype and Sawfish --expected-cn both
- * depend on it being right.
- *
- * This is the reason this file exists. Duplicating it is cheap right up until
- * someone relaxes one copy to accept a blank field for a test run, and the
- * other copy keeps everyone honest while that one silently genotypes XX.
+ * Fail-closed: anything unrecognised throws, and there is no default. A missing
+ * or malformed gender is a data-entry error, not a state the pipeline should
+ * have a policy for — TRGT --karyotype and Sawfish --expected-cn both depend on
+ * it being right.
  */
 def sexFromGender(gender, sampleId) {
     switch ((gender ?: '').toString().trim().toLowerCase()) {
@@ -70,7 +68,7 @@ def sexFromGender(gender, sampleId) {
 /**
  * Parse a LabWare metadata line into a meta map.
  *
- * Accepts BOTH layouts, so no preprocessing step is needed:
+ * Accepts BOTH layouts, so no preprocessing is needed:
  *
  *   underscore-joined (as emitted):
  *     0000103212_113624121888_78_SL-NGC-SJAELDNE_K_T_113782522715_3
@@ -78,99 +76,97 @@ def sexFromGender(gender, sampleId) {
  *   tab-exploded (tr '_' '\t', for manual inspection):
  *     0000103212<TAB>113624121888<TAB>78<TAB>SL-NGC-SJAELDNE<TAB>K<TAB>...
  *
- * Detection is unambiguous: the joined blob contains no tabs and therefore
- * splits to exactly one column, while the exploded form never yields one.
+ * Detection is unambiguous: the joined blob contains no tabs and splits to
+ * exactly one column, the exploded form never does.
  *
- *   [0] rekv   [1] npn      [2] material  [3] testlist
- *   [4] gender [5] proband  [6] intRef    [7] expectedCount (recent addition)
+ *   rekv | npn | material | testlist | gender | proband | intRef | [count]
  *
- * 7 and 8 fields are both accepted — expectedCount was added late and older
- * concatenated sheets will not have it. Fewer than 7 throws: a short line means
- * a malformed record, and guessing which field is missing is how the wrong
- * value ends up in `gender`.
+ * PARSED BY ANCHOR, NOT BY POSITION.
+ * The first three fields are read from the left (they cannot shift). The rest
+ * are located by finding the gender/proband pair — gender in {M,K}, immediately
+ * followed by proband in {T,F}. Anything between material and gender is the
+ * testlist, however many underscores it contains.
+ *
+ * Counting positions instead would break on a testlist like NGC_NEUROGENETIK,
+ * and would break silently in the 8-field case: an extra underscore turns a
+ * 7-field line into an 8-field one, which parses "successfully" with every
+ * field after material holding the wrong value.
+ *
+ * The trailing count field is optional (added late; older exports lack it).
  */
 def parseMetaLine(line) {
 
     def cols = line.toString().trim().split('\t') as List
-    def f    = (cols.size() == 1) ? (cols[0].tokenize('_')) : cols
+    def f    = (cols.size() == 1) ? cols[0].tokenize('_') : cols
 
-    if (f.size() < 7 || f.size() > 8) {
+    if (f.size() < 6) {
         throw new IllegalArgumentException(
-            "Metadata line '${line}' has ${f.size()} fields, expected 7 or 8 " +
-            "(rekv_npn_material_testlist_gender_proband_intRef[_expectedCount]).")
+            "Metadata line '${line}' has only ${f.size()} fields; expected at least " +
+            "rekv_npn_material_testlist_gender_proband.")
+    }
+
+    // Locate gender: in {M,K}, immediately followed by proband in {T,F}.
+    // Search from index 3 (the earliest a testlist could end).
+    def g = -1
+    for (int i = 3; i < f.size() - 1; i++) {
+        if (f[i].toString().trim().toUpperCase() in ['M', 'K'] &&
+            f[i + 1].toString().trim().toUpperCase() in ['T', 'F']) {
+            g = i
+            break
+        }
+    }
+
+    if (g < 0) {
+        throw new IllegalArgumentException(
+            "Metadata line '${line}': could not locate the gender/proband pair " +
+            "(expected M or K followed by T or F). Either the line is malformed or " +
+            "the encoding has changed — refusing to guess which field is the gender.")
     }
 
     def npn = f[1].toString().trim()
-    if (!npn) throw new IllegalArgumentException("Metadata line '${line}' has an empty NPN (field 2).")
+    if (!npn) throw new IllegalArgumentException("Metadata line '${line}' has an empty NPN.")
 
     return [
         rekv          : f[0].toString().trim(),
         id            : npn,
         material      : f[2].toString().trim(),
-        testlist      : f[3].toString().trim(),
-        gender        : f[4].toString().trim(),
-        sex           : sexFromGender(f[4], npn),
-        proband       : f[5].toString().trim(),
-        intRef        : f[6].toString().trim(),
-        expectedCount : (f.size() == 8) ? f[7].toString().trim() : null,
+        testlist      : f[3..(g - 1)].collect { p -> p.toString().trim() }.join('_'),
+        gender        : f[g].toString().trim(),
+        sex           : sexFromGender(f[g], npn),
+        proband       : f[g + 1].toString().trim(),
+        intRef        : (f.size() > g + 2) ? f[g + 2].toString().trim() : null,
+        expectedCount : (f.size() > g + 3) ? f[g + 3].toString().trim() : null,
     ]
 }
 
 
 /**
- * Parse a PacBio uBAM filename into its components.
+ * Extract the NPN from a PacBio uBAM filename.
  *
- *   113738820048_78_NGC-ARVELIG-KRFT_K.m84313_260317_105642_s1.hifi_reads.bc2075.bam
- *   \__________/ \/ \_____________/ \/  \_______________/     \________/ \____/
- *      npn      mat     testlist   gender    instrument+run     readset  barcode
+ *   113720750803_78_NGC_NEUROGENETIK_M.m84328_251121_123048_s1.hifi_reads.bc2017.bam
+ *   \__________/
+ *       npn
  *
- * NOTE the offsets differ from the samplesheet: the uBAM name blob has NO rekv
- * field, so npn is [0] and gender is [3], against [1] and [4] in the sheet.
+ * ONLY the NPN is returned, and that is deliberate. It is field 0 of the name
+ * blob, so it is the one value an underscore in testlist cannot displace.
+ * material, testlist and gender are NOT extracted: their positions shift with
+ * the testlist, so reading them would produce plausible-looking wrong values
+ * rather than an error.
  *
- * ONLY npn AND gender MAY EVER BE CROSS-CHECKED.
- * Not testlist, not intRef, not rekv. Those are properties of a *referral*,
- * not of a sample: the same NPN can be re-referred later under a different
- * testlist, join a different family, or arrive on a new requisition, and the
- * uBAM filename is frozen at sequencing time while the samplesheet is not. A
- * check on any of them would fire on samples that are entirely correct.
- * (The 'SL-' prefix present in sheet testlists and absent from uBAM testlists
- * is a second, independent reason — but the mutability is the real one.)
+ * The samplesheet is the sole source of sex, material and testlist. There is no
+ * cross-check against the filename — a check that fires on correct samples is
+ * worse than no check.
  *
- * npn and gender are safe precisely because they are immutable properties of
- * the individual.
- *
- * Returns null rather than throwing, so callers can branch on unparseable
- * filenames (UNASSIGNED, ad-hoc test data) instead of the run dying on one
- * stray file. Callers MUST handle null.
- *
- * This parser exists twice in main.nf today — in the samplesheet and
- * no-samplesheet branches — with subtly different field handling, and a third
- * time in backgroundPerSample.nf. One copy is enough.
+ * Returns null for anything unparseable (UNASSIGNED, ad-hoc test data) so the
+ * caller can filter rather than the run dying on one stray file.
  */
-def parseUbamName(bamPath) {
+def parseUbamNpn(bamPath) {
     def base = bamPath.toString().tokenize('/').last().replaceFirst(/\.bam$/, '')
     def dots = base.tokenize('.')
 
     if (dots.size() < 3) return null
 
-    def nameField = dots[0].toString()
-    def pacbioID  = dots[1].toString()
-    def readSet   = dots[2].toString()
-    def barcode   = (dots.size() > 3) ? dots[3].toString() : null
+    def npn = dots[0].toString().tokenize('_')[0]
 
-    def nameParts = nameField.tokenize('_')
-    if (!nameParts) return null
-
-    def runParts = pacbioID.tokenize('_')
-
-    return [
-        id         : nameParts[0].toString(),
-        material   : (nameParts.size() > 1) ? nameParts[1].toString() : null,
-        testlist   : (nameParts.size() > 2) ? nameParts[2].toString() : null,
-        genderFile : (nameParts.size() > 3) ? nameParts[3].toString() : null,
-        instrument : (runParts.size()  > 0) ? runParts[0].toString()  : null,
-        rundate    : (runParts.size()  > 1) ? runParts[1].toString()  : null,
-        readSet    : readSet,
-        barcode    : barcode,
-    ]
+    return npn ? npn.toString() : null
 }
