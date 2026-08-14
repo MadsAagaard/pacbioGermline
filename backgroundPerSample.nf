@@ -19,10 +19,13 @@ nextflow.enable.dsl = 2
  *   <bgRoot>/runInfo/<batch>/                            <- inputs.tsv, batchInfo.tsv
  *
  * Run:
- *   nextflow run KGVejle/<repo> -r <tag> \
+ *   nextflow run MadsAagaard/pacbioGermline -r refactor \
  *       -main-script backgroundPerSample.nf \
- *       -profile slurm -c conf/backgroundPerSample.config \
+ *       -profile slurm,background \
  *       --bgSheet batch01.tsv
+ *
+ * -main-script takes ONE dash. Two dashes makes it a pipeline parameter, which
+ * is ignored, and main.nf runs instead.
  *
  * ALWAYS FROM RAW uBAM. There is no aligned-input mode: the old merged-allReads
  * alignments predate the hifi+fail split and cannot be reused, and anything
@@ -56,9 +59,8 @@ if (params.help) {
                            Tab-separated also accepted. Only npn and gender are used.
 
     OPTIONS
-      --bgRoot     [path]  Pool root. Defaults to the production pool in
-                           conf/backgroundPerSample.config — don't pass it unless
-                           you mean it.
+      --bgRoot     [path]  Pool root. Defaults to the production pool in the
+                           'background' profile — don't pass it unless you mean it.
       --initPool           Permit creating a pool that does not yet exist.
       --input      [path]  uBAM search root (default: params.dataArchive)
       --batch      [str]   Label for runInfo/ (default: timestamp)
@@ -77,7 +79,7 @@ include { trgt5_all_adotto; trgt5_all_TRexplorer }     from './modules/dnaModule
 // GUARDS
 // =============================================================================
 
-if (!params.bgRoot)  exit 1, "params.bgRoot is null — conf/backgroundPerSample.config was not loaded. Add: -c conf/backgroundPerSample.config"
+if (!params.bgRoot)  exit 1, "params.bgRoot is null — add: includeConfig 'conf/backgroundPerSample.config'  as the last line of the repo root nextflow.config."
 if (!params.bgSheet) exit 1, "USER INPUT ERROR: --bgSheet is required."
 
 // READ MODE IS FIXED AT HiFi+fail. params.strTag tracks the read mode
@@ -100,13 +102,14 @@ if (!file(params.bgPool).exists() && !params.initPool) {
     exit 1, "POOL NOT FOUND: ${params.bgPool} does not exist. Check --bgRoot for a typo, or pass --initPool if a new pool is intended."
 }
 
-// Without the config overlay, the process publishDir blocks still point at the
+// Without -profile background, the process publishDir blocks still point at the
 // clinical tree and this run would overwrite clinical TRGT output under
-// identical filenames. Probing outBase catches a missing overlay even though
-// the background run publishes nothing per-sample.
+// identical filenames. Probing outBase catches a missing profile even though the
+// background run publishes nothing per-sample. Also catches profile ORDER:
+// -profile background,slurm lets the slurm profile win on workDir.
 def probeOut = params.outBase([id: '__probe__']).toString()
 if (!probeOut.startsWith(params.bgRoot.toString()) || !params.lrsStorage.toString().startsWith(params.bgRoot.toString())) {
-    exit 1, "OUTPUT SAFETY ABORT: publish targets resolve outside --bgRoot.\n  outBase    -> ${probeOut}\n  lrsStorage -> ${params.lrsStorage}\nAdd: -c conf/backgroundPerSample.config"
+    exit 1, "OUTPUT SAFETY ABORT: publish targets resolve outside --bgRoot.\n  outBase    -> ${probeOut}\n  lrsStorage -> ${params.lrsStorage}\nThe 'background' profile is not active. Use: -profile slurm,background"
 }
 
 def runInfo = "${params.bgRoot}/runInfo/${params.batchTag}"
