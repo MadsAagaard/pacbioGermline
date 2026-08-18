@@ -87,31 +87,16 @@ include { trgt5_all_adotto; trgt5_all_TRexplorer }     from './modules/dnaModule
 if (!params.bgRoot)  exit 1, "params.bgRoot is null — add: includeConfig 'conf/backgroundPerSample.config'  as the last line of the repo root nextflow.config."
 if (!params.bgSheet) exit 1, "USER INPUT ERROR: --bgSheet is required."
 
-// READ MODE IS FIXED AT HiFi+fail. params.strTag tracks the read mode
-// ('AllReadsNew' by default, 'HifiReadsOnly' under --hifiReads) and is baked
-// into every output filename — but the pool is one flat directory per catalog,
-// so files from both modes would sit side by side and the LPS toolkit would
-// glob them into a single background. Samples genotyped with fail reads and
-// samples genotyped without are not comparable, and nothing in the VCFs says
-// which is which.
-//
-// A background must also match the clinical calls, which always use HiFi+fail.
-// If a HiFi-only pool is ever wanted, it needs its own --bgRoot, not a flag.
+
 if (params.hifiReads || params.failedReads) {
     exit 1, "USER INPUT ERROR: --hifiReads and --failedReads are not supported here. The pool is one flat directory per catalog, so a second read mode would mix incomparable samples under strTag '${params.strTag}'. Use a separate --bgRoot if a HiFi-only pool is genuinely wanted."
 }
 
-// A typo'd --bgRoot does not error on its own: it silently starts a second pool
-// and re-aligns everything into it. Require the pool to exist, or to be declared.
 if (!file(params.bgPool).exists() && !params.initPool) {
     exit 1, "POOL NOT FOUND: ${params.bgPool} does not exist. Check --bgRoot for a typo, or pass --initPool if a new pool is intended."
 }
 
-// Without -profile background, the process publishDir blocks still point at the
-// clinical tree and this run would overwrite clinical TRGT output under
-// identical filenames. Probing outBase catches a missing profile even though the
-// background run publishes nothing per-sample. Also catches profile ORDER:
-// -profile background,slurm lets the slurm profile win on workDir.
+
 def probeOut = params.outBase([id: '__probe__']).toString()
 if (!probeOut.startsWith(params.bgRoot.toString()) || !params.lrsStorage.toString().startsWith(params.bgRoot.toString())) {
     exit 1, "OUTPUT SAFETY ABORT: publish targets resolve outside --bgRoot.\n  outBase    -> ${probeOut}\n  lrsStorage -> ${params.lrsStorage}\nThe 'background' profile is not active. Use: -profile slurm,background"
@@ -135,8 +120,7 @@ TRExplorer  : ${params.trExplorerCatalog}
 workDir     : ${workflow.workDir}
 """
 
-// Run-level provenance. Per-batch rather than per-sample: a batch is homogeneous
-// by construction, and inputs.tsv maps samples to their batch. To trace a pool
+// Run-level provenance. To trace a pool
 // sample back: grep <npn> runInfo/*/inputs.tsv
 file(runInfo).mkdirs()
 file("${runInfo}/batchInfo.tsv").text = [
@@ -159,12 +143,7 @@ file("${runInfo}/batchInfo.tsv").text = [
 // =============================================================================
 // SAMPLE SHEET
 // =============================================================================
-// Ordinary LabWare metadata, concatenated. Fed raw rather than pre-extracted:
-// `cut -d_ -f2,5` is one off-by-one from putting material in the gender column,
-// and nothing downstream would notice. Batch prep is: cat metadata/*.txt > batch01.tsv
-//
-// Only npn and gender are carried. Not rekv/testlist/groupKey — those would let
-// the clinical 'auto' output layout look satisfied if the overlay went missing.
+
 
 channel.fromPath(params.bgSheet, checkIfExists: true)
     .splitText()
@@ -190,19 +169,6 @@ channel.fromPath(ubamGlob, followLinks: true)
     .groupTuple()
     .join(sheet_ch, failOnDuplicate: true)   // inner join: archive samples not in the sheet drop out here
     .map { id, bams, meta ->
-
-        // NO GENDER CROSS-CHECK AGAINST THE FILENAME.
-        // The uBAM name blob is underscore-joined and testlist is not always
-        // underscore-free (e.g. 113720750803_78_NGC_NEUROGENETIK_M), so the
-        // gender field is not at a fixed index — reading it produces a wrong
-        // value on exactly the samples the check was meant to protect, and
-        // aborts the batch. Only the NPN, at field 0, is positionally safe.
-        //
-        // The samplesheet is the ground truth for sex. sexFromGender validates
-        // it there, at parse time, and fails closed on anything unrecognised.
-
-        // Sorted explicitly: order matters for FOFN stability and so for
-        // -resume hashing.
         def sorted = bams.sort { a, b -> a.name <=> b.name }
         def gb     = (sorted.sum { b -> b.size() } as long) / (1024.0 * 1024 * 1024)
 
@@ -214,9 +180,7 @@ channel.fromPath(ubamGlob, followLinks: true)
 // =============================================================================
 // INPUT SUMMARY
 // =============================================================================
-// One row per sample found, with why it was or was not run. This is the record
-// of what went into the pool from this batch — diff it against the sheet to see
-// what had no sequencing data at all.
+
 
 def inPool = { id ->
     !params.force &&

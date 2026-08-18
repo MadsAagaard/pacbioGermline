@@ -3,13 +3,6 @@ nextflow.enable.dsl = 2
 
 /*
  * PREPROCESS — uBAM -> two separate alignments.
- *
- * Changes vs. the old version:
- *   - extractHifi and pbmm2_align (merged all-reads) are gone. HiFi and fail
- *     reads are aligned independently.
- *   - The map literal was missing a comma after hifiBai (syntax error).
- *   - --hifiReads now short-circuits the fail alignment instead of producing a
- *     failing task that errorStrategy would silently swallow.
  */
 
 include {
@@ -62,10 +55,6 @@ workflow PREPROCESS {
             }
             .set { alignedFinal_ch }
 
-        // NOTE: the join above is an inner join — a sample without a fail
-        // alignment vanishes here. create_fofn hard-fails on an empty fail
-        // FOFN so that condition is caught upstream with an attributable error
-        // rather than a silent drop.
     }
 
     emit:

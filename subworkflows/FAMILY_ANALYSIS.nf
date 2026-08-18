@@ -8,10 +8,7 @@ nextflow.enable.dsl = 2
  *   - params.outputDirTMP -> params.outputDirBase (single name for the output
  *     root; params.outBase() reads it).
  *   - Hard-coded "hg38v4LRS" / "HifiReads" in EXOMISER_ONLY_ENTRY replaced with
- *     params.genomeVersion / params.tagHifi, so a tag change in the config
- *     cannot silently desynchronise the retrospective path reconstruction.
- *   - Consistent dot notation throughout (mixing `|` with `.method()` causes
- *     Groovy precedence surprises).
+ *     params.genomeVersion / params.tagHifi
  */
 
 include { glNexus_jointCall;
@@ -61,13 +58,9 @@ workflow FAMILY_ANALYSIS {
 
 workflow FAMILY_ANALYSIS_ENTRY {
 
-    // Load the family JSON written by pacbio_familyAnalysis_v3.sh (Step 5).
     def familyData = new groovy.json.JsonSlurper()
                          .parse(new File(params.familyJSON))
 
-    // params.outBase(meta) with layoutMode=jointAnalysis resolves to
-    //   ${params.outputDirBase}/jointAnalysis/${meta.caseID}_${params.readSet}
-    // which is exactly what the shell script built in Step 3.
     def anchorMeta = [
         caseID     : familyData.caseID,
         id         : familyData.caseID,
@@ -106,15 +99,6 @@ workflow FAMILY_ANALYSIS_ENTRY {
 
 workflow EXOMISER_ONLY_ENTRY {
 
-    /*
-     * Re-runs the three Exomiser processes on a completed family analysis.
-     * All joint-calling is skipped; VCFs are located by their publishDir paths
-     * under jointCalls/.
-     *
-     * Required params (supplied by pacbio_familyAnalysis_v3.sh --exomiser-only):
-     *   --familyJSON  --familyDir  --familySS  --hpo  [--genome]
-     */
-
     def familyData = new groovy.json.JsonSlurper()
                          .parse(new File(params.familyJSON))
 
@@ -133,8 +117,7 @@ workflow EXOMISER_ONLY_ENTRY {
     def jointCallsDir = "${familyData.jointOutdir}/jointCalls"
     def caseID        = familyData.caseID
 
-    // Sourced from params so the reconstruction cannot drift from what the
-    // modules actually wrote.
+
     def gv = params.genomeVersion   // 'hg38v4LRS'
     def rs = params.tagHifi         // 'HifiReads'
 

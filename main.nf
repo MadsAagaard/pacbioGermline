@@ -7,29 +7,6 @@ import java.util.Locale
  * =============================================================================
  * KG Vejle — PacBio HiFi LRS germline pipeline (hg38)
  * =============================================================================
- *
- * REFACTOR: separate HiFi / fail-read alignments
- * ----------------------------------------------
- * There is no merged all-reads alignment any more:
- *
- *   uBAM -> create_fofn -> pbmm2_align_hifi        -> HiFi BAM
- *                       -> pbmm2_align_failedOnly  -> fail BAM
- *
- *   TRGT consumes both (--reads / --fail-reads); everything else uses HiFi.
- *   hiPhaseTwoAln phases and emits BOTH alignments.
- *
- * Fixes vs. the previous version:
- *   - hiPhaseTwoAln was never imported, and the downstream joins referenced
- *     hiPhase.out.* (the superseded single-BAM process).
- *   - The --aligned re-entry branch was removed; the pipeline always starts
- *     from unmapped BAMs.
- *   - The summary/symlink processes referenced channels that only exist when
- *     --samplesheet is given, so --input alone crashed.
- *   - Destructuring assignments inside map closures had no `def`, so they wrote
- *     to the script-level binding from concurrently executing closures. `date2`
- *     in particular was clobbered by the filename parser.
- *   - `exit 0` on user input errors reported success to the caller.
- * =============================================================================
  */
 
 def runDate      = new Date().format('yyMMdd')
@@ -81,12 +58,6 @@ if (!params.samplesheet && params.hpo && !params.familySS) {
 }
 
 if (params.aligned) {
-    // --aligned was removed: this pipeline always starts from unmapped BAMs.
-    // Analyses that begin from existing alignments are add-on work and belong
-    // in a standalone script (cf. trgtGenomewide.nf), not in a re-entry branch
-    // of main.nf that nothing exercises and nobody tests.
-    // Kept as an explicit error rather than deleting the param, so the flag
-    // fails loudly instead of being silently accepted and ignored.
     exit 1, """
     USER INPUT ERROR: --aligned is no longer supported.
     Run add-on analyses from existing alignments with a standalone script.
@@ -108,17 +79,6 @@ if (params.allReads) {
 
 def ssBaseName = params.ssBase
 
-// -----------------------------------------------------------------------------
-// Sex is validated once, here, where the raw gender field is actually read.
-// A missing or malformed gender is a samplesheet data-entry error, not a state
-// the pipeline should have a policy for: downstream code may assume
-// meta.sex in ['male','female'].
-//
-// This replaces the old
-//   (meta.sex=="male"||meta.sex=="M"||meta.genderFile=="M") ? "XY" : "XX"
-// in Sawfish and every TRGT process, which silently genotyped anything it did
-// not recognise as female.
-// -----------------------------------------------------------------------------
 def sexFromGender = { gender, sampleId ->
     switch ((gender ?: '').toString().trim().toLowerCase()) {
         case ['m', 'male']:

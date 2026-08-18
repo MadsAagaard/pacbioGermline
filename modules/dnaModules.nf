@@ -1,36 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-/*
- * =============================================================================
- * KG Vejle PacBio LRS germline pipeline — process definitions
- * =============================================================================
- *
- * REFACTOR NOTES (hifi/fail split)
- * --------------------------------
- * 1. There is no merged all-reads alignment any more. HiFi and fail reads are
- *    aligned separately by pbmm2_align_hifi / pbmm2_align_failedOnly, and TRGT
- *    consumes both via --reads / --fail-reads.
- *    extractHifi and the single-BAM hiPhase process are gone.
- *
- * 2. The `env` config scope is gone. Every reference file / tool path is now
- *    an explicit `params.*` reference. See Appendix A in nextflowLRS.config.
- *
- * 3. Sex handling is fail-closed: `params.karyotype(meta)` and
- *    `params.sawfishExpectedCn(meta)` throw on unresolvable sex rather than
- *    silently defaulting to XX. meta.genderFile no longer exists and all
- *    references to it have been removed.
- *
- * 4. Naming tags come from params so they can be changed in one place:
- *      params.genomeVersion  'hg38v4LRS'
- *      params.tagHifi        'HifiReads'
- *      params.tagFail        'failedReads'
- *      params.strTag         'AllReadsNew'   (TRGT outputs; kept for
- *                                             backward compatibility with
- *                                             lrsStorage + the symlink index)
- * =============================================================================
- */
-
 
 ////////////////////////////////////////////
 /////// ------- RUN BOOKKEEPING ------- ////
@@ -133,10 +103,7 @@ process create_fofn {
     tuple val(meta), path("${meta.id}.fail_reads.fofn"),     emit: failReads
 
     script:
-    // FAIL-CLOSED: an empty fail_reads FOFN used to slip through (|| true),
-    // pbmm2_align_failedOnly would then fail, errorStrategy swallowed it, the
-    // downstream .join() dropped the sample, and it vanished from the run with
-    // no error anywhere. Now it is an explicit, attributable failure.
+
     def failCheck = params.hifiReads
         ? "true"
         : """if [ ! -s ${meta.id}.fail_reads.fofn ]; then
@@ -404,12 +371,6 @@ process hiPhaseTwoAln {
         )
 
 
-/*
-    publishDir (
-        path: {"${params.lrsStorage}/repeatExpansions/TRGT5_genomeWide/adotto/"},  
-        mode: 'copy', 
-        pattern: "*.hiphase.trgt5.adotto.sorted.*")
-*/
     input:
     tuple val(meta), val(data)
     // data keys: hifiBam, hifiBai, failBam, failBai, dvVcf, sawfishVcf, str4Vcf, str5AdottoVcf
@@ -453,8 +414,7 @@ process hiPhaseTwoAln {
 
     script:
     def prefix  = "${meta.id}.${params.genomeVersion}"
-    // Built as one string: an empty optional arg on its own line would break
-    // the backslash continuation.
+
     def bamArgs = "--bam ${data.hifiBam} --output-bam ${prefix}.${params.tagHifi}.hiphase.bam"
     if (data.failBam) {
         bamArgs += " --bam ${data.failBam} --output-bam ${prefix}.${params.tagFail}.hiphase.bam"
@@ -1034,9 +994,6 @@ process trgt5_all_TRexplorer {
     label "intermediate"
     conda "${params.condaEnvs.trgt51}"
 
-    // FIX: this process was named TRexplorer but used the adotto catalog and
-    // wrote adotto filenames, so it silently duplicated trgt5_all_adotto and
-    // would have overwritten its output in lrsStorage.
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/trexplorer/"},
