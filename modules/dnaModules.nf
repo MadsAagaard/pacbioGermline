@@ -396,6 +396,14 @@ process hiPhaseTwoAln {
         mode: 'copy', 
         pattern: "*.hiphase.deepvariant.vcf.*")
 
+
+    publishDir (
+        path: {"${params.outBase(meta)}/QC/hiphaseStats/"},
+        mode: 'copy',
+        pattern: "*.hiphase.{stats,blocks,summary}.{csv,tsv}"
+        )
+
+
 /*
     publishDir (
         path: {"${params.lrsStorage}/repeatExpansions/TRGT5_genomeWide/adotto/"},  
@@ -436,6 +444,13 @@ process hiPhaseTwoAln {
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.hiphase.trgt5.adotto.sorted.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.hiphase.trgt5.adotto.sorted.vcf.gz.tbi"),      emit: trgt5_adotto_vcf
 
+    tuple val(meta),
+          path("${prefix}.hiphase.stats.csv"),
+          path("${prefix}.hiphase.blocks.tsv"),
+          path("${prefix}.hiphase.summary.tsv"), emit: hiphase_stats
+
+
+
     script:
     def prefix  = "${meta.id}.${params.genomeVersion}"
     // Built as one string: an empty optional arg on its own line would break
@@ -457,6 +472,9 @@ process hiPhaseTwoAln {
     --output-vcf ${prefix}.${params.strTag}.hiphase.trgt5.adotto.sorted.vcf.gz \
     --reference ${params.genomeFasta} \
     --threads ${task.cpus} \
+    --stats-file ${prefix}.hiphase.stats.csv \
+    --blocks-file ${prefix}.hiphase.blocks.tsv \
+    --summary-file ${prefix}.hiphase.summary.tsv \
     --io-threads ${task.cpus}
 
     bcftools index -t -f ${prefix}.${params.tagHifi}.hiphase.deepvariant.vcf.gz
