@@ -1720,8 +1720,7 @@ process multiQC {
 process collect_germline_summary {
     label "low"
     tag "$meta.id"
-    conda "${params.germlineSummaryEnv}"        // needs pyyaml only
-
+    conda "${params.condaEnvs.somaticSummaryEnv}"        // needs pyyaml only - its in our somaticSummary conda env
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
