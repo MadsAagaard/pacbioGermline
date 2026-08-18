@@ -22,6 +22,7 @@ include {
         svTopo_filtered;
         mitorsaw;
         svdb_SawFish;
+        collect_germline_summary;
         } from "../modules/dnaModules.nf"
 
 
@@ -66,6 +67,22 @@ workflow POST_PHASING {
         .set { phasedSawfishAF10 }
 
     svTopo_filtered(phasedSawfishAF10)
+
+    //------ clinical summary (html channel) ------------------------------------------------------
+
+    paraphase4.out.paraphase_json
+    .join(methBatNEW_profile_single.out.icReport)
+    .map { meta, paraphase_json, icReport ->
+        tuple(meta, [
+            paraphase_json: paraphase_json,
+            icReport: icReport
+            ])
+    }
+    .set { clinical_summary_inputs_ch }
+
+    collect_germline_summary(clinical_summary_inputs_ch)
+
+
 
     if (!params.skipQC) {
         Channel.empty()

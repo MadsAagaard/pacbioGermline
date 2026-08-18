@@ -1255,6 +1255,7 @@ process paraphase4 {
 
     output:
     tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.hiphase.paraphase/*")
+    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.hiphase.paraphase/*.paraphase.json"), emit: paraphase_json
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1561,8 +1562,9 @@ process methBatNEW_profile_single {
     tuple val(meta), path(data), path(tbi)
 
     output:
-    tuple val(meta), path("*.5mC.cpgIslands.profile.tsv")
-    tuple val(meta), path("*.met.5mC.*")
+    tuple val(meta), path("*.5mC.cpgIslands.profile.tsv"),emit: cgiProfile
+    tuple val(meta), path("*.5mC.segments"),emit: segments
+    tuple val(meta), path("${prefix}.met.5mC.imprintingReport.tsv"),emit: icReport
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1714,3 +1716,50 @@ process multiQC {
     -n ${reportName}
     """
 }
+
+process collect_germline_summary {
+    label "low"
+    tag "$meta.id"
+    conda "${params.germlineSummaryEnv}"        // needs pyyaml only
+
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
+        mode: 'copy',
+        pattern: "*.{yaml,json,htmls}")
+
+    publishDir (
+        patH: "${params.lrsStorageBase}/clinicalSummaries/germline/json/",
+        mode: 'copy', 
+        pattern: "*.clinical_summaryGermline.json")
+
+    publishDir (
+        patH: "${params.lrsStorageBase}/clinicalSummaries/germline/yaml/",
+        mode: 'copy',
+        pattern: "*.clinical_summaryGermline.yaml")
+
+    input:
+    tuple val(meta), val(data)
+
+    output:
+    tuple val(meta), path("${meta.id}.clinical_summaryGermline.yaml"), emit: yaml
+    tuple val(meta), path("${meta.id}.clinical_summaryGermline.json"), emit: json
+    tuple val(meta), path("${meta.id}.clinical_summaryGermline.html"), emit: html
+
+    script:
+
+    """
+    python3 ${params.germlineSummaryPy} \
+        --case-id             ${meta.id} \
+        --npn                 ${meta.npn} \
+        --gender              ${meta.gender} \
+        --testlist            ${meta.testlist} \
+        --genome-version      ${params.genomeVersion} \
+        --paraphase-json      ${data.paraphase} \
+        --methbat-imprinting  ${data.methbat_imprinting} \
+        --regions             smn,pms2,rccx \
+        --html-template       ${params.germlineSummaryHtml} \
+        --output              ${meta.id}.clinical_summaryGermline
+    """
+}
+
