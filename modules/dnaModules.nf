@@ -3,7 +3,7 @@ nextflow.enable.dsl = 2
 
 include { karyotypeFlag; expectedCnFlag;
           prefixBase; prefixHifi; prefixFail; prefixStr;
-          prefixCaseHifi } from './modules/lrsFunctions.nf'
+          prefixCaseHifi } from './lrsFunctions.nf'
 ////////////////////////////////////////////
 /////// ------- RUN BOOKKEEPING ------- ////
 ////////////////////////////////////////////
