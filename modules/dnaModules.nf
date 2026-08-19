@@ -1199,8 +1199,6 @@ process kivvi_d4z4 {
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
-    # NOTE: this read data.hifiBam, but POST_PHASING feeds it phasedAll, whose
-    # map key is `bam`. It was being invoked with --bam null.
     ${params.kivviDir}/kivvi \
     -r ${params.genomeFasta} \
     --bam ${data.bam} \
