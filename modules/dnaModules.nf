@@ -1563,7 +1563,7 @@ process methBatNEW_profile_single {
 
     output:
     tuple val(meta), path("*.5mC.cpgIslands.profile.tsv"),emit: cgiProfile
-    tuple val(meta), path("*.5mC.segments"),emit: segments
+    tuple val(meta), path("*.5mC.segments.*"),emit: segments
     tuple val(meta), path("${prefix}.met.5mC.imprintingReport.tsv"),emit: icReport
 
     script:
