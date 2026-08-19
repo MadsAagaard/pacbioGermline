@@ -70,3 +70,44 @@ def parseUbamNpn(bamPath) {
 
     return npn ? npn.toString() : null
 }
+
+
+
+
+def karyotypeFlag(meta) {
+    if (meta.sex == 'male')   return '--karyotype XY'
+    if (meta.sex == 'female') return '--karyotype XX'
+    throw new IllegalStateException(
+        "Sample '${meta.id}': meta.sex='${meta.sex}'. Sex should have been validated " +
+        "at samplesheet parse time — refusing to guess a karyotype.")
+}
+
+
+/** Sawfish --expected-cn flag. Fail-closed, same contract as karyotypeFlag. */
+def expectedCnFlag(meta) {
+    if (meta.sex == 'male')   return "--expected-cn ${params.sawfishExpectedCnXY}"
+    if (meta.sex == 'female') return "--expected-cn ${params.sawfishExpectedCnXX}"
+    throw new IllegalStateException(
+        "Sample '${meta.id}': meta.sex='${meta.sex}' — refusing to guess expected copy number.")
+}
+
+
+/*
+ * Filename prefixes. Every published file is named
+ *     <sampleOrCase>.<genomeVersion>.<tag>.<...>
+ * Pick the variant by which read set produced the file:
+ *   prefixHifi      HiFi-derived output              (params.tagHifi)
+ *   prefixFail      fail-read-derived output         (params.tagFail)
+ *   prefixStr       TRGT output, both read sets      (params.strTag)
+ *   prefixBase      no read-set tag (mosdepth ROI, hiphase stats)
+ *   prefixCaseHifi  as prefixHifi but keyed on meta.caseID, for joint calls
+ *
+ *   Example usage:
+ *     output: path("${prefixHifi(meta)}.hiphase.paraphase/*")
+ *     script: def prefix = prefixHifi(meta)
+ */
+def prefixBase(meta)     { "${meta.id}.${params.genomeVersion}" }
+def prefixHifi(meta)     { "${meta.id}.${params.genomeVersion}.${params.tagHifi}" }
+def prefixFail(meta)     { "${meta.id}.${params.genomeVersion}.${params.tagFail}" }
+def prefixStr(meta)      { "${meta.id}.${params.genomeVersion}.${params.strTag}" }
+def prefixCaseHifi(meta) { "${meta.caseID}.${params.genomeVersion}.${params.tagHifi}" }
