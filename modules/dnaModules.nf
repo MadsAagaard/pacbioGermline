@@ -1566,9 +1566,14 @@ process methBatNEW_profile_single {
     tuple val(meta), path(data), path(tbi)
 
     output:
-    tuple val(meta), path("*.5mC.cpgIslands.profile.tsv"),emit: cgiProfile
-    tuple val(meta), path("*.5mC.segments.*"),emit: segments
-    tuple val(meta), path("*.met.5mC.imprintingReport.tsv"),emit: icReport
+    tuple val(meta), 
+        path("*.5mC.cpgIslands.profile.tsv"),       emit: cgiProfile
+    
+    tuple val(meta), 
+        path("*.5mC.segments.*"),                   emit: segments
+    
+    tuple val(meta),
+         path("*.met.5mC.imprintingReport.tsv"),    emit: icReport
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
