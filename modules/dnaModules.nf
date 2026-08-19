@@ -1,8 +1,12 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-include { karyotypeFlag; expectedCnFlag;
-          prefixBase; prefixHifi; prefixFail; prefixStr;
+include { karyotypeFlag; 
+          expectedCnFlag;
+          prefixBase;
+          prefixHifi;
+          prefixFail;
+          prefixStr;
           prefixCaseHifi } from './lrsFunctions.nf'
 ////////////////////////////////////////////
 /////// ------- RUN BOOKKEEPING ------- ////
