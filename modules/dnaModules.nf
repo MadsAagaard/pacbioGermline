@@ -353,10 +353,7 @@ process hiPhaseTwoAln {
         mode: 'copy', 
         pattern: "*.hiphase.trgt4.*")
     
-    publishDir (
-        path: {"${params.outBase(meta)}/repeatExpansions/TRGT5_all/adotto/"}, 
-        mode: 'copy', 
-        pattern: "*.hiphase.trgt5.adotto.sorted.*")
+
 
     publishDir (
         path: {"${params.lrsStorage}/deepVariant/vcfs/"},                        
@@ -364,6 +361,13 @@ process hiPhaseTwoAln {
         pattern: "*.hiphase.deepvariant.vcf.*")
 
 /*
+
+    publishDir (
+        path: {"${params.outBase(meta)}/repeatExpansions/TRGT5_all/adotto/"}, 
+        mode: 'copy', 
+        pattern: "*.hiphase.trgt5.adotto.sorted.*")
+
+
     publishDir (
         path: {"${params.outBase(meta)}/QC/hiphaseStats/"},
         mode: 'copy',
