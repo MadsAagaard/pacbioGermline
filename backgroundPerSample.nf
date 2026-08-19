@@ -8,50 +8,13 @@ nextflow.enable.dsl = 2
  *
  * uBAM -> pbmm2 (HiFi + fail, separately) -> TRGT v5 (adotto + TRExplorer v2)
  *
- * Produces per-sample genome-wide TR calls into a flat pool. It does NOT build
- * a cohort: which samples and how many is decided downstream in the LPS
- * toolkit, which is also where the yymmdd+letter stamp belongs.
- *
- *   <bgRoot>/repeatExpansions/background/adotto/         <- one dir, all samples
- *   <bgRoot>/repeatExpansions/background/adotto_LPS/
- *   <bgRoot>/repeatExpansions/background/trexplorer/
- *   <bgRoot>/repeatExpansions/background/trexplorer_LPS/
- *   <bgRoot>/runInfo/<batch>/                            <- inputs.tsv, batchInfo.tsv
- *
  * Run:
  *   nextflow run MadsAagaard/pacbioGermline -r refactor \
  *       -main-script backgroundPerSample.nf \
  *       -profile slurm,background \
  *       --bgSheet batch01.tsv
  *
- * -main-script takes ONE dash. Two dashes makes it a pipeline parameter, which
- * is ignored, and main.nf runs instead.
- *
- * ALWAYS FROM RAW uBAM. There is no aligned-input mode: the old merged-allReads
- * alignments predate the hifi+fail split and cannot be reused, and anything
- * produced by the refactored clinical pipeline already has adotto calls.
- *
- * BOTH CATALOGS RUN UNCONDITIONALLY: the alignments are not published, so every
- * catalog that might ever be wanted must be genotyped during this one visit to
- * the BAM. A third catalog added later means realigning the whole pool.
- *
- * READ MODE IS FIXED at HiFi+fail, so every file in the pool carries the same
- * strTag ('AllReadsNew'). --hifiReads / --failedReads are refused: see GUARDS.
- *
- * SAMPLES ARE MATCHED TO uBAMs BY NPN ONLY. The uBAM name blob is
- * underscore-joined and testlist may itself contain underscores, so every field
- * after material can shift position. NPN is field 0 and cannot. Sex comes from
- * the samplesheet, which is the ground truth.
- *
- * SPANNING BAMs: not produced. Both TRGT processes run --disable-bam-output, so
- * there is nothing to publish and no sort/index cost. Requires that the *_bam
- * output declarations have been removed from dnaModules.nf, or every task fails
- * on a missing output file.
- *
- * NO PHASING, on purpose. TRGT does not need it and the existing background
- * (adotto_n86.260812a) was built unphased. Changing that means rebuilding the
- * pool — phased and unphased calls are indistinguishable once mixed.
- * =============================================================================
+
  */
 
 if (params.help) {
