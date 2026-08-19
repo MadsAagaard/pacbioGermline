@@ -1,7 +1,9 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-
+include { karyotypeFlag; expectedCnFlag;
+          prefixBase; prefixHifi; prefixFail; prefixStr;
+          prefixCaseHifi } from './modules/lrsFunctions.nf'
 ////////////////////////////////////////////
 /////// ------- RUN BOOKKEEPING ------- ////
 ////////////////////////////////////////////
@@ -481,7 +483,8 @@ process sawFish2 {
     script:
     def exclude = params.genome == "hg38" ? "--cnv-excluded-regions ${params.sawfishExcludeRegions}" : ""
     // FAIL-CLOSED: throws rather than silently assuming XX.
-    def sex     = params.sawfishExpectedCn(meta)
+    //def sex     = params.sawfishExpectedCn(meta)
+    def sex     = expectedCnFlag(meta)
     def prefix  = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
     sawfish discover \
@@ -815,7 +818,7 @@ process trgt4_diseaseSTRs {
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt4.STRchive.sorted.vcf.gz.tbi"), emit: trgt_full
 
     script:
-    def karyotype = params.karyotype(meta)
+    def karyotype = karyotypeFlag(meta)
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt4.STRchive"
     def merged    = "${meta.id}.${params.genomeVersion}.AllReads.pbmm2.merged.bam"
 
@@ -964,7 +967,7 @@ process trgt5_all_adotto {
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.LPS.txt"),           emit: adotto_LPS
 
     script:
-    def karyotype = params.karyotype(meta)
+    def karyotype = karyotypeFlag(meta)
     def failReads = data.failBam ? "--fail-reads ${data.failBam}" : ""
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto"
     """
@@ -1021,7 +1024,7 @@ process trgt5_all_TRexplorer {
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer.LPS.txt"),           emit: trexplorer_LPS
 
     script:
-    def karyotype = params.karyotype(meta)
+    def karyotype = karyotypeFlag(meta)
     def failReads = data.failBam ? "--fail-reads ${data.failBam}" : ""
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.trexplorer"
     """
@@ -1071,7 +1074,7 @@ process trgt5_diseaseSTRs {
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.STRchive.sorted.vcf.gz.tbi"), emit: trgt_full
 
     script:
-    def karyotype = params.karyotype(meta)
+    def karyotype = karyotypeFlag(meta)
     def failReads = data.failBam ? "--fail-reads ${data.failBam}" : ""
     def prefix    = "${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.STRchive"
     """

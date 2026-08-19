@@ -3,60 +3,45 @@ nextflow.enable.dsl = 2
 
 
 def sexFromGender(gender, sampleId) {
-    switch ((gender ?: '').toString().trim().toLowerCase()) {
-        case ['m', 'male']:
-            return 'male'
-        case ['k', 'f', 'female']:
-            return 'female'
-        default:
-            throw new IllegalArgumentException(
-                "Sample ${sampleId}: gender field is '${gender}', expected M/K " +
-                "(or male/female). Fix the samplesheet — the pipeline will not " +
-                "guess a karyotype.")
-    }
+    def g = "${gender}".trim().toUpperCase()
+    if (g == 'M') return 'male'
+    if (g == 'K') return 'female'
+    throw new IllegalArgumentException(
+        "Sample ${sampleId}: gender field is '${gender}', expected M or K. " +
+        "Fix the samplesheet — the pipeline will not guess a karyotype.")
 }
 
 
+/**
+ * Parse a LabWare metadata line into a meta map.
+ *
+ * Accepts both layouts, so no preprocessing step is needed:
+ *   underscore-joined (as emitted):  0000103212_113624121888_78_SL-NGC-SJAELDNE_K_T_113782522715
+ *   tab-exploded (tr '_' '\t'):      same fields, one per column
+ *   [0] rekv   [1] npn     [2] material  [3] testlist
+ *   [4] gender [5] proband [6] intRef    [7] expectedCount (optional)
+ */
 def parseMetaLine(line) {
 
     def cols = line.toString().trim().split('\t') as List
     def f    = (cols.size() == 1) ? cols[0].tokenize('_') : cols
 
-    if (f.size() < 6) {
+    if (f.size() < 7) {
         throw new IllegalArgumentException(
-            "Metadata line '${line}' has only ${f.size()} fields; expected at least " +
-            "rekv_npn_material_testlist_gender_proband.")
+            "Metadata line '${line}' has ${f.size()} fields, expected 7 or 8 " +
+            "(rekv_npn_material_testlist_gender_proband_intRef[_expectedCount]).")
     }
-
-    def g = -1
-    for (int i = 3; i < f.size() - 1; i++) {
-        if (f[i].toString().trim().toUpperCase() in ['M', 'K'] &&
-            f[i + 1].toString().trim().toUpperCase() in ['T', 'F']) {
-            g = i
-            break
-        }
-    }
-
-    if (g < 0) {
-        throw new IllegalArgumentException(
-            "Metadata line '${line}': could not locate the gender/proband pair " +
-            "(expected M or K followed by T or F). Either the line is malformed or " +
-            "the encoding has changed — refusing to guess which field is the gender.")
-    }
-
-    def npn = f[1].toString().trim()
-    if (!npn) throw new IllegalArgumentException("Metadata line '${line}' has an empty NPN.")
 
     return [
         rekv          : f[0].toString().trim(),
-        id            : npn,
+        id            : f[1].toString().trim(),
         material      : f[2].toString().trim(),
-        testlist      : f[3..(g - 1)].collect { p -> p.toString().trim() }.join('_'),
-        gender        : f[g].toString().trim(),
-        sex           : sexFromGender(f[g], npn),
-        proband       : f[g + 1].toString().trim(),
-        intRef        : (f.size() > g + 2) ? f[g + 2].toString().trim() : null,
-        expectedCount : (f.size() > g + 3) ? f[g + 3].toString().trim() : null,
+        testlist      : f[3].toString().trim(),
+        gender        : f[4].toString().trim(),
+        sex           : sexFromGender(f[4], f[1]),
+        proband       : f[5].toString().trim(),
+        intRef        : f[6].toString().trim(),
+        expectedCount : (f.size() > 7) ? f[7].toString().trim() : null,
     ]
 }
 
