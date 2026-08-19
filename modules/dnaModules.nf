@@ -1755,10 +1755,10 @@ process collect_germline_summary {
     tuple val(meta), path("${meta.id}.clinical_summaryGermline.html"), emit: html
 
     script:
-
+    def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
     python3 ${params.germlineSummaryPy} \
-        --case-id             ${meta.id} \
+        --case-id             ${prefix} \
         --npn                 ${meta.npn} \
         --gender              ${meta.gender} \
         --testlist            ${meta.testlist} \
@@ -1767,7 +1767,7 @@ process collect_germline_summary {
         --methbat-imprinting  ${data.methbat_imprinting} \
         --regions             smn,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
-        --output              ${meta.id}.clinical_summaryGermline
+        --output              ${prefix}.clinical_summaryGermline
     """
 }
 
