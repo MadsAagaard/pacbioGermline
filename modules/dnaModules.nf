@@ -199,12 +199,6 @@ process pbmm2_align_failedOnly {
     tag "$meta.id"
     conda "${params.condaEnvs.pbmm2}"
 
-/*
-    publishDir (
-        path: {"${params.outBase(meta)}/alignments/failedReads/"}, 
-        mode: 'copy',
-        pattern: "*.ba*")
-*/
     input:
     tuple val(meta), path(fofn)
 
@@ -1257,7 +1251,7 @@ process paraphase4 {
 
     output:
     tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.hiphase.paraphase/*")
-    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.hiphase.paraphase/*.paraphase.json"), emit: paraphase_json
+    tuple val(meta), path("{prefix}.paraphase.json"), emit: paraphase_json
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1267,6 +1261,8 @@ process paraphase4 {
     --reference ${params.genomeFasta} \
     -t ${task.cpus} \
     -o ${prefix}.hiphase.paraphase
+
+    cp ${prefix}.hiphase.paraphase/${meta.id}.paraphase.json {prefix}.paraphase.json
     """
 }
 
@@ -1757,7 +1753,7 @@ process collect_germline_summary {
     """
     python3 ${params.germlineSummaryPy} \
         --case-id             ${prefix} \
-        --npn                 ${meta.npn} \
+        --npn                 ${meta.id} \
         --gender              ${meta.gender} \
         --testlist            ${meta.testlist} \
         --genome-version      ${params.genomeVersion} \
