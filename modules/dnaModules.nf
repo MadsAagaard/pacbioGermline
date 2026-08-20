@@ -1747,6 +1747,11 @@ process collect_germline_summary {
         mode: 'copy',
         pattern: "*.summaryGermline.yaml")
 
+    publishDir (
+        path: "${params.lrsStorage}/clinicalSummaries/germline/html/",
+        mode: 'copy',
+        pattern: "*.summaryGermline.html")
+
     input:
     tuple val(meta), val(data)
 
