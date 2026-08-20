@@ -1767,8 +1767,8 @@ process collect_germline_summary {
         --gender              ${meta.gender} \
         --testlist            ${meta.testlist} \
         --genome-version      ${params.genomeVersion} \
-        --paraphase-json      ${data.paraphase} \
-        --methbat-imprinting  ${data.methbat_imprinting} \
+        --paraphase-json      ${data.paraphase_json} \
+        --methbat-imprinting  ${data.icReport} \
         --regions             smn,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
         --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline
