@@ -1751,9 +1751,12 @@ process collect_germline_summary {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.clinical_summaryGermline.yaml"), emit: yaml
-    tuple val(meta), path("${meta.id}.clinical_summaryGermline.json"), emit: json
-    tuple val(meta), path("${meta.id}.clinical_summaryGermline.html"), emit: html
+    tuple val(meta), 
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.yaml"), emit: yaml
+    tuple val(meta),
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.json"), emit: json
+    tuple val(meta),
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.html"), emit: html
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1768,7 +1771,7 @@ process collect_germline_summary {
         --methbat-imprinting  ${data.methbat_imprinting} \
         --regions             smn,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
-        --output              ${prefix}.clinical_summaryGermline
+        --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline
     """
 }
 
