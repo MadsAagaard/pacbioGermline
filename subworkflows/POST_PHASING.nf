@@ -82,6 +82,7 @@ methBatNEW_profile_single.out.icReport.view()
     }
     .set { clinical_summary_inputs_ch }
 
+clinical_summary_inputs_ch.view()
     collect_germline_summary(clinical_summary_inputs_ch)
 
 
