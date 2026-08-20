@@ -1769,7 +1769,7 @@ process collect_germline_summary {
     python3 ${params.germlineSummaryPy} \
         --case-id             ${prefix} \
         --npn                 ${meta.id} \
-        --gender              ${meta.gender} \
+        --gender              ${meta.sex} \
         --testlist            ${meta.testlist} \
         --genome-version      ${params.genomeVersion} \
         --paraphase-json      ${data.paraphase_json} \
