@@ -1738,25 +1738,25 @@ process collect_germline_summary {
         pattern: "*.{yaml,json,html}")
 
     publishDir (
-        patH: "${params.lrsStorage}/clinicalSummaries/germline/json/",
+        path: "${params.lrsStorage}/clinicalSummaries/germline/json/",
         mode: 'copy', 
-        pattern: "*.clinical_summaryGermline.json")
+        pattern: "*.summaryGermline.json")
 
     publishDir (
-        patH: "${params.lrsStorage}/clinicalSummaries/germline/yaml/",
+        path: "${params.lrsStorage}/clinicalSummaries/germline/yaml/",
         mode: 'copy',
-        pattern: "*.clinical_summaryGermline.yaml")
+        pattern: "*.summaryGermline.yaml")
 
     input:
     tuple val(meta), val(data)
 
     output:
     tuple val(meta), 
-    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.yaml"), emit: yaml
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.summaryGermline.yaml"), emit: yaml
     tuple val(meta),
-    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.json"), emit: json
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.summaryGermline.json"), emit: json
     tuple val(meta),
-    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline.html"), emit: html
+    path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.summaryGermline.html"), emit: html
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1771,7 +1771,7 @@ process collect_germline_summary {
         --methbat-imprinting  ${data.icReport} \
         --regions             smn1,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
-        --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline
+        --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.summaryGermline
     """
 }
 
