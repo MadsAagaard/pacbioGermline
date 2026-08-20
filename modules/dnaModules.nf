@@ -1735,7 +1735,7 @@ process collect_germline_summary {
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
         mode: 'copy',
-        pattern: "*.{yaml,json,htmls}")
+        pattern: "*.{yaml,json,html}")
 
     publishDir (
         patH: "${params.lrsStorageBase}/clinicalSummaries/germline/json/",
