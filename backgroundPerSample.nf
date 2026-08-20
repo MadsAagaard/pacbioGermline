@@ -14,7 +14,6 @@ nextflow.enable.dsl = 2
  *       -profile slurm,background \
  *       --bgSheet batch01.tsv
  *
-
  */
 
 if (params.help) {
@@ -28,7 +27,7 @@ if (params.help) {
 
     OPTIONS
       --bgRoot     [path]  Pool root. Defaults to the production pool in the
-                           'background' profile — don't pass it unless you mean it.
+                           'background' profile.
       --initPool           Permit creating a pool that does not yet exist.
       --input      [path]  uBAM search root (default: params.dataArchive)
       --batch      [str]   Label for runInfo/ (default: timestamp)
