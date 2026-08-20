@@ -70,8 +70,6 @@ workflow POST_PHASING {
 
     //------ clinical summary (html channel) ------------------------------------------------------
 
-paraphase4.out.paraphase_json.view()
-methBatNEW_profile_single.out.icReport.view()
     paraphase4.out.paraphase_json
     .join(methBatNEW_profile_single.out.icReport)
     .map { meta, paraphase_json, icReport ->
@@ -82,7 +80,6 @@ methBatNEW_profile_single.out.icReport.view()
     }
     .set { clinical_summary_inputs_ch }
 
-clinical_summary_inputs_ch.view()
     collect_germline_summary(clinical_summary_inputs_ch)
 
 
