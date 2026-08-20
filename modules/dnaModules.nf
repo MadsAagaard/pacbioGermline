@@ -1258,7 +1258,7 @@ process paraphase4 {
 
     output:
     tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.hiphase.paraphase/*")
-    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.json"), emit: paraphase_json
+    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.paraphase.json"), emit: paraphase_json
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
