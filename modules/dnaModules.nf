@@ -354,7 +354,6 @@ process hiPhaseTwoAln {
         pattern: "*.hiphase.trgt4.*")
     
 
-
     publishDir (
         path: {"${params.lrsStorage}/deepVariant/vcfs/"},                        
         mode: 'copy', 
