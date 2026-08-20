@@ -1738,12 +1738,12 @@ process collect_germline_summary {
         pattern: "*.{yaml,json,html}")
 
     publishDir (
-        patH: "${params.lrsStorageBase}/clinicalSummaries/germline/json/",
+        patH: "${params.lrsStorage}/clinicalSummaries/germline/json/",
         mode: 'copy', 
         pattern: "*.clinical_summaryGermline.json")
 
     publishDir (
-        patH: "${params.lrsStorageBase}/clinicalSummaries/germline/yaml/",
+        patH: "${params.lrsStorage}/clinicalSummaries/germline/yaml/",
         mode: 'copy',
         pattern: "*.clinical_summaryGermline.yaml")
 
@@ -1769,7 +1769,7 @@ process collect_germline_summary {
         --genome-version      ${params.genomeVersion} \
         --paraphase-json      ${data.paraphase_json} \
         --methbat-imprinting  ${data.icReport} \
-        --regions             smn,pms2,rccx \
+        --regions             smn1,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
         --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.clinical_summaryGermline
     """
