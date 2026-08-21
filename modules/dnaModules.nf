@@ -956,7 +956,11 @@ process trgt5_all_adotto {
         mode: 'copy',
         pattern: "*.trgt5.adotto.sorted.vcf.*")
 
-
+    publishDir (
+        path: {"${params.outBase(meta)}//newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
+        mode: 'copy',
+        pattern: "*.sorted.adotto.ba*")
+    
 
 
     input:
@@ -981,18 +985,20 @@ process trgt5_all_adotto {
     $failReads \
     $karyotype \
     --threads ${task.cpus} \
-    --disable-bam-output \
     --output-prefix ${prefix}
 
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
     bcftools index -t ${prefix}.sorted.vcf.gz
+
+    samtools sort -o ${prefix}.sorted.adotto.bam ${prefix}.spanning.bam
+    samtools index ${prefix}.sorted.adotto.bam
 
     ${params.trgtLps} \
     --vcf ${prefix}.sorted.vcf.gz \
     --threads ${task.cpus} > ${prefix}.LPS.txt
     """
 }
-
+  //--disable-bam-output \
 process trgt5_all_TRexplorer {
     tag "$meta.id"
     label "intermediate"
