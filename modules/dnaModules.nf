@@ -944,8 +944,8 @@ process trgt5_all_adotto {
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
         mode: 'copy',
-       //pattern: "*.{adotto.LPS.txt}")
-        pattern: "*.{LPS,vcf}.*}")
+        pattern: "*.{adotto.LPS.txt}")
+
     publishDir (
         path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/adotto_LPS/",
         mode: 'copy',
@@ -957,9 +957,9 @@ process trgt5_all_adotto {
         pattern: "*.trgt5.adotto.sorted.vcf.*")
 
     publishDir (
-        path: {"${params.outBase(meta)}//newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
+        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
         mode: 'copy',
-        pattern: "*.sorted.adotto.ba*")
+        pattern: "*.sorted.adotto.*")
     
 
 
