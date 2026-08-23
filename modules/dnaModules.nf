@@ -969,6 +969,11 @@ process trgt5_all_adotto {
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.vcf.gz.tbi"), emit: adotto_vcf
+
+    tuple val(meta),
+          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.bam"),
+          path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.sorted.bam.bai"), emit: adotto_bam
+
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.strTag}.trgt5.adotto.LPS.txt"),           emit: adotto_LPS
 
