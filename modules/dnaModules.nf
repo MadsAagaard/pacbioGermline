@@ -962,7 +962,6 @@ process trgt5_all_adotto {
         pattern: "*.sorted.adotto.*")
     
 
-
     input:
     tuple val(meta), val(data)
 
