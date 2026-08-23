@@ -944,12 +944,12 @@ process trgt5_all_adotto {
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
         mode: 'copy',
-        pattern: "*.{adotto.LPS.txt}")
+        pattern: "*.LPS.txt")
 
     publishDir (
         path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/adotto_LPS/",
         mode: 'copy',
-        pattern: "*.adotto.LPS.txt")
+        pattern: "*.LPS.txt")
 
     publishDir (
         path: "${params.lrsStorage}/repeatExpansions/TRGT5_all/adotto/",
@@ -959,7 +959,7 @@ process trgt5_all_adotto {
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/TRGT5_all/adotto/"},
         mode: 'copy',
-        pattern: "*.sorted.adotto.*")
+        pattern: "*.sorted.*")
     
 
     input:
@@ -989,8 +989,8 @@ process trgt5_all_adotto {
     bcftools sort -Oz -o ${prefix}.sorted.vcf.gz ${prefix}.vcf.gz
     bcftools index -t ${prefix}.sorted.vcf.gz
 
-    samtools sort -o ${prefix}.sorted.adotto.bam ${prefix}.spanning.bam
-    samtools index ${prefix}.sorted.adotto.bam
+    samtools sort -o ${prefix}.sorted.bam ${prefix}.spanning.bam
+    samtools index ${prefix}.sorted.bam
 
     ${params.trgtLps} \
     --vcf ${prefix}.sorted.vcf.gz \
