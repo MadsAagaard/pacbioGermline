@@ -1630,6 +1630,7 @@ process mosdepthROI {
     tuple val(meta),
         path("*.region.dist.txt"),
         path("*.mosdepth.summary.txt"),                       emit: summary
+    
     script:
     def callable = params.genome == "hg38" ? "--by ${params.callableRoiBed}" : "--by 1000"
     """
@@ -1781,7 +1782,7 @@ process collect_germline_summary {
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
     python3 ${params.germlineSummaryPy} \
-        --case-id             ${meta.id}.${params.genomeVersion}.${params.tagHifi} \
+        --case-id             ${meta.rekv} \
         --npn                 ${meta.id} \
         --gender              ${meta.sex} \
         --testlist            ${meta.testlist} \
@@ -1797,3 +1798,4 @@ process collect_germline_summary {
     """
 }
 
+//${meta.id}.${params.genomeVersion}.${params.tagHifi}
