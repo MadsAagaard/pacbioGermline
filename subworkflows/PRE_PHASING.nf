@@ -145,6 +145,7 @@ workflow PRE_PHASING {
     sawfish_discover_dir     = sawfish_discover_ch
     sawfish_supporting_reads = sawfish_reads_ch
     mosdepth                 = mosdepth_ch
+    mosdepthSummary            = mosdepthROI.out.summary
     nanoStat                 = nanostat_ch
     hiphaseInput             = hiphase_input_ch
 }

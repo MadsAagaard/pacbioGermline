@@ -32,6 +32,7 @@ workflow POST_PHASING {
     phasedAll                 // tuple(meta, [bam, bai, failBam, failBai, dv_vcf, dv_idx, sawfish_vcf, sawfish_idx, sawfish_reads])
     sawfish_supporting_reads
     mosdepth
+    mosdepthSummary
     nanoStat
 
     main:
@@ -72,9 +73,9 @@ workflow POST_PHASING {
 
     paraphase4.out.paraphase_json
     .join(methBatNEW_profile_single.out.icReport)
-    .join(mosdepth)
+    .join(mosdepthSummary)
     .join(cramino.out.multiqc)
-    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino ->
+    .map { meta, paraphase_json, icReport,mosdepthDist,mosSummary,cramino ->
         tuple(meta, [
             paraphase_json: paraphase_json,
             icReport: icReport,

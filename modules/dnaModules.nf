@@ -1622,9 +1622,14 @@ process mosdepthROI {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${params.genomeVersion}_roi.*"), emit: mosdepth_roi
-    tuple val(meta), path("*.region.dist.txt"), path("*.mosdepth.summary.txt"),                        emit: multiqc
-    //tuple val(meta), path("*.region.dist.txt"), path("*.mosdepth.summary.txt")                       emit: summary
+    tuple val(meta), 
+        path("${meta.id}.${params.genomeVersion}_roi.*"), emit: mosdepth_roi
+    
+    tuple val(meta),  path("*.region.dist.txt"),          emit: multiqc
+   
+    tuple val(meta),
+        path("*.region.dist.txt"),
+        path("*.mosdepth.summary.txt"),                       emit: summary
     script:
     def callable = params.genome == "hg38" ? "--by ${params.callableRoiBed}" : "--by 1000"
     """

@@ -354,6 +354,7 @@ workflow {
         phasedAll,
         PRE_PHASING.out.sawfish_supporting_reads,
         PRE_PHASING.out.mosdepth,
+        PRE_PHASING.out.mosdepthSummary,
         PRE_PHASING.out.nanoStat
     )
 
