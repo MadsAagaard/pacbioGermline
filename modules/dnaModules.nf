@@ -1623,8 +1623,8 @@ process mosdepthROI {
 
     output:
     tuple val(meta), path("${meta.id}.${params.genomeVersion}_roi.*"), emit: mosdepth_roi
-    tuple val(meta), path("*.region.dist.txt"),                        emit: multiqc
-
+    tuple val(meta), path("*.region.dist.txt"), path("*.mosdepth.summary.txt"),                        emit: multiqc
+    //tuple val(meta), path("*.region.dist.txt"), path("*.mosdepth.summary.txt")                       emit: summary
     script:
     def callable = params.genome == "hg38" ? "--by ${params.callableRoiBed}" : "--by 1000"
     """
@@ -1782,8 +1782,8 @@ process collect_germline_summary {
         --testlist            ${meta.testlist} \
         --genome-version      ${params.genomeVersion} \
         --cramino             ${data.cramino} \
-        --mosdepth-summary    ${data.mosdepth} \
-        --mosdepth-region-dist ${data.mosdepth_dist} \
+        --mosdepth-summary    ${data.mosSummary} \
+        --mosdepth-region-dist ${data.mosDist} \
         --paraphase-json      ${data.paraphase_json} \
         --methbat-imprinting  ${data.icReport} \
         --regions             smn1,pms2,rccx \
