@@ -75,7 +75,7 @@ workflow POST_PHASING {
     .join(methBatNEW_profile_single.out.icReport)
     .join(mosdepthSummary)
     .join(cramino.out.multiqc)
-    .map { meta, paraphase_json, icReport,mosdepthDist,mosSummary,cramino ->
+    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino ->
         tuple(meta, [
             paraphase_json: paraphase_json,
             icReport: icReport,
