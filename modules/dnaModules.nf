@@ -1672,7 +1672,7 @@ process cramino {
     tuple val(meta), val(data)
 
     output:
-    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.craminoQC.txt")
+    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.craminoQC.txt"),emit: multiqc
 
     script:
     """
@@ -1776,11 +1776,14 @@ process collect_germline_summary {
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
     python3 ${params.germlineSummaryPy} \
-        --case-id             ${prefix} \
+        --case-id             ${meta.id}.${params.genomeVersion}.${params.tagHifi} \
         --npn                 ${meta.id} \
         --gender              ${meta.sex} \
         --testlist            ${meta.testlist} \
         --genome-version      ${params.genomeVersion} \
+        --cramino             ${data.cramino} \
+        --mosdepth-summary    ${data.mosdepth} \
+        --mosdepth-region-dist ${data.mosdepth_dist} \
         --paraphase-json      ${data.paraphase_json} \
         --methbat-imprinting  ${data.icReport} \
         --regions             smn1,pms2,rccx \

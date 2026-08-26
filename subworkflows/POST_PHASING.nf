@@ -72,10 +72,14 @@ workflow POST_PHASING {
 
     paraphase4.out.paraphase_json
     .join(methBatNEW_profile_single.out.icReport)
-    .map { meta, paraphase_json, icReport ->
+    .join(mosdepth)
+    .join(cramino.out.multiqc)
+    .map { meta, paraphase_json, icReport,mosdepth,cramino ->
         tuple(meta, [
             paraphase_json: paraphase_json,
-            icReport: icReport
+            icReport: icReport,
+            mosdepth: mosdepth,
+            cramino: cramino
             ])
     }
     .set { clinical_summary_inputs_ch }
