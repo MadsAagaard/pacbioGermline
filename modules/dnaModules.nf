@@ -1665,6 +1665,46 @@ process whatsHap_stats {
     """
 }
 
+process bcftools_stats {
+    tag "$meta.id"
+    label "low"
+
+    publishDir (
+        path: {"${params.outBase(meta)}/QC/bcftools/"},
+        mode: 'copy')
+
+    input:
+    tuple val(meta), val(data)
+
+    output:
+    tuple val(meta),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.bcftools.stats.txt"), emit: multiqc
+
+    tuple val(meta),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.bcftools.stats.txt"),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.filterCounts.tsv"),   emit: forSummary
+
+    script:
+    def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
+    """
+    bcftools query -f '%FILTER\\n' ${data.dv_vcf} \
+    | sort \
+    | uniq -c \
+    | sort -k1,1nr \
+    | awk 'BEGIN{OFS="\\t"; print "#filter","count"} {print \$2, \$1}' \
+    > ${prefix}.filterCounts.tsv
+
+    bcftools stats \
+    --threads ${task.cpus} \
+    -f PASS \
+    -s - \
+    -F ${params.genomeFasta} \
+    ${data.dv_vcf} \
+    > ${prefix}.bcftools.stats.txt
+    """
+}
+
+
 process cramino {
     tag "$meta.id"
     label "low"
@@ -1782,6 +1822,7 @@ process collect_germline_summary {
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
     """
     python3 ${params.germlineSummaryPy} \
+        --qc-thresholds       ${params.germlineQcThresholds} \
         --case-id             ${meta.rekv} \
         --npn                 ${meta.id} \
         --gender              ${meta.sex} \
@@ -1790,6 +1831,9 @@ process collect_germline_summary {
         --cramino             ${data.cramino} \
         --mosdepth-summary    ${data.mosSummary} \
         --mosdepth-region-dist ${data.mosDist} \
+        --bcftools-stats      ${data.bcfStats} \
+        --filter-counts       ${data.bcfFilters} \
+        --whatshap-stats      ${data.whatsHap} \
         --paraphase-json      ${data.paraphase_json} \
         --methbat-imprinting  ${data.icReport} \
         --regions             smn1,pms2,rccx \

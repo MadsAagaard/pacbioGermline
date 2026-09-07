@@ -18,6 +18,7 @@ include {
         cramino;
         nanoStat;
         whatsHap_stats;
+        bcftools_stats;
         svTopo;
         svTopo_filtered;
         mitorsaw;
@@ -46,6 +47,7 @@ workflow POST_PHASING {
     cramino(phasedAll)
     mitorsaw(phasedAll)
     whatsHap_stats(phasedAll)
+    bcftools_stats(phasedAll)
     paraphase(phasedAll)
     paraphase4(phasedAll)
     kivvi_d4z4(phasedAll)
@@ -75,19 +77,23 @@ workflow POST_PHASING {
     .join(methBatNEW_profile_single.out.icReport)
     .join(mosdepthSummary)
     .join(cramino.out.multiqc)
-    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino ->
+    .join(bcftools_stats.out.forSummary)
+    .join(whatsHap_stats.out.multiqc)
+    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino,bcfStats,bcfFilters,whatshap ->
         tuple(meta, [
             paraphase_json: paraphase_json,
             icReport: icReport,
             mosDist: mosDist,
             mosSummary: mosSummary,
-            cramino: cramino
+            cramino: cramino,
+            bcfStats: bcfStats,
+            bcfFilters: bcfFilters,
+            whatshap: whatshap
             ])
     }
     .set { clinical_summary_inputs_ch }
 
     collect_germline_summary(clinical_summary_inputs_ch)
-
 
 
     if (!params.skipQC) {
