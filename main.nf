@@ -1,686 +1,488 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
+
 import java.util.Locale
-date=new Date().format( 'yyMMdd' )
-date2=new Date().format( 'yyMMdd HH:mm:ss' )
-user="$USER"
-runID="${date}.${user}"
+
+/*
+ * =============================================================================
+ * KG Vejle — PacBio HiFi LRS germline pipeline (hg38)
+ * =============================================================================
+ */
+
+def runDate      = new Date().format('yyMMdd')
+def runDateTime  = new Date().format('yyMMdd HH:mm:ss')
+def runUser      = System.getenv('USER') ?: 'unknown'
+def runID        = "${runDate}.${runUser}"
+
+def readModeText = params.failedReads ? 'fail reads only'
+                 : params.hifiReads   ? 'HiFi only (TRGT runs without --fail-reads)'
+                 : 'HiFi + fail reads, aligned separately'
 
 log.info """\
 ======================================================
 Clinical Genetics Vejle: PacBio LRS v4
 ======================================================
-Genome        : $params.genome
-GenomeDir     : $refFilesDir
-Input Readset : $inputReadSet_allDefault
-read Subset   : $readSubset_hifiDefault
-RunID         : $runID
-Script start  : $date2
-Genome FASTA  : ${genome_fasta}
-Archive RAW   : ${dataArchive}
-OutputDirBase : ${outputDirBase}
+Genome        : ${params.genome}
+GenomeDir     : ${params.refFilesDir}
+Read mode     : ${readModeText}
+Read set tag  : ${params.readSet}
+STR name tag  : ${params.strTag}
+RunID         : ${runID}
+Script start  : ${runDateTime}
+Genome FASTA  : ${params.genomeFasta}
+Archive RAW   : ${params.dataArchive}
+OutputDirBase : ${params.outputDirBase}
 workDir       : ${workflow.workDir}
-layout        : $params.layoutMode
-min input GB  : $params.minGB
+layout        : ${params.layoutMode}
+error mode    : ${params.errorMode}
+min HiFi GB   : ${params.minHifiGBeff}
 """
 
 
-/* ----- Changes:
+///////////////////////////////////////////////////
+/////// ------- INPUT VALIDATION ------- //////////
+///////////////////////////////////////////////////
 
-    - deprecate obsolete versions of programs:
-    - TRGT4, paraphase3, pb-cpgtools, kivvi05
-
-    - Current versions:
-        TRGT5, paraphase4, methBat profile, kivvi v1
-
-    - Remove allReads bam/cram output
-
-
-*/
-
-//////////// DEFAULT INPUT ///////////////////////
-
-def inputError() {
-    log.info"""
-    USER INPUT ERROR: The user should point to a samplesheet (--samplesheet parameter) or input folder containing all data to be used as input (--input parameter).
+if (!params.samplesheet && !params.input && !params.familySS) {
+    exit 1, """
+    USER INPUT ERROR: provide a samplesheet (--samplesheet) or an input folder
+    containing the data to use (--input).
     """.stripIndent()
 }
 
-def hpoInputError() {
-    log.info"""
-    USER INPUT ERROR: A samplesheet (--samplesheet parameter) containing 5 columns (caseID, samplename, gender, relation and affection status) is required when usign --hpo.  
+if (!params.samplesheet && params.hpo && !params.familySS) {
+    exit 1, """
+    USER INPUT ERROR: --hpo requires a samplesheet (--samplesheet) with the
+    5 columns caseID, samplename, gender, relation, affection status.
     """.stripIndent()
 }
-
-
-if (!params.samplesheet && !params.input && !params.familySS) exit 0, inputError() 
-if (!params.samplesheet && params.hpo && !params.familySS) exit 0, hpoInputError() 
-
-
-if (params.hpo) {
-    channel.fromPath(params.hpo)
-    |set { hpo_ch }
-}
-
 
 if (params.aligned) {
+    exit 1, """
+    USER INPUT ERROR: --aligned is no longer supported.
+    Run add-on analyses from existing alignments with a standalone script.
+    """.stripIndent()
+}
 
-    inputBam="${params.input}/*.bam"
-    inputBai="${params.input}/*.bai"
-
-    Channel.fromPath(inputBam, followLinks: true)
-    |map { tuple(it.baseName,it) }
-    |map {id,bam -> 
-            (samplename,genomeversion)      =id.tokenize(".")
-            meta=[id:samplename,genomeversion:genomeversion,type:"aligned"]
-            tuple(meta,bam)        
-        }
-    |set {bamInput}
-
-    Channel.fromPath(inputBai, followLinks: true)
-    |map { tuple(it.baseName,it) }
-    |map {id,bai -> 
-            (samplename,genomeversion)      =id.tokenize(".")
-            meta=[id:samplename,genomeversion:genomeversion,type:"aligned"]
-            tuple(meta,bai)        
-        }
-    |set {baiInput}  
-
-    bamInput.join(baiInput)
-    |map { meta,bam,bai -> tuple(meta,[bam,bai]) } 
-    | set {alignedInput_tmp}
+if (params.allReads) {
+    log.warn """
+    --allReads is deprecated. HiFi and fail reads are now aligned separately and
+    TRGT consumes both via --fail-reads. The flag is ignored; the default
+    behaviour is what you want. Use --hifiReads for HiFi-only.
+    """.stripIndent()
+}
 
 
-    if (params.samplesheet) {
-        alignedInput_tmp.join(samplesheet_join)
-        |map {metaData,metaSS,meta,bam -> tuple(metaData,bam)}
-        |set {alignedFinal}
-    }
-    if (!params.samplesheet) {
-        alignedInput_tmp
-        |set {alignedFinal}
+///////////////////////////////////////////////////
+/////// ------- SAMPLESHEET PARSING ------- ///////
+///////////////////////////////////////////////////
+
+def ssBaseName = params.ssBase
+
+def sexFromGender = { gender, sampleId ->
+    switch ((gender ?: '').toString().trim().toLowerCase()) {
+        case ['m', 'male']:
+            return 'male'
+        case ['k', 'f', 'female']:
+            return 'female'
+        default:
+            throw new IllegalArgumentException(
+                "Sample ${sampleId}: gender field is '${gender}', expected M or K. " +
+                "Fix the samplesheet — the pipeline will not guess a karyotype.")
     }
 }
 
 
-if (!params.aligned) {
+if (params.samplesheet && !params.customSS && !params.jointSS) {
 
-    if (params.input) {
-        if (params.hifiReads){
-            inputBam="${params.input}/**/*.hifi_reads.*.bam"
+    channel.fromPath(params.samplesheet, checkIfExists: true)
+        .splitCsv(sep: '\t')
+        .map { row ->
+            def (rekv, npn, material, testlist, gender, proband, intRef) = row[0].tokenize('_')
+            def groupKey = (intRef == 'noInfo') ? 'single' : intRef
+            def sex      = sexFromGender(gender, npn)
+            [ id       : npn,
+              testlist : testlist,
+              material : material,
+              gender   : gender,
+              sex      : sex,
+              proband  : proband,
+              intRef   : intRef,
+              rekv     : rekv,
+              groupKey : groupKey,
+              ssBase   : ssBaseName ]
         }
-        if (params.failedReads){
-            inputBam="${params.input}/**/*.fail_reads.*.bam"
+        .set { samplesheet_full }
+
+    samplesheet_full
+        .branch { row ->
+            singleSample : (row.groupKey == 'single')
+            multiSample  : true
         }
-        if (!params.hifiReads && !params.failedReads) {
-            inputBam="${params.input}/**/*.bam"
-        }
-    }
-    
-    if (!params.input) {
-        if (params.hifiReads){
-            inputBam="${params.dataArchive}/**/hifi_reads/*.hifi_reads.*.bam"
-        }
-        if (params.failedReads){
-            inputBam="${params.dataArchive}/**/failed_reads/*.fail_reads.*.bam"
-        }
-        if (!params.hifiReads && !params.failedReads) {
-            inputBam="${params.dataArchive}/**/*_reads/*.bam"
-        }
-    }
+        .set { samplesheetBranch }
+}
 
-    if (params.samplesheet && !params.customSS && !params.jointSS) {
-              
-        def ssBase = params.samplesheet
-                    .toString()
-                    .tokenize('/')
-                    .last()
-                    .replaceFirst(/_metadata$/, '')
+if (params.samplesheet && (params.jointSS || params.familySS || params.customSS)) {
 
-        channel.fromPath(params.samplesheet)
-        | splitCsv(sep:'\t')
-        |map { row ->
-            (rekv, npn,material,testlist,gender,proband,intRef) = row[0].tokenize("_")
-            def groupKey    = (intRef == 'noInfo')  ? "single" : intRef
-            def sex         = (gender =="K")        ? "female" : "male"
-            meta=[  id          :npn,
-                    testlist    :testlist,
-                    sex         :sex,
-                    proband     :proband,
-                    intRef      :intRef,
-                    rekv        :rekv,
-                    groupKey    :groupKey,
-                    ssBase      :ssBase]
-            meta
-            }
-        | set {samplesheet_full}
-        samplesheet_full
-        |branch {row ->
-            singleSample: (row.groupKey== "single")
-                return row
-            multiSample: true
-                return row
-        }
-        |set {samplesheetBranch}
-    }
- 
-   /*
-    if (params.samplesheet && params.customSS) {
+    channel.fromPath(params.samplesheet, checkIfExists: true)
+        .splitCsv(sep: '\t')
+        .map { row ->
+            def (rekv, npn, material, testlist, gender, proband, intRef) = row
+            def sex = sexFromGender(gender, npn)
 
-        def ssBase = params.samplesheet
-                    .toString()
-                    .tokenize('/')
-                    .last()
-                    .replaceFirst(/\.txt$/, '')
-
-        channel.fromPath(params.samplesheet)
-        | splitCsv(sep:'\t')
-        |map { row -> 
-            (caseID, samplename, sex,outKey) =tuple(row)
-            meta=[caseID:caseID,id:samplename,sex:sex,groupKey:"customSampleSheet",outKey:caseID,ssBase:ssBase,rekv:outKey] // edit back to normal, if needed.
-            meta
-        }
-        | set {samplesheet_full}
-    }
-*/
-    if (params.samplesheet && (params.jointSS || params.familySS|| params.customSS) ) {
-        def ssBase = params.samplesheet
-                    .toString()
-                    .tokenize('/')
-                    .last()
-                    .replaceFirst(/\.txt$/, '')
-
-    Channel
-    .fromPath(params.samplesheet)
-    .splitCsv(sep: '\t')
-    .map { row ->
-        def (rekv, npn, material, testlist, gender, proband, intRef) = row
-        def sex = (gender == 'K') ? 'female' : 'male'
-
-        def meta = [
-        rekv     : rekv,
-        id       : npn,
-        material : material,
-        testlist : testlist,
-        gender   : gender,
-        sex      : sex,
-        proband  : proband,
-        intRef   : intRef,
-        ssBase   : ssBase,
-        groupKey : intRef
-        ]
-
-        tuple(intRef, meta)
-    }
-    .groupTuple()
-    .flatMap { intRef, metas ->
-
-        def probands = metas.findAll { it.proband == 'T' }
-        assert probands && probands.size() >= 1 : "No proband (T) found for intRef=${intRef}"
-
-        def anchor = probands[0]
-        def caseID = "${anchor.rekv}_${anchor.testlist}_${intRef}"
-
-        metas.collect { m ->
-            def relation
-            if( m.proband == 'T' ) {
-                relation = 'index'
-            } else if( m.gender == 'M' ) {
-                relation = 'pater'
-            } else if( m.gender == 'K' ) {
-                relation = 'mater'
-            } else {
-                relation = 'unknown_relation'
-            }
-
-            // Return NEW map (don’t mutate original)
-            m + [
-                caseID: caseID,
-                relation: relation
+            def meta = [
+                rekv     : rekv,
+                id       : npn,
+                material : material,
+                testlist : testlist,
+                gender   : gender,
+                sex      : sex,
+                proband  : proband,
+                intRef   : intRef,
+                ssBase   : ssBaseName,
+                groupKey : intRef
             ]
+            tuple(intRef, meta)
         }
-    }
-    | set {samplesheet_full}
-    }
+        .groupTuple()
+        .flatMap { intRef, metas ->
 
+            def probands = metas.findAll { it.proband == 'T' }
+            assert probands && probands.size() >= 1 : "No proband (T) found for intRef=${intRef}"
 
-    if (params.samplesheet) {
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
-        |map {id,bam -> 
-                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
-                (instrument,date,time)                      =pacbioID.tokenize("_")     
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                //meta=[id:samplename,genderFile:gender,testlistFile:testlist]
-                meta=[id:samplename]
-                tuple(meta,bam)   
+            def anchor = probands[0]
+            def caseID = "${anchor.rekv}_${anchor.testlist}_${intRef}"
+
+            metas.collect { m ->
+                def relation = (m.proband == 'T') ? 'index'
+                             : (m.gender  == 'M') ? 'pater'
+                             : (m.gender  == 'K') ? 'mater'
+                             : 'unknown_relation'
+
+                m + [ caseID: caseID, relation: relation ]
             }
-        |groupTuple(sort:true)
-        | map { meta, bams ->
-            long totalBytes = (bams.sum { it.size() } as long)
-            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
-            def meta2 = meta + [
-                nBams       : bams.size(),
-                totalsizeGB : totalGB
-            ]
-            tuple(meta2, bams)
         }
-        |branch  {meta,bam -> 
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                return [meta,bam]
-            samples: true
-                return [meta,bam]
-        }
-        | set { ubam_input }
-
-        ubam_input.samples
-            | map { meta, bam -> tuple(meta.id,meta,bam) }
-        |set {ubam_input_samples}    
-
-        if (!params.singleOnly && !params.intrefOnly) {
-            samplesheet_full
-            |map {row -> meta2=[row.id,row]}
-            |set {samplesheet_join}
-        }
-        if (params.singleOnly) {
-            samplesheetBranch.singleSample
-            |map {row -> meta2=[row.id,row]}
-            |set {samplesheet_join}
-        }
-        if (params.intrefOnly) {
-            samplesheetBranch.multiSample
-            |map {row -> meta2=[row.id,row]}
-            |set {samplesheet_join}
-        }
-        samplesheet_join.join(ubam_input_samples)
-            |map {samplename, metaSS, metaData, bam -> tuple(metaSS+metaData,bam)}
-        |set {ubam_ss_merged} // full unfiltered set
-
-        //write info of full set to summary file:
-
-        ubam_ss_merged
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
-        }
-        .collect()
-        | map { lines ->
-            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
-            ([header] + lines).join("\n")
-        }
-        |set {ubam_size_summary_ch}
-
-        //Branch by total input size (i.e. drop all samples with combined ubam size < e.g. 30GB)
-        ubam_ss_merged
-            |branch { meta, bams ->
-                keep:   (meta.totalsizeGB as double) >= params.minGB 
-                    return [meta, bams]
-                drop:   true
-                    return [meta, bams]
-            }
-        |set { ubam_ss_merged_size_split }
-
-        //write out dropped samples info
-        ubam_ss_merged_size_split.drop
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
-        }
-        .collect()
-        | map { lines ->
-            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
-            ([header] + lines).join("\n")
-        }
-        |set {ubam_size_dropped_ch}
-
-        ubam_ss_merged_size_split.keep 
-        .map { meta, bams ->
-            def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
-            "${meta.id}\t${meta.nBams}\t${inputReadSet_allDefault}\t${gb}\t${meta.testlist}"
-        }
-        .collect()
-        | map { lines ->
-            def header  ="sample\tbamcount\treadSet\ttotal_gb\ttestlist"
-            ([header] + lines).join("\n")
-        }
-        |set {ubam_size_keep_ch}
-
-        ubam_ss_merged_size_split.keep      // All data passing size limit - ready for downstream
-        |set {finalUbamInput}
-        
-        channel.fromPath(params.samplesheet)
-        |set {samplesheet_path_ch}
-    }
-
-    if (!params.samplesheet) {
-        Channel.fromPath(inputBam, followLinks: true)
-        |map { tuple(it.baseName,it) }
-
-        |map {id,bam -> 
-                (samplenameFull,pacbioID,readset,barcode)   =id.tokenize(".")
-                (instrument,date2,time)                      =pacbioID.tokenize("_")     
-                (samplename,material,testlist,gender)       =samplenameFull.tokenize("_")
-                meta=[id:samplename,caseID:date+"_"+testlist, gender:gender,rundate:date,testlist:testlist]
-                tuple(meta,bam)        
-            }
-
-        |groupTuple(sort:true)
-        | map { meta, bams ->
-            long totalBytes = (bams.sum { it.size() } as long)
-            double totalGB  = totalBytes / (1024.0 * 1024 * 1024)
-            def meta2 = meta + [
-                nBams       : bams.size(),
-                totalsizeGB : totalGB
-            ]
-            tuple(meta2, bams)
-        }
-        |branch  {meta,bam -> 
-            UNASSIGNED: (meta.id=~/UNASSIGNED/)
-                        return [meta,bam]
-            samples: true
-                        return [meta,bam]
-        }
-        | set {ubam_input }
-        
-        ubam_input.samples
-        |set {finalUbamInput}
-    }
-
+        .set { samplesheet_full }
 }
 
 
+///////////////////////////////////////////////////
+/////// ------- INPUT DISCOVERY ------- ///////////
+///////////////////////////////////////////////////
 
-/////////////////// MODULES ///////////////////////
+// -------------------------------------------------------------------------
+// uBAM discovery
+// -------------------------------------------------------------------------
+def inputBam
+def root = params.input ?: params.dataArchive
+
+if (params.hifiReads) {
+    inputBam = params.input ? "${root}/**/*.hifi_reads.*.bam" : "${root}/**/hifi_reads/*.hifi_reads.*.bam"
+}
+else if (params.failedReads) {
+    inputBam = params.input ? "${root}/**/*.fail_reads.*.bam" : "${root}/**/failed_reads/*.fail_reads.*.bam"
+}
+else {
+    inputBam = params.input ? "${root}/**/*.bam" : "${root}/**/*_reads/*.bam"
+}
+
+channel.fromPath(inputBam, followLinks: true).set { rawBam }
+
+if (params.samplesheet) {
+
+    rawBam
+        .map { bam ->
+            def id = bam.baseName
+            def (samplenameFull, pacbioID, readset, barcode) = id.tokenize('.')
+            def (samplename, material, testlist, gender)     = samplenameFull.tokenize('_')
+            tuple([id: samplename], bam)
+        }
+        .groupTuple(sort: true)
+        .map { meta, bams ->
+            long   totalBytes = (bams.sum { it.size() } as long)
+            double totalGB    = totalBytes / (1024.0 * 1024 * 1024)
+            tuple(meta + [nBams: bams.size(), totalsizeGB: totalGB], bams)
+        }
+        .branch { meta, bam ->
+            UNASSIGNED : (meta.id =~ /UNASSIGNED/)
+            samples    : true
+        }
+        .set { ubam_input }
+
+    ubam_input.samples
+        .map { meta, bam -> tuple(meta.id, meta, bam) }
+        .set { ubam_input_samples }
+
+    if (params.singleOnly) {
+        samplesheetBranch.singleSample.map { row -> tuple(row.id, row) }.set { samplesheet_join }
+    }
+    else if (params.intrefOnly) {
+        samplesheetBranch.multiSample.map { row -> tuple(row.id, row) }.set { samplesheet_join }
+    }
+    else {
+        samplesheet_full.map { row -> tuple(row.id, row) }.set { samplesheet_join }
+    }
+
+    samplesheet_join
+        .join(ubam_input_samples)
+        .map { samplename, metaSS, metaData, bam -> tuple(metaSS + metaData, bam) }
+        .set { ubam_ss_merged }
+
+    // ---- summary lines -------------------------------------------------
+    def summaryLine = { meta ->
+        def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
+        "${meta.id}\t${meta.nBams}\t${params.inputReadSet}\t${gb}\t${meta.testlist}"
+    }
+    def withHeader = { lines ->
+        (["sample\tbamcount\treadSet\ttotal_gb\ttestlist"] + lines).join("\n")
+    }
+
+    ubam_ss_merged.map { meta, bams -> summaryLine(meta) }.collect()
+        .map(withHeader).set { ubam_size_summary_ch }
+
+    // ---- size gate -----------------------------------------------------
+    ubam_ss_merged
+        .branch { meta, bams ->
+            keep : (meta.totalsizeGB as double) >= params.minHifiGBeff
+            drop : true
+        }
+        .set { ubam_ss_merged_size_split }
+
+    ubam_ss_merged_size_split.drop.map { meta, bams -> summaryLine(meta) }.collect()
+        .map(withHeader).set { ubam_size_dropped_ch }
+
+    ubam_ss_merged_size_split.keep.map { meta, bams -> summaryLine(meta) }.collect()
+        .map(withHeader).set { ubam_size_keep_ch }
+
+    // meta.sex was validated at parse time; nothing more to do here.
+    ubam_ss_merged_size_split.keep.set { finalUbamInput }
+}
+
+if (!params.samplesheet) {
+
+    rawBam
+        .map { bam ->
+            def id = bam.baseName
+            def (samplenameFull, pacbioID, readset, barcode) = id.tokenize('.')
+            def (instrument, runDateRaw, runTime)            = pacbioID.tokenize('_')
+            def (samplename, material, testlist, gender)     = samplenameFull.tokenize('_')
+            def meta = [
+                id       : samplename,
+                caseID   : "${runDateRaw}_${testlist}",
+                gender   : gender,
+                rundate  : runDateRaw,
+                testlist : testlist,
+                rekv     : 'noRekv',
+                groupKey : 'single'
+            ]
+            tuple(meta, bam)
+        }
+        .groupTuple(sort: true)
+        .map { meta, bams ->
+            long   totalBytes = (bams.sum { it.size() } as long)
+            double totalGB    = totalBytes / (1024.0 * 1024 * 1024)
+            tuple(meta + [nBams: bams.size(), totalsizeGB: totalGB], bams)
+        }
+        .branch { meta, bam ->
+            UNASSIGNED : (meta.id =~ /UNASSIGNED/)
+            samples    : true
+        }
+        .set { ubam_input }
+
+    ubam_input.samples.set { finalUbamInput }
+}
 
 
- include {
+///////////////////////////////////////////////////
+/////// ------- MODULES / SUBWORKFLOWS ------- ////
+///////////////////////////////////////////////////
+
+include {
         write_input_summary;
         write_dropped_samples_summary;
-        symlinks_ubam_dropped;
         write_analyzed_samples_summary;
-        hiPhase;
-        } from "./modules/dnaModules.nf" 
-///////////////// SUBWORKFLOWS ///////////////////////
+        symlinks_ubam_dropped;
+        hiPhaseTwoAln;
+        } from './modules/dnaModules.nf'
 
-include { PREPROCESS }              from './subworkflows/PREPROCESS.nf'
-include { PRE_PHASING }             from './subworkflows/PRE_PHASING.nf'
-include { POST_PHASING }            from './subworkflows/POST_PHASING.nf'
-include { FAMILY_ANALYSIS }         from './subworkflows/FAMILY_ANALYSIS.nf'
-include { FAMILY_ANALYSIS_ENTRY }   from './subworkflows/FAMILY_ANALYSIS.nf'
-////////////////// WORKFLOWS AND PROCESSES ///////////////////////
+include { PREPROCESS }            from './subworkflows/PREPROCESS.nf'
+include { PRE_PHASING }           from './subworkflows/PRE_PHASING.nf'
+include { POST_PHASING }          from './subworkflows/POST_PHASING.nf'
+include { FAMILY_ANALYSIS }       from './subworkflows/FAMILY_ANALYSIS.nf'
+include { FAMILY_ANALYSIS_ENTRY } from './subworkflows/FAMILY_ANALYSIS.nf'
 
+
+///////////////////////////////////////////////////
+/////// ------- MAIN WORKFLOW ------- /////////////
+///////////////////////////////////////////////////
 
 workflow {
 
-    if (!params.aligned) {
+    if (params.samplesheet) {
         write_input_summary(ubam_size_summary_ch)
         write_analyzed_samples_summary(ubam_size_keep_ch)
         write_dropped_samples_summary(ubam_size_dropped_ch)
         symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
-        PREPROCESS(finalUbamInput)
     }
+
+    PREPROCESS(finalUbamInput)
+
     PRE_PHASING(PREPROCESS.out.alignedFinal)
 
-    hiPhase(PRE_PHASING.out.hiphaseInput)
+    hiPhaseTwoAln(PRE_PHASING.out.hiphaseInput)
 
-    hiPhase.out.hiphase_bam
-        .join(hiPhase.out.hiphase_dv_vcf)
-        .join(hiPhase.out.hiphase_sawfish_vcf)
+    hiPhaseTwoAln.out.hifi_bam
+        .join(hiPhaseTwoAln.out.fail_bam, remainder: true)
+        .map { meta, bam, bai, failBam, failBai ->
+            tuple(meta, [bam: bam, bai: bai, failBam: failBam, failBai: failBai])
+        }
+        .join(hiPhaseTwoAln.out.dv_vcf)
+        .join(hiPhaseTwoAln.out.sawfish_vcf)
         .join(PRE_PHASING.out.sawfish_supporting_reads)
-        | map { meta, bam, bai, dv_vcf, dv_idx, sv_vcf, sv_idx, sv_jsonReads ->
-            tuple(meta, [
-                bam:           bam,
-                bai:           bai,
-                dv_vcf:        dv_vcf,
-                dv_idx:        dv_idx,
-                sawfish_vcf:   sv_vcf,
-                sawfish_idx:   sv_idx,
-                sawfish_reads: sv_jsonReads
+        .map { meta, aln, dv_vcf, dv_idx, sv_vcf, sv_idx, sv_jsonReads ->
+            tuple(meta, aln + [
+                dv_vcf        : dv_vcf,
+                dv_idx        : dv_idx,
+                sawfish_vcf   : sv_vcf,
+                sawfish_idx   : sv_idx,
+                sawfish_reads : sv_jsonReads
             ])
         }
-    | set { phasedAll }  // use for val(data) instead of path(data) setup in modules 
+        .set { phasedAll }
 
     POST_PHASING(
-                phasedAll,
-                PRE_PHASING.out.sawfish_supporting_reads,
-                PRE_PHASING.out.mosdepth,
-                PRE_PHASING.out.nanoStat
-                )
+        phasedAll,
+        PRE_PHASING.out.sawfish_supporting_reads,
+        PRE_PHASING.out.mosdepth,
+        PRE_PHASING.out.mosdepthSummary,
+        PRE_PHASING.out.nanoStat
+    )
 
-    def hpo_ch = params.hpo        
-        ? channel.fromPath(params.hpo)
-        : Channel.empty()
+    if (params.hpo) {
+        channel.fromPath(params.hpo, checkIfExists: true).set { hpo_ch }
+    } else {
+        Channel.empty().set { hpo_ch }
+    }
 
-    def ss_ch  = params.samplesheet 
-        ? channel.fromPath(params.samplesheet) 
-        : Channel.empty()
-
+    if (params.samplesheet) {
+        channel.fromPath(params.samplesheet, checkIfExists: true).set { ss_ch }
+    } else {
+        Channel.empty().set { ss_ch }
+    }
 
     if (params.jointCall || params.jointSS) {
 
-        PRE_PHASING.out.sawfish_discover_dir   // tuple(meta), path(dir), val(bam)
-        | map { meta, dir, bam ->
-            tuple(
-            meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}")
-            )
-        }
-        | groupTuple()   // -> caseID, [ (meta,line), (meta,line), ... ]
-        | map { caseID, records ->
+        // Manifests are written to the run's runInfo dir rather than launchDir,
+        // so they are recoverable as provenance after the run.
+        def manifestDir = file("${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}/manifests")
+        manifestDir.mkdirs()
 
-            def anchorMeta = records[0][0]
-
-            // build manifest file content
-            def content = records.collect { it[1] }.join("\n") + "\n"
-
-            // write the manifest to a file in the work dir
-            def mf = file("${caseID}.sawFishJoinCall.manifest.csv")
-            mf.text = content
-
-            // emit tuple(meta, manifest)
-            tuple(anchorMeta, mf)
-        }
-        | set { sawfish_jointCall_manifest_ch }
+        PRE_PHASING.out.sawfish_discover_dir      // tuple(meta, discoverDir, hifiBamPath)
+            .map { meta, dir, bam ->
+                assert meta.caseID : "Joint calling requested but sample ${meta.id} has no caseID. Use --jointSS, or add caseID to the samplesheet parser."
+                tuple(meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}"))
+            }
+            .groupTuple()
+            .map { caseID, records ->
+                def anchorMeta = records[0][0]
+                def content    = records.collect { it[1] }.join('\n') + '\n'
+                def mf         = manifestDir.resolve("${caseID}.sawFishJointCall.manifest.csv")
+                mf.text        = content
+                tuple(anchorMeta, mf)
+            }
+            .set { sawfish_jointCall_manifest_ch }
 
         PRE_PHASING.out.dv_gvcf
-        .map { meta, gvcf, tbi ->
-            // store one record per sample: (caseID, meta, gvcfPath)
-            tuple(meta.caseID, tuple(meta, gvcf.toString()))
-        }
-        .groupTuple()
-        .map { caseID, records ->
-            def anchorMeta = records[0][0]
-            def content = records.collect { it[1] }.join('\n') + '\n'
-            def mf = file("${caseID}.manifest")
-            mf.text = content
-            tuple(anchorMeta, mf)
-        }
-        .set { glnexus_manifest_ch }
+            .map { meta, gvcf, tbi ->
+                assert meta.caseID : "Joint calling requested but sample ${meta.id} has no caseID."
+                tuple(meta.caseID, tuple(meta, gvcf.toString()))
+            }
+            .groupTuple()
+            .map { caseID, records ->
+                def anchorMeta = records[0][0]
+                def content    = records.collect { it[1] }.join('\n') + '\n'
+                def mf         = manifestDir.resolve("${caseID}.glnexus.manifest")
+                mf.text        = content
+                tuple(anchorMeta, mf)
+            }
+            .set { glnexus_manifest_ch }
 
         FAMILY_ANALYSIS(
-                        glnexus_manifest_ch,
-                        sawfish_jointCall_manifest_ch,
-                        hpo_ch,
-                        ss_ch
-                        )
-
+            glnexus_manifest_ch,
+            sawfish_jointCall_manifest_ch,
+            hpo_ch,
+            ss_ch
+        )
     }
 }
 
-/*
 
-        PRE_PHASING.out.sawfish_discover_dir
-        | map {" --sample "+it}
-        |collectFile(name: "sawfish_discover_dir_list.csv", newLine: false)
-        |map {it.text.trim()}
-        |set {sawfish_discover_bam_list_ch}
+///////////////////////////////////////////////////
+/////// ------- COMPLETION ------- ////////////////
+///////////////////////////////////////////////////
 
-
-    if (params.test ||params.summary) {
-        finalUbamInput.view()
-        samplesheet_full.view()
-        write_input_summary(ubam_size_summary_ch)
-        write_analyzed_samples_summary(ubam_size_keep_ch)
-        write_dropped_samples_summary(ubam_size_dropped_ch)
-        symlinks_ubam_dropped(ubam_ss_merged_size_split.drop)
-    }
-
-
-
-        if (!params.skipQC) {
-
-            Channel.empty()
-            .mix(QC.out.mosdepth)
-            .mix(QC.out.nanoStat)
-            .mix(whatsHap_stats.out.multiqc)
-            .map { meta, qcfile ->
-                tuple(params.multiqcKey(meta), meta, qcfile)
-            }
-            .groupTuple(by: 0)
-            .map { key, metas, qcfiles ->
-
-                // pick one representative meta for publishDir + naming
-                def meta0 = metas.find { it.relation == 'index' } ?: metas[0]
-
-                tuple(meta0, qcfiles)
-            }
-            .set { multiqc_inputs_ch }
-            multiQC(multiqc_inputs_ch)
-        }
-
-
-
-        hiPhase.out.hiphase_bam
-        .join(svdb_SawFish.out.sawfishAF10)
-        .join(STRUCTURALVARIANTS.out.sawfish_supporting_reads)
-        | map {meta,bam,bai,sv10_vcf,sv10_idx,sv_jsonReads -> 
-        tuple(meta,[bam:bam,bai:bai,sawfish10_vcf:sv10_vcf,sawfish10_idx:sv10_idx,sawfish_reads:sv_jsonReads])}
-        |set {phasedSawfishAF10}   
-
-        svTopo_filtered(phasedSawfishAF10)
-
-
-
-    if (params.hpo && params.samplesheet && (params.jointCall || params.jointSS)) {
-    
-    glNexus_jointCall.out.glnexus_vcf
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {genomiser_ch}
-    
-    glNexus_jointCall.out.glnexus_wes_roi_vcf
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {exomiser_ch}
-    
-    svdb_sawFish2_jointCall_caseID.out.sawfish_caseID_AF10
-    .combine(hpo_ch)
-    .combine(samplesheet_path_ch)
-    |set {exomiserSV_ch}
-        //above structure: caseID, vcf, idx, hpoFile,samplesheet
-        exo14_2508_exome(exomiser_ch)
-        exo14_2508_genome(genomiser_ch)
-        exo14_2508_SV(exomiserSV_ch)
-    }
-
-
- include {pbmm2_align;
-        create_fofn;
-        pbmm2_align_mergedData;
-        extractHifi;
-        inputFiles_symlinks_ubam;
-        sawFish2;
-        svdb_SawFish;
-        sawFish2_jointCall_all;
-        svdb_sawFish2_jointCall_all;
-        sawFish2_jointCall_caseID;
-        svdb_sawFish2_jointCall_caseID;
-        deepvariant;
-        glNexus_jointCall;
-        trgt4_diseaseSTRs;
-        trgt4_diseaseSTRs_plots;
-        trgt4_diseaseSTRs_plots_meth;
-        trgt4_all;
-        trgt5_diseaseSTRs;
-        trgt5_diseaseSTRs_plots;
-        trgt5_diseaseSTRs_plots_meth;
-        kivvi_d4z4;
-        pbCPGtools;
-        paraphase;
-        paraphase35
-        starphase;
-        methBat;
-        multiQC;
-        multiQC_ALL;
-        mosdepthROI;
-        cramino;
-        nanoStat;
-        whatsHap_stats;
-        hiPhase;
-        build_symlinks;
-        check_tmpdir;
-        svTopo;
-        svTopo_filtered;
-        mitorsaw;
-        exo14_2508_exome;
-        exo14_2508_genome;
-        exo14_2508_SV;
-        kivvi05_d4z4;
-        write_input_summary;
-        write_dropped_samples_summary;
-        symlinks_ubam_dropped;
-        write_analyzed_samples_summary;
-        } from "./modules/dnaModules.nf" 
-
-
-
-
-
-*/
-
-
-// Virker ikke lige pt.:
 workflow.onComplete {
 
-    if( !params.createSymlinks ) {
+    // ---- failure manifest ---------------------------------------------------
+    // params.errorMode = 'cohort' lets a bad sample be skipped so a large run
+    // can finish. That is only acceptable if the skip is recorded somewhere a
+    // human will see it.
+    def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+
+    if (failed > 0) {
+        try {
+            def f = file("${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}/FAILED_TASKS.txt")
+            f.parent.mkdirs()
+            f.text = """\
+                Run          : ${workflow.runName}
+                Completed    : ${workflow.complete}
+                Succeeded    : ${workflow.stats.succeedCount}
+                Failed       : ${workflow.stats.failedCount}
+                Ignored      : ${workflow.stats.ignoredCount}
+                Error mode   : ${params.errorMode}
+
+                Per-task detail is in the trace file under NextflowReports/.
+                Output for the affected samples is INCOMPLETE and must not be
+                reported without review.
+                """.stripIndent()
+            log.warn "*** ${failed} task(s) failed or were ignored — see ${f} ***"
+        }
+        catch (Exception e) {
+            log.warn "Could not write FAILED_TASKS.txt: ${e.message}"
+        }
+    }
+
+    // ---- symlink maintenance ------------------------------------------------
+    if (!params.createSymlinks) {
         log.info "Symlink maintenance disabled by config."
         return
     }
-
-    if( !workflow.success ) {
-        log.warn "Workflow failed – skipping symlink maintenance."
+    if (!workflow.success) {
+        log.warn "Workflow failed — skipping symlink maintenance."
         return
     }
 
     def mirrorScript  = params.mirrorSampleData
     def collectScript = params.collectDataTypeSymlink
 
-    if( !mirrorScript || !collectScript ) {
-        log.warn "Symlink script paths not defined in config – skipping."
+    if (!mirrorScript || !collectScript) {
+        log.warn "Symlink script paths not defined in config — skipping."
         return
     }
 
-    def cmds = [
-        "bash '${collectScript}'",
-        "bash '${mirrorScript}'"
-        
-    ]
-
-    cmds.each { cmd ->
+    ["bash '${collectScript}'", "bash '${mirrorScript}'"].each { cmd ->
         log.info "onComplete: running: ${cmd}"
-
         try {
             def p = ["bash", "-lc", cmd].execute()
             p.waitForProcessOutput(System.out, System.err)
-
-            if( p.exitValue() != 0 ) {
+            if (p.exitValue() != 0) {
                 log.warn "onComplete: command failed (exit ${p.exitValue()}): ${cmd}"
             } else {
                 log.info "onComplete: finished OK: ${cmd}"
             }
         }
-        catch(Exception e) {
+        catch (Exception e) {
             log.warn "onComplete: exception while running '${cmd}': ${e.message}"
         }
     }
 }
-
