@@ -64,8 +64,7 @@ Single column, one sample per row, 7 underscore-separated fields:
 ```
 
 **Gender must be M or K.** Anything else aborts the run at samplesheet parse
-time rather than silently genotyping the sample as XX. Sawfish `--expected-cn`
-and TRGT `--karyotype` depend on it.
+time rather than silently genotyping the sample as XX. 
 
 ## Custom samplesheet, unrelated samples
 
@@ -146,15 +145,6 @@ Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
 --skipSV        [bool]: Skip Sawfish
 --skipSTR       [bool]: Skip TRGT and Kivvi
 
-
-### Safety / error handling
---errorMode     [str]:  'strict' (default) — retry transient failures, then
-                            finish the run and fail loudly.
-                        'cohort' — retry, then ignore, so one bad sample cannot
-                            abort a large retrospective build. Failures are
-                            recorded in runInfo/<date>_<ss>/FAILED_TASKS.txt.
-
-
 ### SLURM execution
 -profile slurm:         Run on the KG Vejle SLURM cluster
                             Default: run locally on the launching node
@@ -163,8 +153,7 @@ Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
 ```
 
 **Note:** if any of `--skipVariants`, `--skipSV` or `--skipSTR` is set, phasing
-is disabled — HiPhase needs DeepVariant, Sawfish and TRGT output. A warning is
-logged when this happens.
+is disabled — HiPhase needs DeepVariant, Sawfish and TRGT output. 
 
 ---
 
