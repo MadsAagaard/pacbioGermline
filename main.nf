@@ -228,6 +228,81 @@ if (params.samplesheet) {
         .map { samplename, metaSS, metaData, bam -> tuple(metaSS + metaData, bam) }
         .set { ubam_ss_merged }
 
+<<<<<<< HEAD
+
+
+/////////////////// MODULES ///////////////////////
+include {pbmm2_align;
+        create_fofn;
+        pbmm2_align_mergedData;
+        inputFiles_symlinks_ubam;
+        sawFish2;
+        svdb_SawFish;
+        sawFish2_jointCall_all;
+        svdb_sawFish2_jointCall_all;
+        sawFish2_jointCall_caseID;
+        svdb_sawFish2_jointCall_caseID;
+        deepvariant;
+        glNexus_jointCall;
+        trgt4_diseaseSTRs;
+        trgt4_diseaseSTRs_plots;
+        trgt4_all;
+        kivvi_d4z4;
+        methylationBW;
+        paraphase;
+        starphase;
+        methylationSegm;
+        multiQC;
+        multiQC_ALL;
+        mosdepthROI;
+        cramino;
+        nanoStat;
+        whatsHap_stats;
+        hiPhase;
+        build_symlinks;
+        check_tmpdir;
+        svTopo;
+        svTopo_filtered;
+        mitorsaw;
+        exo14_2508_exome;
+        exo14_2508_genome;
+        exo14_2508_SV;
+        kivvi05_d4z4;
+        write_input_summary;
+        write_dropped_samples_summary;
+        symlinks_ubam_dropped;
+        write_analyzed_samples_summary;
+        //collect_versions;
+        } from "./modules/dnaModules.nf" 
+
+
+puretargetPlotGenes=["SCA1_ATXN1",
+                     "SCA2_ATXN2",
+                     "SCA3_ATXN3",
+                     "SCA6_CACNA1A",
+                     "SCA7_ATXN7",
+                     "CANVAS_RFC1",
+                     "DM1_DMPK",
+                     "DM2_CNBP",
+                     "FTDALS1_C9orf72",
+                     "FXS_FMR1",
+                     "FRDA_FXN",
+                     "HD_HTT"]
+
+
+////////////////// WORKFLOWS AND PROCESSES ///////////////////////
+
+workflow PREPROCESS {
+
+    take:
+    finalUbamInput     
+   
+    main:
+
+    inputFiles_symlinks_ubam(finalUbamInput)
+    create_fofn(finalUbamInput)
+    pbmm2_align_mergedData(create_fofn.out)
+=======
     // ---- summary lines -------------------------------------------------
     def summaryLine = { meta ->
         def gb = String.format(Locale.US, "%.2f", (meta.totalsizeGB as double))
@@ -236,9 +311,17 @@ if (params.samplesheet) {
     def withHeader = { lines ->
         (["sample\tbamcount\treadSet\ttotal_gb\ttestlist"] + lines).join("\n")
     }
+>>>>>>> 4ceb285ec4f6318274817c333b4c0e90421a3884
 
+<<<<<<< HEAD
+    emit:
+    aligned=pbmm2_align_mergedData.out.bam
+    
+}
+=======
     ubam_ss_merged.map { meta, bams -> summaryLine(meta) }.collect()
         .map(withHeader).set { ubam_size_summary_ch }
+>>>>>>> 4ceb285ec4f6318274817c333b4c0e90421a3884
 
     // ---- size gate -----------------------------------------------------
     ubam_ss_merged
@@ -416,18 +499,71 @@ workflow {
     }
 }
 
+workflow.onComplete {
 
+<<<<<<< HEAD
+    if( !params.run_symlink_maintenance ) {
+        log.info "Symlink maintenance disabled by config."
+        return
+    }
+=======
 ///////////////////////////////////////////////////
 /////// ------- COMPLETION ------- ////////////////
 ///////////////////////////////////////////////////
+>>>>>>> 4ceb285ec4f6318274817c333b4c0e90421a3884
 
+<<<<<<< HEAD
+    if( !workflow.success ) {
+        log.warn "Workflow failed – skipping symlink maintenance."
+        return
+    }
+=======
 workflow.onComplete {
+>>>>>>> 4ceb285ec4f6318274817c333b4c0e90421a3884
 
+<<<<<<< HEAD
+    def mirrorScript  = params.mirrorSampleData
+    def collectScript = params.collectDataTypeSymlink
+
+    if( !mirrorScript || !collectScript ) {
+        log.warn "Symlink script paths not defined in config – skipping."
+        return
+    }
+
+    def cmds = [
+        "bash '${mirrorScript}'",
+        "bash '${collectScript}'"
+    ]
+
+    cmds.each { cmd ->
+        log.info "onComplete: running: ${cmd}"
+
+        try {
+            def p = ["bash", "-lc", cmd].execute()
+            p.waitForProcessOutput(System.out, System.err)
+
+            if( p.exitValue() != 0 ) {
+                log.warn "onComplete: command failed (exit ${p.exitValue()}): ${cmd}"
+            } else {
+                log.info "onComplete: finished OK: ${cmd}"
+            }
+        }
+        catch(Exception e) {
+            log.warn "onComplete: exception while running '${cmd}': ${e.message}"
+        }
+    }
+}
+
+
+
+/*
+=======
     // ---- failure manifest ---------------------------------------------------
     // params.errorMode = 'cohort' lets a bad sample be skipped so a large run
     // can finish. That is only acceptable if the skip is recorded somewhere a
     // human will see it.
     def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+>>>>>>> 4ceb285ec4f6318274817c333b4c0e90421a3884
 
     if (failed > 0) {
         try {
