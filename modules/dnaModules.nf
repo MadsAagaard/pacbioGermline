@@ -24,6 +24,11 @@ process write_input_summary {
         mode: 'copy', 
         pattern: "*.txt")
 
+    publishDir (
+        path: {"${params.lrsDocuments}/labWareExport/runSummaries/allSamples/"}, 
+        mode: 'copy', 
+        pattern: "*.txt")
+
     input:
     val(summary_ch)
 
