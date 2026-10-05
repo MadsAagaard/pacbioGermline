@@ -48,6 +48,11 @@ process write_dropped_samples_summary {
         mode: 'copy', 
         pattern: "*.txt")
 
+    publishDir (
+        path: {"${params.lrsDocuments}/labWareExport/runSummaries/droppedSamples/"}, 
+        mode: 'copy', 
+        pattern: "*.txt")
+
     input:
     val(summary_ch)
 
@@ -71,6 +76,11 @@ process write_analyzed_samples_summary {
         path: {"${params.lrsDocuments}/summaryData/analyzedSamples/"}, 
         mode: 'copy', 
         pattern: "*.txt")
+    publishDir (
+        path: {"${params.lrsDocuments}/labWareExport/runSummaries/analyzedSamples/"}, 
+        mode: 'copy', 
+        pattern: "*.txt")
+
 
     input:
     val(summary_ch)
