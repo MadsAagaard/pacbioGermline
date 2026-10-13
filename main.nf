@@ -317,6 +317,14 @@ include { FAMILY_ANALYSIS_ENTRY } from './subworkflows/FAMILY_ANALYSIS.nf'
 ///////////////////////////////////////////////////
 
 workflow {
+    // Record this run's own sample output folders. onComplete mirrors only
+    // these, never the whole tree, so output of other runs (still running, or
+    // failed) is not exposed in the shared patient area.
+    finalUbamInput
+        .map { meta, bams -> params.outBase(meta).toString() }
+        .unique()
+        .collectFile(name: 'sampleOutputDirs.txt', newLine: true, sort: true,
+                     storeDir: "${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}")
 
     if (params.samplesheet) {
         write_input_summary(ubam_size_summary_ch)
@@ -427,7 +435,11 @@ workflow.onComplete {
     // params.errorMode = 'cohort' lets a bad sample be skipped so a large run
     // can finish. That is only acceptable if the skip is recorded somewhere a
     // human will see it.
-    def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+    // Tasks whose failure was ignored (errorMode 'cohort'): their samples'
+    // output is incomplete. Not failedCount: that also counts attempts that
+    // failed and then succeeded on retry, so a clean run with one OOM retry
+    // would be reported as incomplete.
+    def failed = workflow.stats.ignoredCount ?: 0
 
     if (failed > 0) {
         try {
@@ -461,28 +473,36 @@ workflow.onComplete {
         log.warn "Workflow failed — skipping symlink maintenance."
         return
     }
-
-    def mirrorScript  = params.mirrorSampleData
-    def collectScript = params.collectDataTypeSymlink
-
-    if (!mirrorScript || !collectScript) {
-        log.warn "Symlink script paths not defined in config — skipping."
+    if (failed > 0) {
+        log.warn "${failed} task(s) failed and were ignored — skipping symlink maintenance. Review FAILED_TASKS.txt, then mirror by hand."
         return
     }
 
-    ["bash '${collectScript}'", "bash '${mirrorScript}'"].each { cmd ->
-        log.info "onComplete: running: ${cmd}"
-        try {
-            def p = ["bash", "-lc", cmd].execute()
-            p.waitForProcessOutput(System.out, System.err)
-            if (p.exitValue() != 0) {
-                log.warn "onComplete: command failed (exit ${p.exitValue()}): ${cmd}"
-            } else {
-                log.info "onComplete: finished OK: ${cmd}"
-            }
+    def mirrorScript = params.mirrorSampleData
+    if (!mirrorScript) {
+        log.warn "params.mirrorSampleData not defined in config — skipping."
+        return
+    }
+
+    // Mirror only this run's own sample folders (list written by the workflow).
+    def runDirList = file("${params.outputDirBase}/runInfo/${params.dateStamp}_${params.ssBase}/sampleOutputDirs.txt")
+    if (!runDirList.exists() || runDirList.size() == 0) {
+        log.info "No sample output list for this run (${runDirList}) — nothing to mirror."
+        return
+    }
+
+    def cmd = "bash '${mirrorScript}' --list '${runDirList}'"
+    log.info "onComplete: running: ${cmd}"
+    try {
+        def p = ["bash", "-lc", cmd].execute()
+        p.waitForProcessOutput(System.out, System.err)
+        if (p.exitValue() != 0) {
+            log.warn "onComplete: command failed (exit ${p.exitValue()}): ${cmd}"
+        } else {
+            log.info "onComplete: finished OK: ${cmd}"
         }
-        catch (Exception e) {
-            log.warn "onComplete: exception while running '${cmd}': ${e.message}"
-        }
+    }
+    catch (Exception e) {
+        log.warn "onComplete: exception while running '${cmd}': ${e.message}"
     }
 }
