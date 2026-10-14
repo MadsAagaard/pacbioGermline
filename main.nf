@@ -424,6 +424,7 @@ workflow {
     }
 }
 
+workflow.onComplete {
 
 ///////////////////////////////////////////////////
 /////// ------- COMPLETION ------- ////////////////
@@ -435,11 +436,8 @@ workflow.onComplete {
     // params.errorMode = 'cohort' lets a bad sample be skipped so a large run
     // can finish. That is only acceptable if the skip is recorded somewhere a
     // human will see it.
-    // Tasks whose failure was ignored (errorMode 'cohort'): their samples'
-    // output is incomplete. Not failedCount: that also counts attempts that
-    // failed and then succeeded on retry, so a clean run with one OOM retry
-    // would be reported as incomplete.
-    def failed = workflow.stats.ignoredCount ?: 0
+    def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+
 
     if (failed > 0) {
         try {
