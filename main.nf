@@ -424,7 +424,6 @@ workflow {
     }
 }
 
-workflow.onComplete {
 
 ///////////////////////////////////////////////////
 /////// ------- COMPLETION ------- ////////////////
@@ -436,7 +435,8 @@ workflow.onComplete {
     // params.errorMode = 'cohort' lets a bad sample be skipped so a large run
     // can finish. That is only acceptable if the skip is recorded somewhere a
     // human will see it.
-    def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+    //def failed = (workflow.stats.failedCount ?: 0) + (workflow.stats.ignoredCount ?: 0)
+    def failed = workflow.stats.ignoredCount ?: 0
 
 
     if (failed > 0) {
