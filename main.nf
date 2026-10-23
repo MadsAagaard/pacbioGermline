@@ -35,6 +35,8 @@ OutputDirBase : ${params.outputDirBase}
 workDir       : ${workflow.workDir}
 layout        : ${params.layoutMode}
 error mode    : ${params.errorMode}
+lrsShared     : ${params.lrsSharedDir}
+lrsCustomTools: ${params.lrsCustomToolsBase}
 min HiFi GB   : ${params.minHifiGBeff}
 """
 
