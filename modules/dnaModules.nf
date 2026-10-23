@@ -728,7 +728,7 @@ process svTopo {
 
     svtopovz \
     --svtopo-dir ${meta.id}.svtopo_out/ \
-    --genes ${params.gencodeGtf} \
+    --genes ${params.gencodeV36Gtf} \
     --image-type jpg
 
     mv ${meta.id}.svtopo_out/index.html ${meta.id}.svtopo_out/${meta.id}.sawfishSV.svtopo.html
@@ -765,7 +765,7 @@ process svTopo_filtered {
 
     svtopovz \
     --svtopo-dir ${meta.id}.svtopo_out/ \
-    --genes ${params.gencodeGtf} \
+    --genes ${params.gencodeV36Gtf} \
     --image-type jpg
 
     mv ${meta.id}.svtopo_out/index.html ${meta.id}.svtopo_out/${meta.id}.sawfishSV.svtopo.html
