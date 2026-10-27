@@ -46,7 +46,11 @@ if (params.help) {
       --outdir [path]      output root (default /lnx01_data3/pacBioAnalyzedSamples/<genome>/<year>/RNAdata)
       --inputRNA [path]    folder to search for RNA uBAMs (**/*.lima.*.bam) instead of the archive
       --inhouseSplicingGenelist [path]
-                           splicing panel (default: none = all genes)
+                           splicing panel (default: conf/germlineRNA.config;
+                           null = all genes). Checked against the GTF at launch.
+      --spliceGeneAliases [path]
+                           legacy <TAB> current symbol, used when a panel symbol
+                           is not in the GTF
       --rnaIdentityCheck false
                            skip the RNA vs DNA identity check (not recommended)
     """.stripIndent()
@@ -189,6 +193,64 @@ metas.findAll { m -> !ubamsByNpn[m.npnRNA] }.each { m ->
     problems << "RNA ${m.npnRNA}: no ${m.npnRNA}.*.lima.*.bam under ${rnaRoot}"
 }
 
+
+// =============================================================================
+// SPLICING PANEL vs GTF  (launch check; same rule as lrs_splice load_panel)
+// =============================================================================
+// lrs_splice stops (exit 2) on any panel symbol it cannot find in the GTF, but
+// only after preprocessing has run for hours. Resolve the panel here instead:
+// a symbol is used as is when it is a gene_name in the GTF, else through the
+// alias file (legacy <TAB> current). Anything left over stops the run now.
+
+def panelResolved = []                  // [input, gtfSymbol, how]
+def panelMissing  = []
+
+if (params.inhouseSplicingGenelist) {
+    def clean   = { String s -> s.replaceAll(/\r$/, '') }
+    def wanted  = file(params.inhouseSplicingGenelist, checkIfExists: true).readLines()
+        .collect { clean(it).split('\t')[0].trim() }
+        .findAll { it && !it.startsWith('#') }
+        .unique()
+    def aliases = [:]
+    if (params.spliceGeneAliases) {
+        file(params.spliceGeneAliases, checkIfExists: true).readLines().each { l ->
+            def f = clean(l).split('\t')
+            if (f.size() >= 2 && f[0].trim() && f[1].trim() && !f[0].startsWith('#'))
+                aliases[f[0].trim()] = f[1].trim()
+        }
+    }
+
+    // gene_name of every 'gene' line in the GTF lrs_splice reads (plain or .gz)
+    def gtf   = file(params.gencodeV49Gtf, checkIfExists: true)
+    def known = new HashSet<String>()
+    def input = gtf.name.endsWith('.gz') ? new java.util.zip.GZIPInputStream(gtf.newInputStream()) : gtf.newInputStream()
+    input.withReader { rd ->
+        String line
+        while ((line = rd.readLine()) != null) {
+            if (!line || line.charAt(0) == ('#' as char)) continue
+            int t1 = line.indexOf('\t');      if (t1 < 0) continue
+            int t2 = line.indexOf('\t', t1 + 1); if (t2 < 0) continue
+            int t3 = line.indexOf('\t', t2 + 1); if (t3 < 0) continue
+            if (line.substring(t2 + 1, t3) != 'gene') continue
+            int i = line.indexOf('gene_name "', t3)
+            if (i < 0) continue
+            i += 11
+            known << line.substring(i, line.indexOf('"', i))
+        }
+    }
+
+    wanted.each { g ->
+        if (g in known)                                 panelResolved << [g, g, 'GTF']
+        else if (aliases[g] && aliases[g] in known)     panelResolved << [g, aliases[g], 'alias']
+        else                                            panelMissing  << (aliases[g] ? "${g} (alias ${aliases[g]} also not in the GTF)" : g)
+    }
+    if (panelMissing) {
+        problems << ("splicing panel ${params.inhouseSplicingGenelist}: ${panelMissing.size()} of ${wanted.size()} symbols not in ${gtf.name}" +
+                     " — add legacy<TAB>current lines to ${params.spliceGeneAliases ?: 'an alias file (--spliceGeneAliases)'}:\n      " +
+                     panelMissing.join('\n      '))
+    }
+}
+
 if (problems) {
     exit 1, "\nGERMLINE RNA INPUT ERRORS (${params.rnaSS}) — nothing was started:\n  - " + problems.join('\n  - ') + "\n"
 }
@@ -209,6 +271,12 @@ manifest.text = (
     }
 ).join('\n') + '\n'
 
+if (panelResolved) {
+    file("${runInfoDir}/splicingPanel_resolved.${params.traceStamp}.tsv").text =
+        (['panelSymbol', 'gtfSymbol', 'resolvedBy'].join('\t') + '\n') +
+        panelResolved.collect { it.join('\t') }.join('\n') + '\n'
+}
+
 
 log.info """\
 ======================================================
@@ -221,7 +289,8 @@ Samples         : ${metas.size()}  (DNA+RNA: ${metas.count { it.dnaNPN }}, RNA o
 RNA uBAM search : ${params.inputRNA ?: params.dataArchiveRNA}/**/*.lima.*.bam
 OutputDirBase   : ${params.outputDirBase}
 Input manifest  : ${manifest}
-Splicing panel  : ${params.inhouseSplicingGenelist ?: 'none (all genes)'}
+Splicing panel  : ${params.inhouseSplicingGenelist ? "${params.inhouseSplicingGenelist} (${panelResolved.size()} genes, ${panelResolved.count { it[2] == 'alias' }} via alias)" : 'none (all genes)'}
+Fusion gene list: ${params.inhouseFusionGenelist}
 Recurrence store: ${params.spliceRecurrenceDb ?: 'none'}
 Identity check  : ${params.rnaIdentityCheck}
 workDir         : ${workflow.workDir}
