@@ -58,6 +58,8 @@ if (params.help) {
                            is not in the GTF
       --rnaIdentityCheck false
                            skip the RNA vs DNA identity check (not recommended)
+      --summaryFusions true
+                           fusion cards in the summary (default false: counts only)
       --spliceRecurrenceDb [path|false]
                            blood recurrence store (default: conf/germlineRNA.config);
                            false = no store
@@ -314,6 +316,7 @@ OutputDirBase   : ${params.outputDirBase}
 Input manifest  : ${manifest}
 Splicing panel  : ${params.inhouseSplicingGenelist ? "${params.inhouseSplicingGenelist} (${panelResolved.size()} genes, ${panelResolved.count { it[2] == 'alias' }} via alias)" : 'none (all genes)'}
 Fusion gene list: ${params.inhouseFusionGenelist}
+Summary fusions : ${params.summaryFusions ? 'cards' : 'counts only (--summaryFusions true for cards)'}
 Recurrence store: ${params.spliceRecurrenceDb ?: 'none'}
 Identity check  : ${params.rnaIdentityCheck}
 workDir         : ${workflow.workDir}
