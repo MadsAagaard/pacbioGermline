@@ -29,6 +29,7 @@ include {
     whatshap_haplotag;
     lrs_splice;
     lrs_splice_report;
+    germline_rna_summary;
 } from '../modules/rnaModules.nf'
 
 
@@ -260,4 +261,70 @@ workflow RNA_SPLICING_GERMLINE {
         panel  = lrs_splice.out.panel
         json   = lrs_splice.out.json
         html   = lrs_splice_report.out.html
+}
+
+/*
+ * Per-sample germline RNA summary (YAML + JSON + HTML), one per RNA sample.
+ * Required per sample: refine report, pigeon reports, pbfusion INHOUSE file.
+ * Optional (joined with remainder, absent = [] / null):
+ *   fusion_annotate JSON, identity TSV + verdict, haplotag list, lrs_splice JSON + report.
+ * When splicing is absent the reason is passed on, so the report never just says
+ * "not run": identity check not PASS, or no output (task failed / ignored).
+ */
+workflow RNA_SUMMARY_GERMLINE {
+    take:
+        isoseqForSummary        // (meta, refine report json)
+        pigeonForSummary        // (meta, filtered report json, raw report json)
+        fusionForSummary        // (meta, *.INHOUSE.txt)
+        fusionAnnot             // (meta, *.fusion_annot.json)          may be empty
+        identity                // (meta, *.identityCheck.tsv, verdict) may be empty
+        haplotagList            // (meta, *.haplotag.tsv)               may be empty
+        spliceJson              // (meta, *.aberrantSplicing.json)      may be empty
+        spliceHtml              // (meta, *.aberrantSplicing.report.html)
+    main:
+        fusionAnnot.map  { meta, json -> [meta.id, json] }                    .set { annot_by_id }
+        identity.map     { meta, tsv, verdict -> [meta.id, [tsv: tsv, verdict: verdict]] } .set { id_by_id }
+        haplotagList.map { meta, tsv -> [meta.id, tsv] }                      .set { hap_by_id }
+        spliceJson.map   { meta, json -> [meta.id, json] }
+            .join(spliceHtml.map { meta, html -> [meta.id, html] }, remainder: true)
+            .filter { id, json, html -> json != null }                     // report without JSON cannot happen; be safe
+            .map { id, json, html -> [id, [json: json, html: html]] }
+            .set { splice_by_id }
+
+        isoseqForSummary
+            .join(pigeonForSummary)
+            .join(fusionForSummary)
+            | map { meta, refine_json, pigeonFiltered_json, pigeonRaw_json, fusions ->
+                [meta.id, meta, [
+                    refineReportJSON:   refine_json,
+                    pigeonFilteredJSON: pigeonFiltered_json,
+                    pigeonRawJSON:      pigeonRaw_json,
+                    fusionInhouse:      fusions ]]
+            }
+            | join(annot_by_id,  remainder: true) | filter { it[1] != null }
+            | map { id, meta, d, annot -> [id, meta, d + [fusionAnnot: annot ?: []]] }
+            | join(id_by_id,     remainder: true) | filter { it[1] != null }
+            | map { id, meta, d, idt -> [id, meta, d + [identityTsv: idt ? idt.tsv : [], identityVerdict: idt ? idt.verdict : null]] }
+            | join(hap_by_id,    remainder: true) | filter { it[1] != null }
+            | map { id, meta, d, hap -> [id, meta, d + [haplotagList: hap ?: []]] }
+            | join(splice_by_id, remainder: true) | filter { it[1] != null }
+            | map { id, meta, d, sp ->
+                def note = null
+                if (!sp) {
+                    note = (d.identityVerdict && d.identityVerdict != 'PASS')
+                        ? "not run: RNA/DNA identity check ${d.identityVerdict}"
+                        : "no output: lrs_splice or its report failed or was ignored (see runInfo FAILED_TASKS)"
+                }
+                tuple(meta, d + [
+                    spliceJSON:   sp ? sp.json : [],
+                    spliceReport: (sp && sp.html) ? sp.html.name : null,
+                    spliceNote:   note ])
+            }
+            | set { summary_in }
+
+        germline_rna_summary(summary_in)
+
+    emit:
+        html = germline_rna_summary.out.html
+        json = germline_rna_summary.out.json
 }
