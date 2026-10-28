@@ -19,8 +19,10 @@ nextflow.enable.dsl = 2
  *   - lrs_splice: --patient ${meta.patient ?: meta.id}
  *   - NEW rna_dna_identity: RNA vs DNA genotype check before haplotagging
  *   - stub blocks, for -stub test runs
- *   - only the processes rna.nf uses (no summary, ASE, OUTRIDER, ISA, oarfish,
+ *   - only the processes rna.nf uses (no ASE, OUTRIDER, ISA, oarfish,
  *     sqanti3, isoCall merge/call)
+ *   - NEW germline_rna_summary (germline counterpart of collect_clinical_summaryRNA;
+ *     not in the somatic file)
  * =============================================================================
  */
 
@@ -666,5 +668,84 @@ process lrs_splice_report {
     stub:
     """
     touch ${meta.prefixRNA}.aberrantSplicing.section.html ${meta.prefixRNA}.aberrantSplicing.report.html
+    """
+}
+
+
+////////////////////////////////////////////
+/////// ------- SUMMARY ------- ////////////
+////////////////////////////////////////////
+
+/*
+ * Germline RNA summary: YAML + JSON + self-contained HTML per RNA sample
+ * (lrsCustomTools summaryScripts/germlineRNA). TEST PHASE banner in the HTML.
+ * The HTML sits in reportFiles/ next to the lrs_splice report it links to.
+ */
+process germline_rna_summary {
+    label 'low'
+    tag "$meta.id"
+    conda "${params.condaEnvs.somaticSummaryEnv}"                // python3 + pyyaml
+
+    publishDir (
+        path: { "${params.outBase(meta)}/reportFiles/" },
+        mode: 'copy',
+        pattern: "*.summaryRNA.html")
+    publishDir (
+        path: { "${params.outBase(meta)}/summaryFiles/" },
+        mode: 'copy',
+        pattern: "*.summaryRNA.*")
+    publishDir (
+        path: { "${params.lrsStorage}/summaries/rna/" },
+        mode: 'copy',
+        pattern: "*.summaryRNA.{json,yaml}")
+
+    input:
+    tuple val(meta), val(data)
+    // data: refineReportJSON, pigeonRawJSON, pigeonFilteredJSON, fusionInhouse
+    //       fusionAnnot    fusion_annotate JSON, or []
+    //       identityTsv    rna_dna_identity TSV, or []        (use case 2 only)
+    //       haplotagList   whatshap haplotag list, or []      (identity PASS only)
+    //       spliceJSON     lrs_splice JSON, or []
+    //       spliceReport   file name of the standalone lrs_splice report, or null
+    //       spliceNote     why spliceJSON is [], or null
+
+    output:
+    tuple val(meta), path("${meta.prefixRNA}.summaryRNA.yaml"), emit: yaml
+    tuple val(meta), path("${meta.prefixRNA}.summaryRNA.json"), emit: json
+    tuple val(meta), path("${meta.prefixRNA}.summaryRNA.html"), emit: html
+
+    script:
+    def opt   = { flag, v -> (v == null || v instanceof List) ? '' : "${flag} ${v}" }
+    def panel = params.inhouseSplicingGenelist ? "--panel-name ${file(params.inhouseSplicingGenelist).name}" : ''
+    """
+    python3 ${params.germlineRnaSummaryPy} \
+        --rna-npn                ${meta.npnRNA} \
+        --dna-npn                ${meta.dnaNPN ?: 'NA'} \
+        --case-id                ${meta.caseID ?: 'NA'} \
+        --use-case               '${meta.useCase}' \
+        --vcf-source             ${meta.vcfSource ?: 'NA'} \
+        --phased-vcf             ${meta.phasedVcf ?: 'NA'} \
+        --genome-version         ${params.genomeVersion} \
+        ${panel} \
+        --refine-json            ${data.refineReportJSON} \
+        --pigeon-raw             ${data.pigeonRawJSON} \
+        --pigeon-filtered        ${data.pigeonFilteredJSON} \
+        --pbfusion               ${data.fusionInhouse} \
+        ${opt('--fusion-annot', data.fusionAnnot)} \
+        --identity-check-enabled ${params.rnaIdentityCheck ? 'true' : 'false'} \
+        --identity-min-sites     ${params.rnaIdentityMinSites} \
+        ${opt('--identity-tsv', data.identityTsv)} \
+        ${opt('--haplotag-list', data.haplotagList)} \
+        ${opt('--splice-json', data.spliceJSON)} \
+        ${data.spliceReport ? "--splice-report-href ${data.spliceReport}" : ''} \
+        ${data.spliceNote ? "--splice-note '${data.spliceNote}'" : ''} \
+        --html-template          ${params.germlineRnaSummaryHtml} \
+        --output                 ${meta.prefixRNA}.summaryRNA
+    """
+
+    stub:
+    """
+    touch ${meta.prefixRNA}.summaryRNA.yaml ${meta.prefixRNA}.summaryRNA.json ${meta.prefixRNA}.summaryRNA.html
+    echo "splice=${data.spliceJSON instanceof List ? 'none' : data.spliceJSON} note=${data.spliceNote} identity=${data.identityVerdict} hap=${data.haplotagList instanceof List ? 'none' : 'yes'} annot=${data.fusionAnnot instanceof List ? 'none' : 'yes'}" > ${meta.prefixRNA}.summaryRNA.stubinfo.txt
     """
 }

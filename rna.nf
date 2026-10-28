@@ -11,7 +11,8 @@ nextflow.enable.dsl = 2
  * RNA:  refine/cluster2 -> pbmm2 -> collapse -> pigeon      (transcriptome)
  *                                -> pbfusion -> fusion_annotate
  *       refined BAM -> [identity check -> whatshap haplotag]  (use case 2 only)
- *                   -> lrs_splice -> lrs_splice_report
+ *                   -> lrs_splice (blood recurrence store) -> lrs_splice_report
+ *       all of the above -> germline_rna_summary (YAML / JSON / HTML per sample)
  *
  * Run:
  *   nextflow run MadsAagaard/pacbioGermline -r <tag> \
@@ -20,9 +21,13 @@ nextflow.enable.dsl = 2
  *
  * --rnaSS: tab-separated, one row per RNA sample; '#' lines and a header row
  * starting with "rnaNPN" are ignored.
- *     rnaNPN   dnaNPN   [phasedVcf]
+ *     rnaNPN   dnaNPN   [phasedVcf]   [caseID]
  *   - dnaNPN NA (or -, empty)  -> use case 3, no DNA
- *   - phasedVcf (optional)     -> this file is used as is, no lookup
+ *   - phasedVcf (optional)     -> this file is used as is, no lookup (NA = look up)
+ *   - caseID (optional)        -> family / case ID. Samples sharing it are one
+ *                                 group in the blood recurrence store (relatives
+ *                                 never count as recurrence for each other).
+ *                                 Default group: dnaNPN, else rnaNPN.
  *
  * The germline DNA input is the hiPhase-phased DeepVariant VCF (+ .tbi beside it):
  *   <dnaNPN>.<genomeVersion>.<readSet tag>.hiphase.deepvariant.vcf.gz
@@ -40,7 +45,7 @@ if (params.help) {
     Germline RNA (TEST PHASE) — see the header of rna.nf.
 
     REQUIRED
-      --rnaSS  [path]      rnaNPN <TAB> dnaNPN|NA [<TAB> phasedVcf]
+      --rnaSS  [path]      rnaNPN <TAB> dnaNPN|NA [<TAB> phasedVcf|NA [<TAB> caseID]]
 
     OPTIONS
       --outdir [path]      output root (default /lnx01_data3/pacBioAnalyzedSamples/<genome>/<year>/RNAdata)
@@ -53,6 +58,9 @@ if (params.help) {
                            is not in the GTF
       --rnaIdentityCheck false
                            skip the RNA vs DNA identity check (not recommended)
+      --spliceRecurrenceDb [path|false]
+                           blood recurrence store (default: conf/germlineRNA.config);
+                           false = no store
     """.stripIndent()
     exit 0
 }
@@ -73,7 +81,7 @@ if (params.rnaIdentityCheck == null) {
 }
 
 
-include { RNA_ARM; RNA_PHASE_GERMLINE; RNA_SPLICING_GERMLINE } from './subworkflows/RNA.nf'
+include { RNA_ARM; RNA_PHASE_GERMLINE; RNA_SPLICING_GERMLINE; RNA_SUMMARY_GERMLINE } from './subworkflows/RNA.nf'
 
 
 // =============================================================================
@@ -92,19 +100,24 @@ file(params.rnaSS, checkIfExists: true).readLines().eachWithIndex { line, i ->
     if (f[0].toLowerCase() == 'rnanpn') return                          // header row
 
     if (f.size() < 2) {
-        problems << "line ${i + 1}: expected rnaNPN <TAB> dnaNPN|NA [<TAB> phasedVcf], got '${l}'"
+        problems << "line ${i + 1}: expected rnaNPN <TAB> dnaNPN|NA [<TAB> phasedVcf|NA [<TAB> caseID]], got '${l}'"
         return
     }
     def rnaNPN = f[0]
     def dnaNPN = isMissing(f[1]) ? null : f[1]
     def vcfCol = (f.size() > 2 && !isMissing(f[2])) ? f[2] : null
+    def caseID = (f.size() > 3 && !isMissing(f[3])) ? f[3] : null
 
     if (rnaNPN.contains('.') || rnaNPN.contains('_') || rnaNPN.contains(' '))
         problems << "line ${i + 1}: rnaNPN '${rnaNPN}' contains '.', '_' or a space"
     if (vcfCol && !dnaNPN)
         problems << "line ${i + 1}: phasedVcf given but dnaNPN is NA — give the dnaNPN too, so the pair is named"
+    if (caseID && !(caseID ==~ /[A-Za-z0-9._-]+/))
+        problems << "line ${i + 1}: caseID '${caseID}' may only contain letters, digits, '.', '_' and '-'"
+    if (f.size() > 4 && f[4..-1].any { it })
+        problems << "line ${i + 1}: more than 4 columns (rnaNPN, dnaNPN, phasedVcf, caseID)"
 
-    rows << [line: i + 1, rnaNPN: rnaNPN, dnaNPN: dnaNPN, vcfCol: vcfCol]
+    rows << [line: i + 1, rnaNPN: rnaNPN, dnaNPN: dnaNPN, vcfCol: vcfCol, caseID: caseID]
 }
 
 if (!rows && !problems) problems << "no sample rows in ${params.rnaSS}"
@@ -167,14 +180,16 @@ def metas = rows.collect { r ->
         npn        : r.rnaNPN,                 // pbmm2 --sample
         npnRNA     : r.rnaNPN,
         dnaNPN     : r.dnaNPN,
-        patient    : r.dnaNPN ?: r.rnaNPN,     // lrs_splice --patient (recurrence store key)
+        // lrs_splice --patient = recurrence-store group key (leave-one-out): the
+        // family / case when given, so relatives never count as recurrence
+        patient    : r.caseID ?: r.dnaNPN ?: r.rnaNPN,
         useCase    : r.dnaNPN ? 'DNA+RNA' : 'RNA only',
         phasedVcf  : vcf?.toString(),
         vcfSource  : source,
         sampletype : 'rnaGermline',
         prefixRNA  : "${r.rnaNPN}.rnaGermline.${params.genomeVersion}",
         outName    : r.dnaNPN ? "${r.rnaNPN}_${r.dnaNPN}" : "${r.rnaNPN}_noDNA",
-    ]
+    ] + (r.caseID ? [caseID: r.caseID] : [:])   // key only when given: meta (and so every task hash) is unchanged for sheets without caseID
 }
 
 // =============================================================================
@@ -251,6 +266,14 @@ if (params.inhouseSplicingGenelist) {
     }
 }
 
+// =============================================================================
+// SPLICING RECURRENCE STORE  (blood; conf/germlineRNA.config)
+// =============================================================================
+if (params.spliceRecurrenceDb && !file(params.spliceRecurrenceDb.toString()).exists()) {
+    problems << ("splicing recurrence store not found: ${params.spliceRecurrenceDb}\n" +
+                 "      Build it with lrsCustomTools splicing/germline_recurrence_add.sh, or run without it: --spliceRecurrenceDb false")
+}
+
 if (problems) {
     exit 1, "\nGERMLINE RNA INPUT ERRORS (${params.rnaSS}) — nothing was started:\n  - " + problems.join('\n  - ') + "\n"
 }
@@ -264,9 +287,9 @@ def runInfoDir = "${params.outputDirBase}/runInfo/${params.dateStamp}_${params.s
 def manifest   = file("${runInfoDir}/germlineRNA_inputs.${params.traceStamp}.tsv")
 manifest.parent.mkdirs()
 manifest.text = (
-    [ ['rnaNPN', 'dnaNPN', 'useCase', 'vcfSource', 'phasedVcf', 'outputFolder', 'ubams'].join('\t') ] +
+    [ ['rnaNPN', 'dnaNPN', 'caseID', 'recurrenceKey', 'useCase', 'vcfSource', 'phasedVcf', 'outputFolder', 'ubams'].join('\t') ] +
     metas.collect { m ->
-        [m.npnRNA, m.dnaNPN ?: 'NA', m.useCase, m.vcfSource, m.phasedVcf ?: 'NA',
+        [m.npnRNA, m.dnaNPN ?: 'NA', m.caseID ?: 'NA', m.patient, m.useCase, m.vcfSource, m.phasedVcf ?: 'NA',
          params.outBase(m), ubamsByNpn[m.npnRNA].join(',')].join('\t')
     }
 ).join('\n') + '\n'
@@ -315,6 +338,17 @@ workflow {
     RNA_PHASE_GERMLINE(RNA_ARM.out.refinedAlignedBam)
 
     RNA_SPLICING_GERMLINE(RNA_PHASE_GERMLINE.out.spliceBam)
+
+    RNA_SUMMARY_GERMLINE(
+        RNA_ARM.out.isoseqForSummary,
+        RNA_ARM.out.pigeonForSummary,
+        RNA_ARM.out.fusionForSummary,
+        RNA_ARM.out.fusionAnnot,
+        RNA_PHASE_GERMLINE.out.identity,
+        RNA_PHASE_GERMLINE.out.haplotagList,
+        RNA_SPLICING_GERMLINE.out.json,
+        RNA_SPLICING_GERMLINE.out.html
+    )
 }
 
 
