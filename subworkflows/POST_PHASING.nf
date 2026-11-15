@@ -80,11 +80,13 @@ workflow POST_PHASING {
     .join(cramino.out.multiqc)
     .join(bcftools_stats.out.forSummary)
     .join(whatsHap_stats.out.multiqc)
-    // Section 05 (PWS/AS): sawfish copy number + the phased sawfish SV VCF.
+    // Section 05 (PWS/AS): sawfish copy number + the phased sawfish SV VCF,
+    // SVDB-annotated so every call carries its in-house frequency (OCC / FRQ).
     // No remainder: a sample only reaches POST_PHASING when sawFish2 has run
-    // (phasedAll is built from its VCF in main.nf), so both are always present.
+    // (phasedAll is built from its VCF in main.nf), and svdb_SawFish runs on
+    // every sample of phasedAll, so both are always present.
     .join(sawfish_copynum)
-    .join(phasedAll.map { meta, data -> tuple(meta, data.sawfish_vcf) })
+    .join(svdb_SawFish.out.svdb_vcf.map { meta, vcf, tbi -> tuple(meta, vcf) })
     .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino,bcfStats,bcfFilters,whatshap,sawfishCopynum,sawfishVcf ->
         tuple(meta, [
             sawfishCopynum: sawfishCopynum,
