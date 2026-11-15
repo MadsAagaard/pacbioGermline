@@ -555,6 +555,10 @@ process svdb_SawFish {
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
+    // Full SVDB-annotated VCF (INFO/OCC, INFO/FRQ on every record): germline summary section 05.
+    tuple val(meta),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.vcf.gz"),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.vcf.gz.tbi"),             emit: svdb_vcf
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
