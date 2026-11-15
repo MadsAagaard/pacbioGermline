@@ -32,6 +32,7 @@ workflow POST_PHASING {
     take:
     phasedAll                 // tuple(meta, [bam, bai, failBam, failBai, dv_vcf, dv_idx, sawfish_vcf, sawfish_idx, sawfish_reads])
     sawfish_supporting_reads
+    sawfish_copynum           // tuple(meta, copynum.bedgraph) — germline summary section 05
     mosdepth
     mosdepthSummary
     nanoStat
@@ -79,8 +80,17 @@ workflow POST_PHASING {
     .join(cramino.out.multiqc)
     .join(bcftools_stats.out.forSummary)
     .join(whatsHap_stats.out.multiqc)
-    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino,bcfStats,bcfFilters,whatshap ->
+    // Section 05 (PWS/AS): sawfish copy number + the phased sawfish SV VCF,
+    // SVDB-annotated so every call carries its in-house frequency (OCC / FRQ).
+    // No remainder: a sample only reaches POST_PHASING when sawFish2 has run
+    // (phasedAll is built from its VCF in main.nf), and svdb_SawFish runs on
+    // every sample of phasedAll, so both are always present.
+    .join(sawfish_copynum)
+    .join(svdb_SawFish.out.svdb_vcf.map { meta, vcf, tbi -> tuple(meta, vcf) })
+    .map { meta, paraphase_json, icReport,mosDist,mosSummary,cramino,bcfStats,bcfFilters,whatshap,sawfishCopynum,sawfishVcf ->
         tuple(meta, [
+            sawfishCopynum: sawfishCopynum,
+            sawfishVcf: sawfishVcf,
             paraphase_json: paraphase_json,
             icReport: icReport,
             mosDist: mosDist,

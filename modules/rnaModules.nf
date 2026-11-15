@@ -702,7 +702,7 @@ process germline_rna_summary {
     input:
     tuple val(meta), val(data)
     // data: refineReportJSON, pigeonRawJSON, pigeonFilteredJSON, fusionInhouse
-    //       fusionAnnot    fusion_annotate JSON, or []
+    //       fusionAnnot    fusion_annotate JSON, or [] (not passed when params.summaryFusions is false)
     //       identityTsv    rna_dna_identity TSV, or []        (use case 2 only)
     //       haplotagList   whatshap haplotag list, or []      (identity PASS only)
     //       spliceJSON     lrs_splice JSON, or []
@@ -731,7 +731,7 @@ process germline_rna_summary {
         --pigeon-raw             ${data.pigeonRawJSON} \
         --pigeon-filtered        ${data.pigeonFilteredJSON} \
         --pbfusion               ${data.fusionInhouse} \
-        ${opt('--fusion-annot', data.fusionAnnot)} \
+        ${params.summaryFusions ? opt('--fusion-annot', data.fusionAnnot) : '--skip-fusions'} \
         --identity-check-enabled ${params.rnaIdentityCheck ? 'true' : 'false'} \
         --identity-min-sites     ${params.rnaIdentityMinSites} \
         ${opt('--identity-tsv', data.identityTsv)} \

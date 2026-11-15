@@ -497,6 +497,9 @@ process sawFish2 {
     tuple val(meta), path("${meta.id}.sawfishDiscover"), val("${data.hifiBam}"),      emit: sv_discover_dir2
     tuple val(meta), path("*.sawfishSV.supporting_reads.json.gz"),                    emit: sv_supporting_reads
     tuple val(meta), path("${meta.id}.sawfishSV/"),                                   emit: sawfish_out_dir
+    // ADDED: named emit for the germline summary (section 05, PWS/AS copy number).
+    // The file was already produced and published through the "*.sawfishSV.*" glob above.
+    tuple val(meta), path("*.sawfishSV.copynum.bedgraph"),                            emit: copynum
 
     script:
     def exclude = params.genome == "hg38" ? "--cnv-excluded-regions ${params.sawfishExcludeRegions}" : ""
@@ -552,6 +555,10 @@ process svdb_SawFish {
     tuple val(meta),
           path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz"),
           path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.AF_below10pct.vcf.gz.tbi"), emit: sawfishAF10
+    // Full SVDB-annotated VCF (INFO/OCC, INFO/FRQ on every record): germline summary section 05.
+    tuple val(meta),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.vcf.gz"),
+          path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.sawfishSV.hiphase.svdb.vcf.gz.tbi"),             emit: svdb_vcf
 
     script:
     def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
@@ -1851,6 +1858,9 @@ process collect_germline_summary {
         --whatshap-stats      ${data.whatsHap} \
         --paraphase-json      ${data.paraphase_json} \
         --methbat-imprinting  ${data.icReport} \
+        --sawfish-copynum     ${data.sawfishCopynum} \
+        --sawfish-vcf         ${data.sawfishVcf} \
+        --pws-as-intervals    ${params.germlinePwsAsIntervals} \
         --regions             smn1,pms2,rccx \
         --html-template       ${params.germlineSummaryHtml} \
         --output              ${meta.id}.${params.genomeVersion}.${params.tagHifi}.summaryGermline
