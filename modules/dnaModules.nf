@@ -488,6 +488,18 @@ process sawFish2 {
         mode: 'copy',
         pattern: "${meta.id}.sawfishDiscover")
 
+    // Depth + copy-number files kept centrally for a later panel-of-normals depth reference
+    // (germline visualizations, 2026-11-23).
+    publishDir (
+        path: "${params.lrsStorage}/structuralVariants/sawfishDepthFiles/bigwig/",
+        mode: 'copy',
+        pattern: "*.sawfishSV.gc_bias_corrected_depth.bw")
+
+    publishDir (
+        path: "${params.lrsStorage}/structuralVariants/sawfishDepthFiles/bedgraph/",
+        mode: 'copy',
+        pattern: "*.sawfishSV.copynum.bedgraph")
+
     input:
     tuple val(meta), val(data)
 
@@ -500,6 +512,8 @@ process sawFish2 {
     // ADDED: named emit for the germline summary (section 05, PWS/AS copy number).
     // The file was already produced and published through the "*.sawfishSV.*" glob above.
     tuple val(meta), path("*.sawfishSV.copynum.bedgraph"),                            emit: copynum
+    // Named emit for germline_circos (read-depth ring). Already produced and published above.
+    tuple val(meta), path("*.sawfishSV.gc_bias_corrected_depth.bw"),                  emit: depth_bw
 
     script:
     def exclude = params.genome == "hg38" ? "--cnv-excluded-regions ${params.sawfishExcludeRegions}" : ""
@@ -1868,3 +1882,49 @@ process collect_germline_summary {
 }
 
 //${meta.id}.${params.genomeVersion}.${params.tagHifi}
+
+
+process germline_circos {
+    label "low"
+    tag "$meta.id"
+    conda "${params.condaEnvs.circos}"      // lrsCustomTools viz/environment.yml (python3 + playwright/chromium for PNG/SVG)
+
+    // TEST PHASE: next to the germline summary; JSON + SVG in a subfolder.
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
+        mode: 'copy',
+        pattern: "*.germlineCircos.{html,png,cnvs.tsv,svs.tsv}")
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/germlineCircos/"},
+        mode: 'copy',
+        pattern: "*.germlineCircos.{json,svg}")
+
+    input:
+    tuple val(meta), val(data)      // data: depthBw, copynum, svdbVcf, dvVcf
+
+    output:
+    tuple val(meta), path("*.germlineCircos.html"),     emit: html
+    tuple val(meta), path("*.germlineCircos.json"),     emit: json
+    tuple val(meta), path("*.germlineCircos.cnvs.tsv"), emit: cnvs
+    tuple val(meta), path("*.germlineCircos.svs.tsv"),  emit: svs
+    tuple val(meta), path("*.germlineCircos.png"),      emit: png, optional: true
+    tuple val(meta), path("*.germlineCircos.svg"),      emit: svg, optional: true
+
+    script:
+    def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
+    """
+    # Chromium for the PNG/SVG is installed inside circosEnv (playwright install chromium)
+    export PLAYWRIGHT_BROWSERS_PATH=\${PLAYWRIGHT_BROWSERS_PATH:-\$CONDA_PREFIX/ms-playwright}
+
+    python3 ${params.germlineCircosPy} \\
+        --sample   ${meta.id} \\
+        --sex      ${meta.sex} \\
+        --out      ${prefix}.germlineCircos \\
+        --depth-bw ${data.depthBw} \\
+        --copynum  ${data.copynum} \\
+        --sv-vcf   ${data.svdbVcf} \\
+        --dv-vcf   ${data.dvVcf} \\
+        --static   ${params.germlineCircosStatic}
+    """
+}

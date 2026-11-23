@@ -34,6 +34,7 @@ workflow PRE_PHASING {
     sawfish_discover_ch  = Channel.empty()
     sawfish_reads_ch     = Channel.empty()
     sawfish_copynum_ch   = Channel.empty()
+    sawfish_depth_bw_ch  = Channel.empty()
     str4_vcf_ch          = Channel.empty()
     str5_adotto_vcf_ch   = Channel.empty()
     mosdepth_ch          = Channel.empty()
@@ -68,6 +69,7 @@ workflow PRE_PHASING {
         sawfish_discover_ch = sawFish2.out.sv_discover_dir2
         sawfish_reads_ch    = sawFish2.out.sv_supporting_reads
         sawfish_copynum_ch  = sawFish2.out.copynum          // tuple(meta, copynum.bedgraph)
+        sawfish_depth_bw_ch = sawFish2.out.depth_bw         // tuple(meta, gc_bias_corrected_depth.bw)
     }
 
     // -------------------------------------------------------------------------
@@ -147,6 +149,7 @@ workflow PRE_PHASING {
     sawfish_discover_dir     = sawfish_discover_ch
     sawfish_supporting_reads = sawfish_reads_ch
     sawfish_copynum          = sawfish_copynum_ch
+    sawfish_depth_bw         = sawfish_depth_bw_ch
     mosdepth                 = mosdepth_ch
     mosdepthSummary            = mosdepthROI.out.summary
     nanoStat                 = nanostat_ch
