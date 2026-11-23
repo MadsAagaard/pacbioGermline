@@ -34,7 +34,7 @@ Archive RAW   : ${params.dataArchive}
 OutputDirBase : ${params.outputDirBase}
 workDir       : ${workflow.workDir}
 layout        : ${params.layoutMode}
-project       : ${params.project ?: '-'}
+project       : ${params.projectName ?: '-'}
 lrsStorage    : ${params.lrsStorage}
 lrsDocuments  : ${params.lrsDocuments}
 error mode    : ${params.errorMode}
@@ -118,7 +118,7 @@ if (params.samplesheet && !params.customSS && !params.jointSS) {
                 groupKey : groupKey,
                 ssBase   : ssBaseName ]
             // --project: every sample is one case (joint calling, MultiQC)
-            if (params.project) meta.caseID = params.project.toString()
+            if (params.projectName) meta.caseID = params.projectName
             meta
         }
         .set { samplesheet_full }
@@ -156,11 +156,11 @@ if (params.samplesheet && (params.jointSS || params.familySS || params.customSS)
         .groupTuple()
         .flatMap { intRef, metas ->
 
-            // --project: the project name is the caseID of every sample, so the
+            // --project: the project name (samplesheet name) is the caseID of every sample, so the
             // whole project is one case; no proband is needed per intRef then.
             def caseID
-            if (params.project) {
-                caseID = params.project.toString()
+            if (params.projectName) {
+                caseID = params.projectName
             }
             else {
                 def probands = metas.findAll { it.proband == 'T' }
@@ -285,7 +285,7 @@ if (!params.samplesheet) {
             def (samplename, material, testlist, gender)     = samplenameFull.tokenize('_')
             def meta = [
                 id       : samplename,
-                caseID   : params.project ? params.project.toString() : "${runDateRaw}_${testlist}",
+                caseID   : params.projectName ?: "${runDateRaw}_${testlist}",
                 gender   : gender,
                 rundate  : runDateRaw,
                 testlist : testlist,
