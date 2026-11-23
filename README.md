@@ -117,6 +117,10 @@ is generated and Exomiser runs for the family.
 
 --hpo           [path]: File with HPO terms (trios / family analyses)
 
+--project             : Project run (switch, no value; see "Project runs"
+                        below). The samplesheet name is the project name; all
+                        samples share one output folder and one caseID.
+
 
 ### Read set selection
 Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
@@ -155,6 +159,31 @@ Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
 **Note:** if any of `--skipVariants`, `--skipSV` or `--skipSTR` is set, phasing
 is disabled — HiPhase needs DeepVariant, Sawfish and TRGT output. 
 
+### Project runs (`--project`)
+
+For research / project samples that should be collected in one place, apart
+from clinical samples. Works with the default samplesheet and with `--jointSS`
+sheets. `--project` is a switch; the project name `<name>` is the samplesheet
+file name without `.txt` (letters, digits, `.`, `_`, `-`).
+
+- Output: one folder for all samples (`alignments/`, `SNV_and_INDELs/`,
+  `structuralVariants/`, ...):
+  `/lnx01_data3/pacBioAnalyzedSamples/<genome>/projectData/<name>_<readSet>/`.
+  `--outdir <dir>` replaces the projectData folder: `<dir>/<name>_<readSet>/`.
+  Clinical runs are unchanged (`<genome>/<year>/...`, or `<outdir>_<readSet>`).
+- Every sample gets caseID = `<name>`: one MultiQC report
+  (`QC/<name>.MultiQC.DNA.html`), and `--jointCall` / `--jointSS` joint-call
+  the whole project (GLnexus, Sawfish, SVDB) into `jointCalls/`.
+- Shared locations: lrsStorage and lrsDocuments output (VCF stores, TRGT,
+  methylation, clinical summaries, run summaries, LabWare run summaries) goes
+  to a `projects/<name>/` subfolder of each, with the usual structure below it.
+- `--singleOnly` / `--intrefOnly` still select samples; the layout stays
+  `project`.
+- Refused (the run stops at launch): a value after `--project`, no
+  `--samplesheet`, `--hpo` (Exomiser would treat the whole project as one
+  family), `--outputLayout`, `--familySS` / `--familyDir`, `--rnaSS` (germline
+  RNA is not covered).
+
 ---
 
 ## Usage examples
@@ -181,6 +210,12 @@ Trio analysis with Exomiser:
 
 ```
 nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/samplesheet.txt -profile slurm --hpo /path/to/hpo.txt --jointSS
+```
+
+Project run, all samples in one folder, joint-called as one project:
+
+```
+nextflow run MadsAagaard/pacbioGermline -r main --samplesheet /path/to/PROJECT-NAME.txt -profile slurm --project --jointCall
 ```
 
 ---

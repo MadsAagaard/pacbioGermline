@@ -1777,7 +1777,7 @@ process nanoStat {
 }
 
 process multiQC {
-    tag { params.layoutMode == 'jointAnalysis' ? meta.caseID : meta.id }
+    tag { params.layoutMode in params.caseLayouts ? meta.caseID : meta.id }
     label "low"
     conda "${params.condaEnvs.multiqc}"
 
@@ -1792,7 +1792,7 @@ process multiQC {
     path("*MultiQC*.html")
 
     script:
-    def reportName = (params.layoutMode == 'jointAnalysis') ? "${meta.caseID}.MultiQC.DNA.html" : "${meta.id}.MultiQC.DNA.html"
+    def reportName = (params.layoutMode in params.caseLayouts) ? "${meta.caseID}.MultiQC.DNA.html" : "${meta.id}.MultiQC.DNA.html"
     """
     mkdir -p qc_in
     cp -L ${qcfiles} qc_in/
