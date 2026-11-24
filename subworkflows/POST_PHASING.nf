@@ -7,6 +7,8 @@ nextflow.enable.dsl = 2
 
 include {
         kivvi_d4z4;
+        kivvi_d4z4_v11;
+        kivvi_report;
         pbCPGtools;
         paraphase;
         paraphase4;
@@ -126,6 +128,15 @@ workflow POST_PHASING {
         .set { germline_circos_inputs_ch }
 
         germline_circos(germline_circos_inputs_ch)
+    }
+
+
+    //------ Kivvi 1.1 D4Z4 + FSHD report (TEST PHASE, next to Kivvi 1.0) -------------------------
+    // Failures are ignored (conf/germline.config section 8): a missing *.kivviReport.html
+    // in newToolsTest/customReports/ means Kivvi 1.1 or the report failed for that sample.
+    if (!params.skipKivvi11) {
+        kivvi_d4z4_v11(phasedAll)
+        kivvi_report(kivvi_d4z4_v11.out.d4z4)
     }
 
 
