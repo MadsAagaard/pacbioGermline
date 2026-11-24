@@ -1254,6 +1254,38 @@ process kivvi_d4z4 {
     """
 }
 
+// TEST PHASE: Kivvi 1.1.0 next to Kivvi 1.0 (kivvi_d4z4 above, unchanged).
+// 1.1 has no -r (it carries its own D4Z4 reference) and phases the flanks in
+// up to 2 threads. Outputs: <prefix>.kivvi.d4z4.{json,vcf,svg,bam(+bai)}; a sample
+// with no reads in D4Z4 gets the JSON and VCF only.
+process kivvi_d4z4_v11 {
+    tag "$meta.id"
+    label "medium"
+    conda "${params.condaEnvs.kivvi11}"
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/repeatExpansions/kivvi_v1.1/"},
+        mode: 'copy')
+
+    input:
+    tuple val(meta), val(data)
+
+    output:
+    tuple val(meta), path("${meta.id}.${params.genomeVersion}.${params.tagHifi}.kivvi.d4z4.*"), emit: d4z4
+
+    script:
+    def prefix = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
+    """
+    kivvi --version
+    kivvi \
+    --bam ${data.bam} \
+    --prefix ${prefix} \
+    --out . \
+    d4z4 \
+    --threads 2
+    """
+}
+
 process paraphase {
     tag "$meta.id"
     label "medium"
@@ -1823,10 +1855,21 @@ process collect_germline_summary {
     tag "$meta.id"
     conda "${params.condaEnvs.somaticSummaryEnv}"        // needs pyyaml only - its in our somaticSummary conda env
 
+    // customReports/ shows the HTML reports only; JSON and YAML go to json/ and yaml/
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
         mode: 'copy',
-        pattern: "*.{yaml,json,html}")
+        pattern: "*.summaryGermline.html")
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/json/"},
+        mode: 'copy',
+        pattern: "*.summaryGermline.json")
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/yaml/"},
+        mode: 'copy',
+        pattern: "*.summaryGermline.yaml")
 
     publishDir (
         path: "${params.lrsStorage}/clinicalSummaries/germline/json/",
@@ -1889,16 +1932,21 @@ process germline_circos {
     tag "$meta.id"
     conda "${params.condaEnvs.circos}"      // lrsCustomTools viz/environment.yml (python3 + playwright/chromium for PNG/SVG)
 
-    // TEST PHASE: next to the germline summary; JSON + SVG in a subfolder.
+    // TEST PHASE: HTML next to the germline summary, JSON in json/, PNG/SVG/TSVs in germlineCircos/.
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
         mode: 'copy',
-        pattern: "*.germlineCircos.{html,png,cnvs.tsv,svs.tsv}")
+        pattern: "*.germlineCircos.html")
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/json/"},
+        mode: 'copy',
+        pattern: "*.germlineCircos.json")
 
     publishDir (
         path: {"${params.outBase(meta)}/newToolsTest/customReports/germlineCircos/"},
         mode: 'copy',
-        pattern: "*.germlineCircos.{json,svg}")
+        pattern: "*.germlineCircos.{png,svg,cnvs.tsv,svs.tsv}")
 
     input:
     tuple val(meta), val(data)      // data: depthBw, copynum, svdbVcf, dvVcf
@@ -1926,5 +1974,57 @@ process germline_circos {
         --sv-vcf   ${data.svdbVcf} \\
         --dv-vcf   ${data.dvVcf} \\
         --static   ${params.germlineCircosStatic}
+    """
+}
+
+
+// TEST PHASE: D4Z4 / FSHD report (JSON + HTML) from the Kivvi 1.1 output.
+// lrsCustomTools summaryScripts/kivvi/. Placeholder thresholds until
+// params.kivviReportThresholds points at an approved file (the report says so).
+process kivvi_report {
+    label "low"
+    tag "$meta.id"
+    conda "${params.condaEnvs.somaticSummaryEnv}"        // python3 only (stdlib)
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/"},
+        mode: 'copy',
+        pattern: "*.kivviReport.html")
+
+    publishDir (
+        path: {"${params.outBase(meta)}/newToolsTest/customReports/json/"},
+        mode: 'copy',
+        pattern: "*.kivviReport.json")
+
+    publishDir (
+        path: "${params.lrsStorage}/clinicalSummaries/germline/json/",
+        mode: 'copy',
+        pattern: "*.kivviReport.json")
+
+    publishDir (
+        path: "${params.lrsStorage}/clinicalSummaries/germline/html/",
+        mode: 'copy',
+        pattern: "*.kivviReport.html")
+
+    input:
+    tuple val(meta), path(kivviFiles)       // <prefix>.kivvi.d4z4.* staged together (the VCF header gives the Kivvi version)
+
+    output:
+    tuple val(meta), path("*.kivviReport.json"), emit: json
+    tuple val(meta), path("*.kivviReport.html"), emit: html
+
+    script:
+    def prefix     = "${meta.id}.${params.genomeVersion}.${params.tagHifi}"
+    def thresholds = params.kivviReportThresholds ? "--thresholds ${params.kivviReportThresholds}" : ""
+    def pipeline   = "pacbioGermline ${workflow.revision ?: workflow.commitId ?: 'local'}"
+    """
+    python3 ${params.kivviReportPy} \
+        --kivvi-json    ${prefix}.kivvi.d4z4.json \
+        --sample-id     ${meta.id} \
+        --case-id       ${meta.rekv} \
+        --pipeline      '${pipeline}' \
+        --html-template ${params.kivviReportHtml} \
+        ${thresholds} \
+        --output        ${prefix}
     """
 }

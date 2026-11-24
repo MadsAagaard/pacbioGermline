@@ -29,7 +29,7 @@ There is no merged all-reads alignment and no `extracthifi` step.
 - Complex SV visualisation (SVTopo)
 - In-house allele frequency annotation of SVs (SVDB)
 - Repeat expansions (TRGT v4 + v5; disease loci and genome-wide adotto catalog)
-- Repeat contraction (Kivvi)
+- Repeat contraction (Kivvi 1.0; TEST PHASE: Kivvi 1.1 + D4Z4 / FSHD report in `newToolsTest/`)
 - Phasing (HiPhase)
 - Pseudogenes (Paraphase)
 - Pharmacogenomics (Starphase + PharmCAT)
@@ -148,6 +148,7 @@ Default (no flag): HiFi + fail reads, aligned separately. TRGT uses both.
 --skipVariants  [bool]: Skip DeepVariant
 --skipSV        [bool]: Skip Sawfish
 --skipSTR       [bool]: Skip TRGT and Kivvi
+--skipKivvi11   [bool]: Skip Kivvi 1.1 and the D4Z4 / FSHD report (TEST PHASE)
 
 ### SLURM execution
 -profile slurm:         Run on the KG Vejle SLURM cluster
