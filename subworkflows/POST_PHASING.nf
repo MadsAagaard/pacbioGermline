@@ -7,6 +7,8 @@ nextflow.enable.dsl = 2
 
 include {
         kivvi_d4z4;
+        kivvi_d4z4_v11;
+        kivvi_report;
         pbCPGtools;
         paraphase;
         paraphase4;
@@ -24,6 +26,7 @@ include {
         mitorsaw;
         svdb_SawFish;
         collect_germline_summary;
+        germline_circos;
         } from "../modules/dnaModules.nf"
 
 
@@ -32,7 +35,8 @@ workflow POST_PHASING {
     take:
     phasedAll                 // tuple(meta, [bam, bai, failBam, failBai, dv_vcf, dv_idx, sawfish_vcf, sawfish_idx, sawfish_reads])
     sawfish_supporting_reads
-    sawfish_copynum           // tuple(meta, copynum.bedgraph) — germline summary section 05
+    sawfish_copynum           // tuple(meta, copynum.bedgraph) — germline summary section 05 + germline_circos
+    sawfish_depth_bw          // tuple(meta, gc_bias_corrected_depth.bw) — germline_circos
     mosdepth
     mosdepthSummary
     nanoStat
@@ -104,6 +108,41 @@ workflow POST_PHASING {
     .set { clinical_summary_inputs_ch }
 
     collect_germline_summary(clinical_summary_inputs_ch)
+
+    //------ germline circos (TEST PHASE) ----------------------------------------------------------
+    // Same no-remainder reasoning as above: copynum, the depth bigWig and the SVDB VCF exist for
+    // every sample of phasedAll. A failed task shows as a missing *.germlineCircos.html.
+    // The summary JSON feeds the imprinted-region ring (germline_circos >= 0.3.0): same MethBat rows and
+    // thresholds as section 04, so the circos waits for collect_germline_summary (errorMode strict: a
+    // failed summary stops the run anyway).
+    if (!params.skipGermlineCircos) {
+        phasedAll
+        .join(sawfish_copynum)
+        .join(sawfish_depth_bw)
+        .join(svdb_SawFish.out.svdb_vcf.map { meta, vcf, tbi -> tuple(meta, vcf) })
+        .join(collect_germline_summary.out.json)
+        .map { meta, data, copynum, depthBw, svdbVcf, summaryJson ->
+            tuple(meta, [
+                depthBw     : depthBw,
+                copynum     : copynum,
+                svdbVcf     : svdbVcf,
+                dvVcf       : data.dv_vcf,
+                summaryJson : summaryJson
+            ])
+        }
+        .set { germline_circos_inputs_ch }
+
+        germline_circos(germline_circos_inputs_ch)
+    }
+
+
+    //------ Kivvi 1.1 D4Z4 + FSHD report (TEST PHASE, next to Kivvi 1.0) -------------------------
+    // Failures are ignored (conf/germline.config section 8): a missing *.kivviReport.html
+    // in newToolsTest/customReports/ means Kivvi 1.1 or the report failed for that sample.
+    if (!params.skipKivvi11) {
+        kivvi_d4z4_v11(phasedAll)
+        kivvi_report(kivvi_d4z4_v11.out.d4z4)
+    }
 
 
     if (!params.skipQC) {

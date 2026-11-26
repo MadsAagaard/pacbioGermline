@@ -34,6 +34,9 @@ Archive RAW   : ${params.dataArchive}
 OutputDirBase : ${params.outputDirBase}
 workDir       : ${workflow.workDir}
 layout        : ${params.layoutMode}
+project       : ${params.projectName ?: '-'}
+lrsStorage    : ${params.lrsStorage}
+lrsDocuments  : ${params.lrsDocuments}
 error mode    : ${params.errorMode}
 lrsShared     : ${params.lrsSharedDir}
 lrsCustomTools: ${params.lrsCustomToolsBase}
@@ -103,16 +106,20 @@ if (params.samplesheet && !params.customSS && !params.jointSS) {
             def (rekv, npn, material, testlist, gender, proband, intRef) = row[0].tokenize('_')
             def groupKey = (intRef == 'noInfo') ? 'single' : intRef
             def sex      = sexFromGender(gender, npn)
-            [ id       : npn,
-              testlist : testlist,
-              material : material,
-              gender   : gender,
-              sex      : sex,
-              proband  : proband,
-              intRef   : intRef,
-              rekv     : rekv,
-              groupKey : groupKey,
-              ssBase   : ssBaseName ]
+            def meta = [
+                id       : npn,
+                testlist : testlist,
+                material : material,
+                gender   : gender,
+                sex      : sex,
+                proband  : proband,
+                intRef   : intRef,
+                rekv     : rekv,
+                groupKey : groupKey,
+                ssBase   : ssBaseName ]
+            // --project: every sample is one case (joint calling, MultiQC)
+            if (params.projectName) meta.caseID = params.projectName
+            meta
         }
         .set { samplesheet_full }
 
@@ -149,11 +156,19 @@ if (params.samplesheet && (params.jointSS || params.familySS || params.customSS)
         .groupTuple()
         .flatMap { intRef, metas ->
 
-            def probands = metas.findAll { it.proband == 'T' }
-            assert probands && probands.size() >= 1 : "No proband (T) found for intRef=${intRef}"
+            // --project: the project name (samplesheet name) is the caseID of every sample, so the
+            // whole project is one case; no proband is needed per intRef then.
+            def caseID
+            if (params.projectName) {
+                caseID = params.projectName
+            }
+            else {
+                def probands = metas.findAll { it.proband == 'T' }
+                assert probands && probands.size() >= 1 : "No proband (T) found for intRef=${intRef}"
 
-            def anchor = probands[0]
-            def caseID = "${anchor.rekv}_${anchor.testlist}_${intRef}"
+                def anchor = probands[0]
+                caseID = "${anchor.rekv}_${anchor.testlist}_${intRef}"
+            }
 
             metas.collect { m ->
                 def relation = (m.proband == 'T') ? 'index'
@@ -270,7 +285,7 @@ if (!params.samplesheet) {
             def (samplename, material, testlist, gender)     = samplenameFull.tokenize('_')
             def meta = [
                 id       : samplename,
-                caseID   : "${runDateRaw}_${testlist}",
+                caseID   : params.projectName ?: "${runDateRaw}_${testlist}",
                 gender   : gender,
                 rundate  : runDateRaw,
                 testlist : testlist,
@@ -364,6 +379,7 @@ workflow {
         phasedAll,
         PRE_PHASING.out.sawfish_supporting_reads,
         PRE_PHASING.out.sawfish_copynum,
+        PRE_PHASING.out.sawfish_depth_bw,
         PRE_PHASING.out.mosdepth,
         PRE_PHASING.out.mosdepthSummary,
         PRE_PHASING.out.nanoStat
@@ -390,7 +406,7 @@ workflow {
 
         PRE_PHASING.out.sawfish_discover_dir      // tuple(meta, discoverDir, hifiBamPath)
             .map { meta, dir, bam ->
-                assert meta.caseID : "Joint calling requested but sample ${meta.id} has no caseID. Use --jointSS, or add caseID to the samplesheet parser."
+                assert meta.caseID : "Joint calling requested but sample ${meta.id} has no caseID. Use --jointSS or --project."
                 tuple(meta.caseID, tuple(meta, "${dir.toString()}, ${bam.toString()}"))
             }
             .groupTuple()
