@@ -1949,7 +1949,7 @@ process germline_circos {
         pattern: "*.germlineCircos.{png,svg,cnvs.tsv,svs.tsv}")
 
     input:
-    tuple val(meta), val(data)      // data: depthBw, copynum, svdbVcf, dvVcf
+    tuple val(meta), val(data)      // data: depthBw, copynum, svdbVcf, dvVcf, summaryJson
 
     output:
     tuple val(meta), path("*.germlineCircos.html"),     emit: html
@@ -1973,6 +1973,7 @@ process germline_circos {
         --copynum  ${data.copynum} \\
         --sv-vcf   ${data.svdbVcf} \\
         --dv-vcf   ${data.dvVcf} \\
+        --summary-json ${data.summaryJson} \\
         --static   ${params.germlineCircosStatic}
     """
 }
