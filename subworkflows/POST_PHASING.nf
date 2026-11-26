@@ -112,17 +112,22 @@ workflow POST_PHASING {
     //------ germline circos (TEST PHASE) ----------------------------------------------------------
     // Same no-remainder reasoning as above: copynum, the depth bigWig and the SVDB VCF exist for
     // every sample of phasedAll. A failed task shows as a missing *.germlineCircos.html.
+    // The summary JSON feeds the imprinted-region ring (germline_circos >= 0.3.0): same MethBat rows and
+    // thresholds as section 04, so the circos waits for collect_germline_summary (errorMode strict: a
+    // failed summary stops the run anyway).
     if (!params.skipGermlineCircos) {
         phasedAll
         .join(sawfish_copynum)
         .join(sawfish_depth_bw)
         .join(svdb_SawFish.out.svdb_vcf.map { meta, vcf, tbi -> tuple(meta, vcf) })
-        .map { meta, data, copynum, depthBw, svdbVcf ->
+        .join(collect_germline_summary.out.json)
+        .map { meta, data, copynum, depthBw, svdbVcf, summaryJson ->
             tuple(meta, [
-                depthBw : depthBw,
-                copynum : copynum,
-                svdbVcf : svdbVcf,
-                dvVcf   : data.dv_vcf
+                depthBw     : depthBw,
+                copynum     : copynum,
+                svdbVcf     : svdbVcf,
+                dvVcf       : data.dv_vcf,
+                summaryJson : summaryJson
             ])
         }
         .set { germline_circos_inputs_ch }
